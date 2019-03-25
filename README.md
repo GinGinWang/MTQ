@@ -3,7 +3,8 @@
 
 ### Content
 
-* **sosflow** - code for sosflow.
+* **flows.py**,**general_maf.py** - code for sosflow.
+* **mnist_LSA.py** - code for building novelty dector for dataset mnist.
 * **train.py** - code for training novelty dector.
 * **test.py** - code for testing/run novelty dector.
 
