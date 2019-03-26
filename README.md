@@ -1,4 +1,4 @@
-# Novel Detection Using SoSflow density estimator
+# Novelty Detection Using SoSflow density estimator
 
 
 ### Content
