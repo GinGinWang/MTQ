@@ -8,12 +8,16 @@ import torch.nn as nn
 from models.base import BaseModule
 from models.blocks_2d import DownsampleBlock
 from models.blocks_2d import UpsampleBlock 
-from models.estimator_1D import Estimator1D
+
+from models.estimator_sos import EstimatorSoS
+from models.estimator_maf import EstimatorMAF
+import torch.nn.functional as F
 
 
 class Encoder(BaseModule):
     """
     MNIST model encoder.
+    same as LSA
     """
     def __init__(self, input_shape, code_length):
         # type: (Tuple[int, int, int], int) -> None
@@ -73,6 +77,7 @@ class Decoder(BaseModule):
         # type: (int, Tuple[int, int, int], Tuple[int, int, int]) -> None
         """
         Class constructor.
+        same as LSA
 
         :param code_length: the dimensionality of latent vectors.
         :param deepest_shape: the dimensionality of the encoder's deepest convolutional map.
@@ -103,6 +108,8 @@ class Decoder(BaseModule):
             nn.Conv2d(in_channels=16, out_channels=1, kernel_size=1, bias=False)
         )
 
+
+
     def forward(self, x):
         # types: (torch.Tensor) -> torch.Tensor
         """
@@ -120,26 +127,29 @@ class Decoder(BaseModule):
         return o
 
 
-class LSAMNIST(BaseModule):
+class LSA_MNIST(BaseModule):
     """
     LSA model for MNIST one-class classification.
     """
-    def __init__(self,  input_shape, code_length, cpd_channels):
+    def __init__(self,  input_shape, code_length,num_blocks, est_name):
         # type: (Tuple[int, int, int], int, int) -> None
         """
         Class constructor.
 
         :param input_shape: the shape of MNIST samples.
         :param code_length: the dimensionality of latent vectors.
-        :param cpd_channels: number of bins in which the multinomial works.
+        :param cpd_channels: number of bins in which the multinomial 
+        works.
+        :param est_name: density estimator {"sos","maf"}
+        :param coder_name: auto-encoder {"LSA"}
         """
-        super(LSAMNIST, self).__init__()
+        super(LSA_MNIST, self).__init__()
 
         self.input_shape = input_shape
         self.code_length = code_length
-        self.cpd_channels = cpd_channels
-        # To determine loss
-        self.name = "LSA"
+        self.est_name = est_name
+        self.coder_name = coder_name
+        self.name = est_name+coder_name
 
         # Build encoder
         self.encoder = Encoder(
@@ -155,14 +165,13 @@ class LSAMNIST(BaseModule):
         )
 
         # Build estimator
-        # JJ: Use New density estimator
-        self.estimator = Estimator1D(
-            code_length=code_length,
-            fm_list=[32, 32, 32, 32],
-            # JJ: fm_list?
-            cpd_channels=cpd_channels
-        )
-        
+        # Use New density estimator
+            #sosflow
+        if est_name == "SOS":
+            self.estimator = EstimatorSoS(num_blocks, code_length)  
+            # maf    
+        elif est_name == "MAF":
+            self.estimator = EstimatorMAF(num_blocks, code_length)
 
     def forward(self, x):
         # type: (torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
@@ -175,16 +184,18 @@ class LSAMNIST(BaseModule):
         h = x
 
         # Produce representations
-        z = self.encoder(h)
+        # z = self.encoder(h)
+        z = h
 
         # Estimate CPDs with autoregression
-
-        z_dist = self.estimator(z)
+        # JJ: replace estimator with SOSflow z= SOS(s)
+        # density estimator
+        s,log_jacob_s = self.estimator(z)
 
         # Reconstruct x
-        x_r = self.decoder(z)
+        # x_r = self.decoder(z)
+        x_r = z 
         x_r = x_r.view(-1, *self.input_shape)
-        s = None
-        log_jacob_s =None
+        z_dist = None
 
-        return x_r, z, z_dist, s, log_jacob_s
+        return x_r, z, z_dist,s,log_jacob_s

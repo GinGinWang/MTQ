@@ -43,11 +43,11 @@ class EstimatorMAF(BaseModule):
         self.code_length = code_length
         modules = []
         for _ in range(args.num_blocks):
-        modules += [
-            fnn.MADE(num_inputs, num_hidden, num_cond_inputs, act=act),
-            fnn.BatchNormFlow(num_inputs),
-            fnn.Reverse(num_inputs)
-        ]
+            modules += [
+                fnn.MADE(num_inputs, num_hidden, num_cond_inputs, act=act),
+                fnn.BatchNormFlow(num_inputs),
+                fnn.Reverse(num_inputs)
+            ]
 
         model = fnn.FlowSequential(*modules)
 
