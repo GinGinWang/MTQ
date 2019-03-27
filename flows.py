@@ -1,3 +1,4 @@
+import math
 import types
 
 import numpy as np
@@ -18,7 +19,7 @@ def get_mask(in_features, out_features, in_flow_features, mask_type=None):
     else:
         in_degrees = torch.arange(in_features) % (in_flow_features - 1)
 
-    if mask_type == 'output':
+    if mask_type == 'output':  
         out_degrees = torch.arange(out_features) % in_flow_features - 1
     else:
         out_degrees = torch.arange(out_features) % (in_flow_features - 1)

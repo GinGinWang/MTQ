@@ -10,12 +10,14 @@ from models.blocks_2d import DownsampleBlock
 from models.blocks_2d import UpsampleBlock 
 
 from models.estimator_sos import EstimatorSoS
+from model.estimator_maf import EstimatorMAF
 import torch.nn.functional as F
 
 
 class Encoder(BaseModule):
     """
     MNIST model encoder.
+    same as LSA
     """
     def __init__(self, input_shape, code_length):
         # type: (Tuple[int, int, int], int) -> None
@@ -75,6 +77,7 @@ class Decoder(BaseModule):
         # type: (int, Tuple[int, int, int], Tuple[int, int, int]) -> None
         """
         Class constructor.
+        same as LSA
 
         :param code_length: the dimensionality of latent vectors.
         :param deepest_shape: the dimensionality of the encoder's deepest convolutional map.
@@ -128,20 +131,25 @@ class SOSLSA_MNIST(BaseModule):
     """
     LSA model for MNIST one-class classification.
     """
-    def __init__(self,  input_shape, code_length,num_blocks):
+    def __init__(self,  input_shape, code_length,num_blocks, est_name):
         # type: (Tuple[int, int, int], int, int) -> None
         """
         Class constructor.
 
         :param input_shape: the shape of MNIST samples.
         :param code_length: the dimensionality of latent vectors.
-        :param cpd_channels: number of bins in which the multinomial works.
+        :param cpd_channels: number of bins in which the multinomial 
+        works.
+        :param est_name: density estimator {"sos","maf"}
+        :param coder_name: auto-encoder {"LSA"}
         """
         super(SOSLSA_MNIST, self).__init__()
 
         self.input_shape = input_shape
         self.code_length = code_length
-        self.name = "SOSLSA"
+        self.est_name = est_name
+        self.coder_name = coder_name
+        self.name = est_name+coder_name
 
         # Build encoder
         self.encoder = Encoder(
@@ -157,8 +165,13 @@ class SOSLSA_MNIST(BaseModule):
         )
 
         # Build estimator
-        # JJ: Use New density estimator
-        self.estimator = EstimatorSoS(num_blocks, code_length)        
+        # Use New density estimator
+            #sosflow
+        if est_name == "SOS":
+            self.estimator = EstimatorSoS(num_blocks, code_length)  
+            # maf    
+        elif est_name == "MAF":
+            self.estimator = EstimatorMAF(num_blocks, code_length)
 
     def forward(self, x):
         # type: (torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]

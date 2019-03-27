@@ -69,6 +69,7 @@ class OneClassResultHelper(object):
             sample_llk = np.zeros(shape=(len(loader),))
             sample_rec = np.zeros(shape=(len(loader),))
             sample_y = np.zeros(shape=(len(loader),))
+
             for i, (x, y) in tqdm(enumerate(loader), desc=f'Computing scores for {self.dataset}'):
                 x = x.to('cuda')
 
@@ -82,6 +83,7 @@ class OneClassResultHelper(object):
 
             # Normalize scores
             sample_llk = normalize(sample_llk, min_llk, max_llk)
+
             sample_rec = normalize(sample_rec, min_rec, max_rec)
 
             # Compute the normalized novelty score
@@ -207,8 +209,6 @@ class OneClassTrainHelper(object):
                     self.model.zero_grad()
                     # x_tra
                     x = x.to('cuda')
-
-                    
 
                     x_r, z, z_dist,s,log_jacob_s = self.model(x)
 

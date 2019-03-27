@@ -28,6 +28,7 @@ class SumLoss(nn.Module):
         # Set up loss modules
         self.reconstruction_loss_fn = ReconstructionLoss()
         self.autoregression_loss_fn = AutoregressionLoss(self.cpd_channels)
+
         self.sos_loss_fn = SoSLoss()
 
         # Numerical variables
@@ -55,20 +56,19 @@ class SumLoss(nn.Module):
         if self.lossname == "LSA":
             rec_loss = self.reconstruction_loss_fn(x, x_r)
             arg_loss = self.autoregression_loss_fn(z, z_dist)
-            llk_loss = arg_loss
+            
             tot_loss = rec_loss + self.lam * arg_loss
 
         if self.lossname == "SOSLSA":
             # rec_loss = self.reconstruction_loss_fn(x, x_r)
             rec_loss = 0
             arg_loss = self.sos_loss_fn(s,log_jacob_s)
-            llk_loss = self.sos_loss_fn(s,log_jacob_s)
             tot_loss = rec_loss + self.lam * arg_loss
 
         # Store numerical
         self.reconstruction_loss = rec_loss.item()
         self.autoregression_loss = arg_loss.item()
-        self.llk_loss = llk_loss.item()
+        
         self.total_loss = tot_loss.item()
 
         return tot_loss

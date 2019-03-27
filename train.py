@@ -19,9 +19,12 @@ def train_mnist():
 
     # dataset split to train and testcd
     dataset = MNIST(path='data/MNIST')
-    print (dataset.shape)
+    print ("dataset shape: "dataset.shape)
+    
     # Build Model
-    model =SOSLSA_MNIST(input_shape=dataset.shape,code_length=32, num_blocks=5).cuda()
+    estimator_name = "maf" # specify an estimator
+    
+    model =SOSLSA_MNIST(input_shape=dataset.shape,code_length=32, num_blocks=5,est_name= estimator_name, coder_name ="LSA").cuda()
 
     # model = LSAMNIST(input_shape=dataset.shape, code_length=32, cpd_channels=100).cuda()
 
@@ -37,7 +40,7 @@ def train_mnist():
 
     # Initialize training process
     helper = OneClassTrainHelper(dataset, model, optimizer, checkpoints_dir=dirName, train_epoch=100)
-    
+
     # Start training 
     helper.train_one_class_classification()
 
