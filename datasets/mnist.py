@@ -162,4 +162,4 @@ class MNIST(OneClassDataset):
         return 1, 28, 28
 
     def __repr__(self):
-        return f"ONE-CLASS MNIST (normal class =  {self.normal_class} )"
+        return ("ONE-CLASS MNIST (normal class =  {} )").format(self.normal_class)
