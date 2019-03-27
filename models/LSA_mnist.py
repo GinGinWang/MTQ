@@ -62,10 +62,16 @@ class Encoder(BaseModule):
         """
 
         h = x
+        
         h = self.conv(h)
+        print ("h:")
+        print(h.shape)
         h = h.view(len(h), -1)
+        print ("h:")
+        print(h.shape)
         o = self.fc(h)
-
+        print("o:")
+        print(o.shape)
         return o
 
 
@@ -123,7 +129,6 @@ class Decoder(BaseModule):
         h = h.view(len(h), *self.deepest_shape)
         h = self.conv(h)
         o = h
-
         return o
 
 
@@ -148,8 +153,7 @@ class LSA_MNIST(BaseModule):
         self.input_shape = input_shape
         self.code_length = code_length
         self.est_name = est_name
-        self.coder_name = coder_name
-        self.name = est_name+coder_name
+        self.name = f"{est_name}LSA"
 
         # Build encoder
         self.encoder = Encoder(
@@ -184,17 +188,15 @@ class LSA_MNIST(BaseModule):
         h = x
 
         # Produce representations
-        # z = self.encoder(h)
-        z = h
-
+        z = self.encoder(h)
+        
         # Estimate CPDs with autoregression
         # JJ: replace estimator with SOSflow z= SOS(s)
         # density estimator
         s,log_jacob_s = self.estimator(z)
 
         # Reconstruct x
-        # x_r = self.decoder(z)
-        x_r = z 
+        x_r = self.decoder(z)
         x_r = x_r.view(-1, *self.input_shape)
         z_dist = None
 

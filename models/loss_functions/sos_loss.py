@@ -18,7 +18,7 @@ class SoSLoss(BaseModule):
             -1, keepdim=True)
         # formula (3)
         # loss = -(log_probs + log_jacob).sum() if use_J else -(log_probs).sum()
-        loss = (-log_probs + log_jacob).sum() if use_J else -(log_probs).sum()
+        loss = -(log_probs + log_jacob).sum() if use_J else -(log_probs).sum()
         
         if size_average:
             loss /= s.size(0)

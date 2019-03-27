@@ -12,7 +12,7 @@ from models.base import BaseModule
 import general_maf  as gmaf
 # 
 # import flows as fnn
-import flows_temp as fnn
+import flows_maf as fnn
 
 class EstimatorMAF(BaseModule):
     """
@@ -25,7 +25,7 @@ class EstimatorMAF(BaseModule):
     p(s) = q(z), pd
     """
 
-    def __init__(self, num_blocks, code_length, num_hidden=60, K=5, M=3, use_bn=True ):
+    def __init__(self, num_blocks, code_length, num_hidden=60, use_bn=True ):
         # type: (int, List[int], int) -> None
         """
         Class constructor.
@@ -38,11 +38,16 @@ class EstimatorMAF(BaseModule):
             M
             use_bn
         """
-        super(EstimatorSoS, self).__init__()
+        num_inputs = code_length
+        num_cond_inputs = None
+        act = 'relu'
 
-        self.code_length = code_length
+
+        super(EstimatorMAF, self).__init__()
+
+        code_length = code_length
         modules = []
-        for _ in range(args.num_blocks):
+        for _ in range(num_blocks):
             modules += [
                 fnn.MADE(num_inputs, num_hidden, num_cond_inputs, act=act),
                 fnn.BatchNormFlow(num_inputs),

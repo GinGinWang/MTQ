@@ -28,16 +28,14 @@ class SumLoss(nn.Module):
         # Set up loss modules
         self.reconstruction_loss_fn = ReconstructionLoss()
         self.autoregression_loss_fn = AutoregressionLoss(self.cpd_channels)
-
         self.sos_loss_fn = SoSLoss()
 
         # Numerical variables
-        self.reconstruction_loss = None
-        self.autoregression_loss = None
-        self.llk_loss = None
+        self.reconstruction_loss = 0
+        self.autoregression_loss = 0
 
         # Add all needed loss
-        self.total_loss = None
+        self.total_loss = 0
 
     def forward(self, x, x_r, z, z_dist, s, log_jacob_s):
         # type: (torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor) -> torch.Tensor
@@ -54,21 +52,23 @@ class SumLoss(nn.Module):
         """
         # Compute pytorch loss
         if self.lossname == "LSA":
-            rec_loss = self.reconstruction_loss_fn(x, x_r)
             arg_loss = self.autoregression_loss_fn(z, z_dist)
-            
-            tot_loss = rec_loss + self.lam * arg_loss
-
         if self.lossname == "SOSLSA":
             # rec_loss = self.reconstruction_loss_fn(x, x_r)
-            rec_loss = 0
             arg_loss = self.sos_loss_fn(s,log_jacob_s)
-            tot_loss = rec_loss + self.lam * arg_loss
+
+        if self.lossname == "MAFLSA":
+            # rec_loss = self.reconstruction_loss_fn(x, x_r)
+            arg_loss = self.sos_loss_fn(s,log_jacob_s)
 
         # Store numerical
-        self.reconstruction_loss = rec_loss.item()
-        self.autoregression_loss = arg_loss.item()
-        
-        self.total_loss = tot_loss.item()
+        rec_loss = self.reconstruction_loss_fn(x,x_r)
+
+        self.reconstruction_loss += rec_loss.item()
+        self.autoregression_loss += arg_loss.item()
+
+        self.total_loss += self.reconstruction_loss+ self.autoregression_loss
+
+        tot_loss = rec_loss+ arg_loss;
 
         return tot_loss

@@ -2,9 +2,7 @@ import argparse
 from argparse import Namespace
 
 from datasets.mnist import MNIST
-from models import SOSLSA_MNIST
-from models import LSAMNIST
-from models import SOSAE_MNIST
+from models import LSA_MNIST
 
 from datasets.utils import set_random_seed
 from result_helpers import OneClassTrainHelper
@@ -28,27 +26,29 @@ def main():
     # prepare dataset in train mode
     if args.dataset == 'mnist':
         dataset = MNIST(path='data/MNIST')
+
     elif args.dataset == 'cifar10':
         dataset = MNIST(path='data/CIFAR')
+    
     else:
         raise ValueError('Unknown dataset')
+    
     print ("dataset shape: ",dataset.shape)
     
 
     # Build Model
-    if coder_name == "LSA":
-        if estimator_name == "SOS"    
-        model =LSA_MNIST(input_shape=dataset.shape,code_length=32, num_blocks=5,est_name= arg.estimator_name, coder_name ="LSA").cuda()
+    if args.autoencoder == "LSA":
+        model =LSA_MNIST(input_shape=dataset.shape,code_length=32, num_blocks=5,est_name= args.estimator).cuda()
     # (add other models here)    
 
     # Optimizer
-    optimizer = optim.Adam(model.parameters(), lr=arg.lr, weight_decay=1e-6)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-6)
 
     # trained model save_dir
-    dirName = f'checkpoints/{arg.dataset}/'
+    dirName = f'checkpoints/{args.dataset}/'
     
     # Initialize training process
-    helper = OneClassTrainHelper(dataset, model, optimizer, checkpoints_dir=dirName, train_epoch=arg.epochs)
+    helper = OneClassTrainHelper(dataset, model, optimizer, checkpoints_dir=dirName, train_epoch=args.epochs)
 
     # Start training 
     helper.train_one_class_classification()
@@ -79,8 +79,15 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description = 'Train autoencoder with density estimation',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
+    # autoencoder name 
+    parser.add_argument('--autoencoder', type=str,
+                        help='The Autoencoder framework.'
+                        'Choose among `LSA`', metavar='')
+    # density estimator
+    parser.add_argument('--estimator', type=str, default='SOS', help='The name of density estimator.'
+                        'Choose among `SOS`, `MAF`', metavar='')
     # dataset 
-    parser.add_argument('dataset', type=str,
+    parser.add_argument('--dataset', type=str,
                         help='The name of the dataset to perform tests on.'
                         'Choose among `mnist`, `cifar10`', metavar='')
     
@@ -101,10 +108,6 @@ def parse_arguments():
     # learning rate 
     parser.add_argument(
     '--lr', type=float, default=0.0001, help='learning rate (default: 0.0001)')
-
-    # density estimator
-    parser.add_argument(
-    '--density', default='MAF', help='flow to use: MAF | SOS')
 
     # disable cuda
     parser.add_argument(

@@ -29,6 +29,11 @@ class MaskedLinear(nn.Linear):
         self.register_buffer('mask', mask)
 
     def forward(self, inputs):
+
+        # print(inputs.shape)  100 1 28 28
+        # print(self.weight.shape)  60 32
+        # print(self.mask.shape)     60 32
+
         return F.linear(inputs, self.weight * self.mask, self.bias)
 
 
@@ -55,51 +60,6 @@ class GeneralMADE(nn.Module):
     def _params(self, inputs):
         return self.param_net(inputs)
 
-
-# class MADE(GeneralMADE):
-#     def __init__(self, num_inputs, num_hidden, use_tanh=True):
-#         super().__init__(num_inputs, num_hidden, 2*num_inputs)
-#         self.use_tanh = use_tanh
-
-#     def _make_param_net(self):
-#         input_mask = get_mask(
-#             self.num_inputs, self.num_hidden, self.num_inputs, mask_type='input')
-#         hidden_mask = get_mask(self.num_hidden, self.num_hidden, self.num_inputs)
-#         output_mask = get_mask(
-#             self.num_hidden, self.num_inputs * 2, self.num_inputs, mask_type='output')
-
-#         return nn.Sequential(
-#             nn.MaskedLinear(self.num_inputs, self.num_hidden, input_mask), nn.ReLU(),
-#             nn.MaskedLinear(self.num_hidden, self.num_hidden, hidden_mask), nn.ReLU(),
-#             nn.MaskedLinear(self.num_hidden, self.num_inputs * 2, output_mask))
-
-#     def forward(self, inputs, mode='inverse'):
-#         if mode == 'direct':
-#             return self._direct(inputs)
-#         else:
-#             return self._inverse(inputs)
-
-#     def _direct(self, inputs):
-#         params = self.param_net(inputs)
-#         m, a = params.chunk(2, 1)
-#         if self.use_tanh:
-#             a = torch.tanh(a)
-#         u = (inputs - m) * torch.exp(-a)
-#         return u, -a.sum(-1, keepdim=True)
-
-#     def _inverse(self, inputs):
-#         x = torch.zeros_like(inputs)
-#         J = torch.zeros(inputs.size(0), 1)
-#         for i in range(inputs.shape[1]):
-#             params = self.param_net(x)
-#             m, a = params.chunk(2, 1)
-#             if self.use_tanh:
-#                 a = torch.tanh(a)
-#             x_i = inputs[:, i] * torch.exp(a[:, i]) + m[:, i]
-#             J_i = -a[:, i]
-#             x[:, i] = x_i
-#             J += J_i.unsqueeze(1)
-#         return x, J
 
 
 class SumSqMAF(GeneralMADE):
@@ -176,40 +136,3 @@ class SumSqMAF(GeneralMADE):
         XCX = torch.matmul(X.transpose(3, 4), CX)                                               # bs x d x k x 1 x 1
         #aXCX = torch.matmul(a.unsqueeze(-2), XCX.squeeze(-1)).view(batch_size, self.num_inputs) # bs x d
         return torch.sum(XCX.view(XCX.size()[:3]), 2)
-
-
-# class NADE(GeneralMADE):
-#     def __init__(self, num_inputs, num_hidden, C):
-#         #super().__init__(num_inputs, num_hidden,
-#                          #k * num_inputs + k * m * num_inputs + num_inputs)
-#         super().__init__(num_inputs, num_hidden, num_inputs * 3 * C)
-#         self.C = C
-#         self.param_net= self._make_param_net()
-#         self.register_buffer('filter', self._make_filter())
-
-#     def _make_param_net(self):
-#         input_mask = get_mask(
-#             self.num_inputs, self.num_hidden, self.num_inputs, mask_type='input')
-#         hidden_mask = get_mask(self.num_hidden, self.num_hidden, self.num_inputs)
-#         output_mask = get_mask(
-#             self.num_hidden, self.num_outputs, self.num_inputs, mask_type='output')
-
-#         return nn.Sequential(
-#             MaskedLinear(self.num_inputs, self.num_hidden, input_mask), nn.ReLU(),
-#             MaskedLinear(self.num_hidden, self.num_hidden, hidden_mask), nn.ReLU(),
-#             MaskedLinear(self.num_hidden, self.num_outputs, output_mask))
-
-#     def _params(self, inputs):
-#         params = self.param_net(inputs)
-
-#         batch_size = inputs.size(0)
-#         k = self.num_inputs*self.C
-#         w = params[:,:k].view(batch_size, self.num_inputs, self.C)
-#         mu = params[:,k:2*k].view(batch_size, self.num_inputs, self.C)
-#         sigma = params[:, 2*k:].view(batch_size, self.num_inputs, self.C)
-
-#         #return a, C, constant
-#         return w, mu, sigma
-
-#     def forward(self, inputs, train=False):
-#         return self._params(inputs)

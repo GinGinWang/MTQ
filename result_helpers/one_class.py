@@ -60,6 +60,7 @@ class OneClassResultHelper(object):
 
             # First we need a run on validation, to compute
             # normalizing coefficient of the Novelty Score (Eq.9)
+            
             min_llk, max_llk, min_rec, max_rec = self.compute_normalizing_coefficients(cl)
 
             # Run the actual test
@@ -123,7 +124,7 @@ class OneClassResultHelper(object):
         sample_rec = np.zeros(shape=(len(loader),))
         for i, (x, y) in enumerate(loader):
             x = x.to('cuda')
-
+            print(x.shape)
             x_r, z, z_dist, s, log_jacob_s = self.model(x)
 
             self.loss(x, x_r, z, z_dist,s, log_jacob_s)

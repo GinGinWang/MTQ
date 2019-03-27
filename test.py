@@ -1,38 +1,73 @@
 import argparse
 from argparse import Namespace
 
-from datasets import MNIST
-
-from models import SOSLSA_MNIST
-from models import LSAMNIST
-from models import SOSAE_MNIST
-
-from result_helpers import OneClassResultHelper
+from datasets.mnist import MNIST
+from models import LSA_MNIST
 
 from datasets.utils import set_random_seed
+from result_helpers import OneClassResultHelper
 
-def test_mnist():
+import torch.optim as optim
+
+
+
+def main():
     # type: () -> None
     """
-    Performs One-class classification tests on MNIST
+    Performs One-class classification tests on one dataset
     """
 
-    # dataset split to train and test
-    dataset = MNIST(path='data/MNIST')
+    ## Parse command line arguments
+    args = parse_arguments()
 
-    # set model for test
-    # model = SOSAE_MNIST(input_shape=dataset.shape, code_length=32, num_blocks= 5).cuda().eval()
+    # Lock seeds
+    set_random_seed(30101990)
 
-    # code_lenghth: latent vector length, cpd_channels:cpd_length
-    # model = LSAMNIST(input_shape=dataset.shape, code_length=32, cpd_channels=100).cuda().eval()
+    # prepare dataset in train mode
+    if args.dataset == 'mnist':
+        dataset = MNIST(path='data/MNIST')
+
+    elif args.dataset == 'cifar10':
+        dataset = MNIST(path='data/CIFAR')
     
-    model =SOSLSA_MNIST(input_shape=dataset.shape,code_length=32, num_blocks=5).cuda().eval()
-
-    # Set up result helper and perform test
-    model_path = 'checkpoints/mnist/'
-    helper = OneClassResultHelper(dataset, model, checkpoints_dir=model_path, output_file='mnist_.'+model.name+'txt')
+    else:
+        raise ValueError('Unknown dataset')
     
+    print ("dataset shape: ",dataset.shape)
+    
+
+    # Build Model
+    if args.autoencoder == "LSA":
+        model =LSA_MNIST(input_shape=dataset.shape,code_length=32, num_blocks=5,est_name= args.estimator).cuda()
+    # (add other models here)    
+
+    # Optimizer
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-6)
+
+    # trained model save_dir
+    dirName = "checkpoints/mnist/"
+
+    
+    # Initialize training process
+    helper = OneClassResultHelper(dataset, model,checkpoints_dir= dirName, output_file= f"{args.autoencoder}_{args.estimator}_{args.dataset}" )
+
+    # Start training 
     helper.test_one_class_classification()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def parse_arguments():
@@ -42,31 +77,66 @@ def parse_arguments():
 
     :return: the command line arguments.
     """
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('dataset', type=str,
+    parser = argparse.ArgumentParser(description = 'Train autoencoder with density estimation',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    # autoencoder name 
+    parser.add_argument('--autoencoder', type=str,
+                        help='The Autoencoder framework.'
+                        'Choose among `LSA`', metavar='')
+    # density estimator
+    parser.add_argument('--estimator', type=str, default='SOS', help='The name of density estimator.'
+                        'Choose among `SOS`, `MAF`', metavar='')
+    # dataset 
+    parser.add_argument('--dataset', type=str,
                         help='The name of the dataset to perform tests on.'
-                             'Choose among `mnist`, `cifar10`, `ucsd-ped2`, `shanghaitech`', metavar='')
+                        'Choose among `mnist`, `cifar10`', metavar='')
+    
+    # batch size for training
+    parser.add_argument(
+    '--batch-size',
+    type=int,
+    default=100,
+    help='input batch size for training (default: 100)')
+    
+    # epochs 
+    parser.add_argument(
+    '--epochs',
+    type=int,
+    default=1000,
+    help='number of epochs to train (default: 1000)')
+    
+    # learning rate 
+    parser.add_argument(
+    '--lr', type=float, default=0.0001, help='learning rate (default: 0.0001)')
+
+    # disable cuda
+    parser.add_argument(
+    '--no-cuda',
+    action='store_true',
+    default=False,
+    help='disables CUDA training')
+
+    # number of blocks
+    parser.add_argument(
+    '--num-blocks',
+    type=int,
+    default=5,
+    help='number of invertible blocks (default: 5)')
+
+
+    # number of blocks
+    parser.add_argument(
+    '--code-length',
+    type=int,
+    default=32,
+    help='length of hidden vector (default: 32)')
+
+    #K  (only for SOS flow) 
+    #M (only for SOS flow)
 
     return parser.parse_args()
-
-
-def main():
-
-    # Parse command line arguments
-    args = parse_arguments()
-
-    # Lock seeds
-    set_random_seed(30101990)
-
-    # Run test
-    if args.dataset == 'mnist':
-        test_mnist()
-    elif args.dataset == 'cifar10':
-        test_cifar()
-    else:
-        raise ValueError('Unknown dataset')
-
-
+    
 # Entry point
 if __name__ == '__main__':
     main()

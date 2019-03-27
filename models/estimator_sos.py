@@ -36,8 +36,8 @@ class EstimatorSoS(BaseModule):
         """
         super(EstimatorSoS, self).__init__()
 
-        self.code_length = code_length
         modules = []
+        
         for _ in range(num_blocks):
             if use_bn:
                 modules += [
