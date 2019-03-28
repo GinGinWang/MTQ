@@ -61,8 +61,11 @@ class OneClassResultHelper(object):
             # First we need a run on validation, to compute
             # normalizing coefficient of the Novelty Score (Eq.9)
             
-            min_llk, max_llk, min_rec, max_rec = self.compute_normalizing_coefficients(cl)
-
+            # min_llk, max_llk, min_rec, max_rec = self.compute_normalizing_coefficients(cl)
+            min_llk =0
+            max_llk =1
+            min_rec =0
+            max_rec =1
             # Run the actual test
             self.dataset.test(cl)
             loader = DataLoader(self.dataset)
@@ -73,9 +76,7 @@ class OneClassResultHelper(object):
 
             for i, (x, y) in tqdm(enumerate(loader), desc=f'Computing scores for {self.dataset}'):
                 x = x.to('cuda')
-
                 x_r, z, z_dist, s, log_jacob_s = self.model(x)
-
                 self.loss(x, x_r, z, z_dist,s,log_jacob_s)
 
                 sample_llk[i] = - self.loss.autoregression_loss
@@ -124,7 +125,6 @@ class OneClassResultHelper(object):
         sample_rec = np.zeros(shape=(len(loader),))
         for i, (x, y) in enumerate(loader):
             x = x.to('cuda')
-            print(x.shape)
             x_r, z, z_dist, s, log_jacob_s = self.model(x)
 
             self.loss(x, x_r, z, z_dist,s, log_jacob_s)
@@ -213,15 +213,15 @@ class OneClassTrainHelper(object):
 
                     x_r, z, z_dist,s,log_jacob_s = self.model(x)
 
-                    tot_loss = self.loss(x, x_r, z,z_dist, s, log_jacob_s) 
+                    self.loss(x, x_r, z,z_dist, s, log_jacob_s) 
 
-                    (tot_loss).backward()
+                    (self.loss.total_loss).backward()
 
                     self.optimizer.step()
 
-                    epoch_loss=+self.loss.total_loss
-                    epoch_recloss =+ self.loss.reconstruction_loss
-                    epoch_regloss =+ self.loss.autoregression_loss
+                    epoch_loss=+self.loss.total_loss.item()
+                    epoch_recloss =+ self.loss.reconstruction_loss.item()
+                    epoch_regloss =+ self.loss.autoregression_loss.item()
 
                     # print batch result
                     
@@ -230,5 +230,6 @@ class OneClassTrainHelper(object):
 
             #save model for every normal class
             print("Training finish! Normal_class:>>>>>",cl)
+            print(join(self.checkpoints_dir,f'{cl}{self.model.name}.pkl'))
             torch.save(self.model.state_dict(), join(self.checkpoints_dir,f'{cl}{self.model.name}.pkl'))
        

@@ -33,17 +33,13 @@ def main():
     else:
         raise ValueError('Unknown dataset')
     
-    print ("dataset shape: ",dataset.shape)
     
 
     # Build Model
     if args.autoencoder == "LSA":
-        model =LSA_MNIST(input_shape=dataset.shape,code_length=32, num_blocks=5,est_name= args.estimator).cuda()
+        model =LSA_MNIST(input_shape=dataset.shape,code_length=32, num_blocks=5,est_name= args.estimator).cuda().eval()
     # (add other models here)    
-
-    # Optimizer
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-6)
-
+   
     # trained model save_dir
     dirName = "checkpoints/mnist/"
 

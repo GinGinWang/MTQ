@@ -33,7 +33,7 @@ class Encoder(BaseModule):
         self.code_length = code_length
 
         c, h, w = input_shape
-
+        
         activation_fn = nn.LeakyReLU()
 
         # Convolutional network
@@ -61,17 +61,10 @@ class Encoder(BaseModule):
         :return: the batch of latent vectors.
         """
 
-        h = x
-        
+        h = x  
         h = self.conv(h)
-        print ("h:")
-        print(h.shape)
         h = h.view(len(h), -1)
-        print ("h:")
-        print(h.shape)
         o = self.fc(h)
-        print("o:")
-        print(o.shape)
         return o
 
 
@@ -185,10 +178,9 @@ class LSA_MNIST(BaseModule):
         :param x: the input batch of images.
         :return: a tuple of torch.Tensors holding reconstructions, latent vectors and CPD estimates.
         """
-        h = x
 
         # Produce representations
-        z = self.encoder(h)
+        z = self.encoder(x)
         
         # Estimate CPDs with autoregression
         # JJ: replace estimator with SOSflow z= SOS(s)
