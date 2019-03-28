@@ -61,11 +61,7 @@ class OneClassResultHelper(object):
             # First we need a run on validation, to compute
             # normalizing coefficient of the Novelty Score (Eq.9)
             
-            # min_llk, max_llk, min_rec, max_rec = self.compute_normalizing_coefficients(cl)
-            min_llk =0
-            max_llk =1
-            min_rec =0
-            max_rec =1
+            min_llk, max_llk, min_rec, max_rec = self.compute_normalizing_coefficients(cl)
             # Run the actual test
             self.dataset.test(cl)
             loader = DataLoader(self.dataset)
