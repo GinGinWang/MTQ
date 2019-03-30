@@ -129,7 +129,7 @@ class LSA_MNIST(BaseModule):
     """
     LSA model for MNIST one-class classification.
     """
-    def __init__(self,  input_shape, code_length,num_blocks, est_name):
+    def __init__(self,  input_shape, code_length,num_blocks, est_name,combine_density):
         # type: (Tuple[int, int, int], int, int) -> None
         """
         Class constructor.
@@ -139,7 +139,9 @@ class LSA_MNIST(BaseModule):
         :param cpd_channels: number of bins in which the multinomial 
         works.
         :param est_name: density estimator {"sos","maf"}
-        :param coder_name: auto-encoder {"LSA"}
+        :param combine_density: 
+                            False =  input of estimator is z
+                            True  =  input of estimator is (z,|x-xr|^2)
         """
         super(LSA_MNIST, self).__init__()
 
@@ -147,6 +149,9 @@ class LSA_MNIST(BaseModule):
         self.code_length = code_length
         self.est_name = est_name
         self.name = f"{est_name}LSA"
+
+        # the input of estimator is density z / combine_density (z,|x-x_r|^2)
+        self.combine_density = combine_density
 
         # Build encoder
         self.encoder = Encoder(
@@ -164,11 +169,22 @@ class LSA_MNIST(BaseModule):
         # Build estimator
         # Use New density estimator
             #sosflow
-        if est_name == "SOS":
-            self.estimator = EstimatorSoS(num_blocks, code_length)  
-            # maf    
-        elif est_name == "MAF":
-            self.estimator = EstimatorMAF(num_blocks, code_length)
+        if combine_density == False:
+            if est_name == "SOS":
+                self.estimator = EstimatorSoS(num_blocks, code_length)  
+                # maf    
+            elif est_name == "MAF":
+                self.estimator = EstimatorMAF(num_blocks, code_length)
+        else:
+
+        # density = [z,dist(x,x_r)], code_length+1
+            if est_name == "SOS":
+                self.estimator = EstimatorSoS(num_blocks, code_length+1)  
+                # maf    
+            elif est_name == "MAF":
+                self.estimator = EstimatorMAF(num_blocks, code_length+1)
+
+
 
     def forward(self, x):
         # type: (torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
@@ -182,14 +198,25 @@ class LSA_MNIST(BaseModule):
         # Produce representations
         z = self.encoder(x)
         
-        # Estimate CPDs with autoregression
-        # JJ: replace estimator with SOSflow z= SOS(s)
-        # density estimator
-        s,log_jacob_s = self.estimator(z)
 
         # Reconstruct x
         x_r = self.decoder(z)
         x_r = x_r.view(-1, *self.input_shape)
         z_dist = None
+
+
+        # Estimate CPDs with autoregression
+        # density estimator
+        if combine_density == False:
+            s,log_jacob_s = self.estimator(z)
+        
+        # [z,|x-xr|^2]
+        else:
+            L = torch.pow((x - x_r), 2)
+
+            while L.dim() > 1:
+                L = torch.sum(L, dim=-1)
+            
+            s,log_jacob_s = self.estimator([z,L])
 
         return x_r, z, z_dist,s,log_jacob_s

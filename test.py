@@ -5,7 +5,7 @@ from datasets.mnist import MNIST
 from models import LSA_MNIST
 
 from datasets.utils import set_random_seed
-from result_helpers import OneClassResultHelper
+from result_helpers import OneClassTestHelper
 
 import torch.optim as optim
 
@@ -45,7 +45,7 @@ def main():
 
     
     # Initialize training process
-    helper = OneClassResultHelper(dataset, model,checkpoints_dir= dirName, output_file= f"{args.autoencoder}_{args.estimator}_{args.dataset}" )
+    helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, checkpoints_dir= dirName, output_file= f"{args.autoencoder}_{args.estimator}_{args.dataset}" )
 
     # Start training 
     helper.test_one_class_classification()
@@ -128,11 +128,34 @@ def parse_arguments():
     default=32,
     help='length of hidden vector (default: 32)')
 
+    # Normalize the novelty score
+    parser.add_argument(
+        '--score_normed',
+        type = bool,
+        default= False,
+        help ='For Test: Normalize novelty score by Valid Set' )
+
+    # novel ratio
+    parser.add_argument(
+        '--novel_ratio',
+        type = float,
+        default= 0.1,
+        help ='For Test: Ratio, novel examples in test sets: [0,1,0.5]' )
+    
+    # join density
+    parser.add_argument(
+        '--combine_density',
+        type = bool,
+        default= False,
+        help = 'Combine reconstruction loss in the input of density estimator'
+        )
+
     #K  (only for SOS flow) 
+    
     #M (only for SOS flow)
 
     return parser.parse_args()
-    
+
 # Entry point
 if __name__ == '__main__':
     main()

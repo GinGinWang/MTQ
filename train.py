@@ -37,8 +37,9 @@ def main():
     
 
     # Build Model
-    if args.autoencoder == "LSA":
+    if args.autoencoder == "LSA":        
         model =LSA_MNIST(input_shape=dataset.shape,code_length=32, num_blocks=5,est_name= args.estimator).cuda()
+
     # (add other models here)    
 
     # Optimizer
@@ -130,6 +131,15 @@ def parse_arguments():
     type=int,
     default=32,
     help='length of hidden vector (default: 32)')
+
+    # join density (For train or test)
+    parser.add_argument(
+        '--combine_density',
+        type = bool,
+        default= False,
+        help = 'Combine reconstruction loss in the input of density estimator'
+        )
+
 
     #K  (only for SOS flow) 
     #M (only for SOS flow)

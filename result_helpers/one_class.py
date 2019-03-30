@@ -15,25 +15,30 @@ from datasets.utils import novelty_score
 from datasets.utils import normalize
 
 
-class OneClassResultHelper(object):
+class OneClassTestHelper(object):
     """
     Performs tests for one-class datasets (MNIST or CIFAR-10).
     """
 
-    def __init__(self, dataset, model, checkpoints_dir, output_file):
+    def __init__(self, dataset, model, score_normed, novel_ratio,checkpoints_dir, output_file):
         # type: (OneClassDataset, BaseModule, str, str) -> None
         """
         Class constructor.
 
         :param dataset: dataset class.
-        :param model: pytorch model to evaluate.
+        :param novel_ratio: novel_ratio in test sets
+        :param model: py-torch model to evaluate.
         :param checkpoints_dir: directory holding checkpoints for the model.
         :param output_file: text file where to save results.
+        :param score_normed: 1 normalized the novelty score with valid set, 0: not normalized
         """
         self.dataset = dataset
         self.model = model
         self.checkpoints_dir = checkpoints_dir
         self.output_file = output_file
+
+        # control novel ratio in test sets.
+        self.novel_ratio = novel_ratio
 
         # Set up loss function
         self.loss = SumLoss(self.model.name)
@@ -58,12 +63,13 @@ class OneClassResultHelper(object):
             # Load the checkpoint
             self.model.load_w(join(self.checkpoints_dir, f'{cl}{self.model.name}.pkl'))
 
-            # First we need a run on validation, to compute
-            # normalizing coefficient of the Novelty Score (Eq.9)
-            
-            min_llk, max_llk, min_rec, max_rec = self.compute_normalizing_coefficients(cl)
-            # Run the actual test
-            self.dataset.test(cl)
+            if self.score_normed == 1:
+                # we need a run on validation, to compute
+                # normalizing coefficient of the Novelty Score (Eq.9 in LSA)
+                min_llk, max_llk, min_rec, max_rec = self.compute_normalizing_coefficients(cl)
+
+            # Prepare test set for one class and control the novel ratio in test set
+            self.dataset.test(cl,self.novel_ratio)
             loader = DataLoader(self.dataset)
 
             sample_llk = np.zeros(shape=(len(loader),))
@@ -79,14 +85,15 @@ class OneClassResultHelper(object):
                 sample_rec[i] = - self.loss.reconstruction_loss
                 sample_y[i] = y.item()
 
-            # Normalize scores
-            sample_llk = normalize(sample_llk, min_llk, max_llk)
+            if self.score_normed == 1:
+                # Normalize scores
+                sample_llk = normalize(sample_llk, min_llk, max_llk)
 
-            sample_rec = normalize(sample_rec, min_rec, max_rec)
+                sample_rec = normalize(sample_rec, min_rec, max_rec)
 
             # Compute the normalized novelty score
             sample_ns = novelty_score(sample_llk, sample_rec)
-
+            
             # Compute AUROC for this class
             this_class_metrics = [
                 roc_auc_score(sample_y, sample_llk),  # likelihood metric
@@ -169,6 +176,7 @@ class OneClassTrainHelper(object):
         self.checkpoints_dir = checkpoints_dir
         self.train_epoch = train_epoch
         self.optimizer = optimizer
+        self.combine_density = combine_density
 
         # Set up loss function
         # if self.model.name =="SOSLSA":
