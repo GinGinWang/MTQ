@@ -105,6 +105,7 @@ class OneClassTestHelper(object):
 
                 sample_rec = normalize(sample_rec, min_rec, max_rec)
 
+            print(sample_llk)
             # Compute the normalized novelty score
             sample_ns = novelty_score(sample_llk, sample_rec)
 

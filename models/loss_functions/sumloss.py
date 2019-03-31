@@ -64,5 +64,5 @@ class SumLoss(nn.Module):
         # Store numerical
         self.reconstruction_loss = self.reconstruction_loss_fn(x,x_r)
 
-        self.total_loss = self.reconstruction_loss+ self.autoregression_loss
+        self.total_loss = self.reconstruction_loss+self.lam *self.autoregression_loss
         

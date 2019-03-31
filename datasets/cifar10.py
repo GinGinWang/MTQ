@@ -7,6 +7,7 @@ from torchvision import datasets
 from torchvision import transforms
 
 from datasets.base import OneClassDataset
+
 from datasets.transforms import OCToFloatTensor2D
 from datasets.transforms import ToFloat32
 from datasets.transforms import ToFloatTensor2D
@@ -111,25 +112,33 @@ class CIFAR10(OneClassDataset):
         self.mode = 'test'
         self.transform = self.test_transform
 
-        # create test examples (normal)
-        self.test_idxs = [idx for idx in self.shuffled_test_idx if self.test_split[idx][1] == self.normal_class]
+        if novel_ratio == 1:
+            # testing examples (norm)
+            self.length = len(self.test_split)
+            normal_idxs = [idx for idx in self.shuffled_test_idx if self.test_split[idx][1] == self.normal_class]
+            normal_num = len(normal_idxs)
+            novel_num = self.length - normal_num
+        else:
+            # create test examples (normal)
+            self.test_idxs = [idx for idx in self.shuffled_test_idx if self.test_split[idx][1] == self.normal_class]
 
-        normal_num = len(self.test_idxs)
+            normal_num = len(self.test_idxs)
 
-        # add test examples (unnormal)
-        novel_num  = int(normal_num/(1-novel_ratio) - normal_num)
-        
-        novel_idxs = [idx for idx in self.shuffled_test_idx if self.test_split[idx][1] != self.normal_class]
+            # add test examples (unnormal)
+            novel_num  = int(normal_num/(1-novel_ratio) - normal_num)
+            
+            novel_idxs = [idx for idx in self.shuffled_test_idx if self.test_split[idx][1] != self.normal_class]
 
-        novel_idxs = novel_idxs[0:novel_num]
+            novel_idxs = novel_idxs[0:novel_num]
 
-        # combine normal and novel part
-        self.test_idxs = self.test_idxs+novel_idxs
-        
-        # testing examples (norm)
-        self.length = len(self.test_idxs)
+            # combine normal and novel part
+            self.test_idxs = self.test_idxs+novel_idxs
+            
+            # testing examples (norm)
+            self.length = len(self.test_idxs)
 
         print(f"Test Set prepared, Num:{self.length},Novel_num:{novel_num},Normal_num:{normal_num}")
+
 
     def __len__(self):
         # type: () -> int
@@ -148,16 +157,13 @@ class CIFAR10(OneClassDataset):
         # Load the i-th example
         if self.mode == 'test':
             x, y = self.test_split[i]
-            x = np.uint8(x)[..., np.newaxis]
             sample = x, int(y == self.normal_class)
 
         elif self.mode == 'val':
             x, _ = self.train_split[self.val_idxs[i]]
-            x = np.uint8(x)[..., np.newaxis]
             sample = x, x
         elif self.mode == 'train':
             x, _ = self.train_split[self.train_idxs[i]]
-            x = np.uint8(x)[..., np.newaxis]
             sample = x, x
         else:
             raise ValueError

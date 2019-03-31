@@ -4,6 +4,7 @@ from argparse import Namespace
 from datasets.mnist import MNIST
 from datasets.cifar10 import CIFAR10
 from models import LSA_MNIST
+from models import LSA_CIFAR10
 
 from datasets.utils import set_random_seed
 from train_one_class import OneClassTrainHelper
@@ -29,9 +30,11 @@ def main():
     # prepare dataset in train mode
     if args.dataset == 'mnist':
         dataset = MNIST(path='data/MNIST')
+        lam =0.1
 
     elif args.dataset == 'cifar10':
         dataset = CIFAR10(path='data/CIFAR10')
+        lam = 1
     
     else:
         raise ValueError('Unknown dataset')
@@ -56,8 +59,14 @@ def main():
 
         dataset.train(cl)
         # Build Model
-        if args.autoencoder == "LSA":        
-            model =LSA_MNIST(input_shape=dataset.shape, code_length=32, num_blocks=5, est_name= args.estimator, combine_density = args.combine_density).cuda()
+        if args.autoencoder == "LSA":
+            
+            if args.dataset == 'mnist':        
+                model =LSA_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.combine_density).cuda()
+            
+            elif args.dataset == 'cifar10':
+                model =LSA_CIFAR10(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.combine_density).cuda()
+
 
         # (add other models here)    
 
@@ -68,7 +77,7 @@ def main():
 
         
         # Initialize training process
-        helper = OneClassTrainHelper(dataset, model, optimizer, checkpoints_dir=dirName, train_epoch=args.epochs, batch_size= args.batch_size)
+        helper = OneClassTrainHelper(dataset, model, optimizer, lam = lam, checkpoints_dir=dirName, train_epoch=args.epochs, batch_size= args.batch_size)
 
         # Start training 
         helper.train_one_class_classification()
@@ -150,7 +159,7 @@ def parse_arguments():
     parser.add_argument(
     '--code_length',
     type=int,
-    default=32,
+    default=64,
     help='length of hidden vector (default: 32)')
 
     # join density (For train or test)

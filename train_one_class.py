@@ -20,7 +20,7 @@ class OneClassTrainHelper(object):
     Performs tests for one-class datasets (MNIST or CIFAR-10).
     """
 
-    def __init__(self, dataset, model, optimizer, checkpoints_dir,log_interval=1000, train_epoch=100, batch_size = 100):
+    def __init__(self, dataset, model, optimizer,lam, checkpoints_dir,log_interval=1000, train_epoch=100, batch_size = 100):
         # type: (OneClassDataset, BaseModule, str, str) -> None
         """
         Class constructor.
@@ -44,7 +44,7 @@ class OneClassTrainHelper(object):
         # Set up loss function
         # if self.model.name =="SOSLSA":
         #     self.loss= SumLoss(self.model.name, lam = 0.1)
-        self.loss = SumLoss(self.model.name)
+        self.loss = SumLoss(self.model.name,lam=lam)
         self.log_interval = log_interval
     def train_every_epoch(self, epoch):
             
@@ -54,15 +54,18 @@ class OneClassTrainHelper(object):
             epoch_regloss = 0
 
             loader = DataLoader(self.dataset, batch_size=self.batch_size)
+            print(len(loader))
 
-            for batch_idx, (x, y) in tqdm(enumerate(loader), desc=f'Training models for {self.dataset}'):
+            for batch_idx, (x,y) in tqdm(enumerate(loader), desc=f'Training models for {self.dataset}'):
                 # Clear grad for every batch
+
                 self.model.zero_grad()
+                
                 # x_tra
                 x = x.to('cuda')
                 x_r, z, z_dist,s,log_jacob_s = self.model(x)
 
-                self.loss(x, x_r, z,z_dist, s, log_jacob_s) 
+                self.loss(x, x_r, z, z_dist, s, log_jacob_s) 
 
                 (self.loss.total_loss).backward()
 
