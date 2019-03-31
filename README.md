@@ -3,8 +3,9 @@
 
 ### Content
 
-* **flows.py**,**general_maf.py** - code for sosflow.
+* **flows.py**,**general_maf.py** - code for SoS flow.
 
+* **flows_maf.py** - code for MAF flow.
 * **train.py** - code for training novelty dector.
 * **test.py** - code for testing/run novelty dector.
 
