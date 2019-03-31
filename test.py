@@ -37,15 +37,15 @@ def main():
 
     # Build Model
     if args.autoencoder == "LSA":
-        model =LSA_MNIST(input_shape=dataset.shape,code_length=32, num_blocks=5,est_name= args.estimator).cuda().eval()
+        model =LSA_MNIST(input_shape=dataset.shape,code_length=32, num_blocks=5,est_name= args.estimator,combine_density= args.combine_density).cuda().eval()
+    
     # (add other models here)    
    
     # trained model save_dir
-    dirName = "checkpoints/mnist/"
+    dirName = f'checkpoints/{args.dataset}/combined{args.combine_density}/'
 
-    
     # Initialize training process
-    helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, checkpoints_dir= dirName, output_file= f"{args.autoencoder}_{args.estimator}_{args.dataset}" )
+    helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, checkpoints_dir= dirName, output_file= f"{args.autoencoder}_{args.estimator}_{args.dataset}_cd{args.combine_density}_nml{args.score_normed}_nlration{args.novel_ratio}")
 
     # Start training 
     helper.test_one_class_classification()
@@ -90,7 +90,7 @@ def parse_arguments():
     
     # batch size for training
     parser.add_argument(
-    '--batch-size',
+    '--batch_size',
     type=int,
     default=100,
     help='input batch size for training (default: 100)')
@@ -108,14 +108,14 @@ def parse_arguments():
 
     # disable cuda
     parser.add_argument(
-    '--no-cuda',
+    '--no_cuda',
     action='store_true',
     default=False,
     help='disables CUDA training')
 
     # number of blocks
     parser.add_argument(
-    '--num-blocks',
+    '--num_blocks',
     type=int,
     default=5,
     help='number of invertible blocks (default: 5)')
@@ -123,7 +123,7 @@ def parse_arguments():
 
     # number of blocks
     parser.add_argument(
-    '--code-length',
+    '--code_length',
     type=int,
     default=32,
     help='length of hidden vector (default: 32)')
@@ -131,11 +131,11 @@ def parse_arguments():
     # Normalize the novelty score
     parser.add_argument(
         '--score_normed',
-        type = bool,
-        default= False,
+        default= True,
         help ='For Test: Normalize novelty score by Valid Set' )
 
     # novel ratio
+    # default use 10% novel examples in test set
     parser.add_argument(
         '--novel_ratio',
         type = float,
@@ -145,7 +145,6 @@ def parse_arguments():
     # join density
     parser.add_argument(
         '--combine_density',
-        type = bool,
         default= False,
         help = 'Combine reconstruction loss in the input of density estimator'
         )

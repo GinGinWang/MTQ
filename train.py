@@ -5,9 +5,11 @@ from datasets.mnist import MNIST
 from models import LSA_MNIST
 
 from datasets.utils import set_random_seed
-from result_helpers import OneClassTrainHelper
+from train_one_class import OneClassTrainHelper
+
 
 import torch.optim as optim
+import os
 
 
 
@@ -36,23 +38,41 @@ def main():
     print ("dataset shape: ",dataset.shape)
     
 
-    # Build Model
-    if args.autoencoder == "LSA":        
-        model =LSA_MNIST(input_shape=dataset.shape,code_length=32, num_blocks=5,est_name= args.estimator).cuda()
+    
 
-    # (add other models here)    
 
-    # Optimizer
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-6)
+
 
     # trained model save_dir
-    dirName = f'checkpoints/{args.dataset}/'
-    
-    # Initialize training process
-    helper = OneClassTrainHelper(dataset, model, optimizer, checkpoints_dir=dirName, train_epoch=args.epochs)
+    dirName = f'checkpoints/{args.dataset}/combined{args.combine_density}/'
+    if not os.path.exists(dirName):
+        os.makedirs(dirName)
+        print(f'Make Dir:{dirName}')
 
-    # Start training 
-    helper.train_one_class_classification()
+
+
+    for cl_idx, cl in enumerate(dataset.train_classes):
+
+        dataset.train(cl)
+        # Build Model
+        if args.autoencoder == "LSA":        
+            model =LSA_MNIST(input_shape=dataset.shape, code_length=32, num_blocks=5, est_name= args.estimator, combine_density = args.combine_density).cuda()
+
+        # (add other models here)    
+
+        # Optimizer
+        optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-6)
+
+        
+
+        
+        # Initialize training process
+        helper = OneClassTrainHelper(dataset, model, optimizer, checkpoints_dir=dirName, train_epoch=args.epochs, batch_size= args.batch_size)
+
+        # Start training 
+        helper.train_one_class_classification()
+
+
 
 
 
@@ -94,7 +114,7 @@ def parse_arguments():
     
     # batch size for training
     parser.add_argument(
-    '--batch-size',
+    '--batch_size',
     type=int,
     default=100,
     help='input batch size for training (default: 100)')
@@ -112,14 +132,14 @@ def parse_arguments():
 
     # disable cuda
     parser.add_argument(
-    '--no-cuda',
+    '--no_cuda',
     action='store_true',
     default=False,
     help='disables CUDA training')
 
     # number of blocks
     parser.add_argument(
-    '--num-blocks',
+    '--num_blocks',
     type=int,
     default=5,
     help='number of invertible blocks (default: 5)')
@@ -127,7 +147,7 @@ def parse_arguments():
 
     # number of blocks
     parser.add_argument(
-    '--code-length',
+    '--code_length',
     type=int,
     default=32,
     help='length of hidden vector (default: 32)')
@@ -135,7 +155,6 @@ def parse_arguments():
     # join density (For train or test)
     parser.add_argument(
         '--combine_density',
-        type = bool,
         default= False,
         help = 'Combine reconstruction loss in the input of density estimator'
         )

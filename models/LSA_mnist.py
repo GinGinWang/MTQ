@@ -150,6 +150,7 @@ class LSA_MNIST(BaseModule):
         self.est_name = est_name
         self.name = f"{est_name}LSA"
 
+        
         # the input of estimator is density z / combine_density (z,|x-x_r|^2)
         self.combine_density = combine_density
 
@@ -207,7 +208,7 @@ class LSA_MNIST(BaseModule):
 
         # Estimate CPDs with autoregression
         # density estimator
-        if combine_density == False:
+        if self.combine_density == False:
             s,log_jacob_s = self.estimator(z)
         
         # [z,|x-xr|^2]
@@ -217,6 +218,9 @@ class LSA_MNIST(BaseModule):
             while L.dim() > 1:
                 L = torch.sum(L, dim=-1)
             
-            s,log_jacob_s = self.estimator([z,L])
+            L= torch.unsqueeze(L,1)
+            new_z = torch.cat((z,L),1)
+
+            s,log_jacob_s = self.estimator(new_z)
 
         return x_r, z, z_dist,s,log_jacob_s

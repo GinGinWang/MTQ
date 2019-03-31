@@ -76,7 +76,7 @@ class MNIST(OneClassDataset):
         
         self.val_idxs = self.shuffled_train_idx[int(0.9 * len(self.shuffled_train_idx)):]
 
-        # valid examples (90% of training examples)
+        # valid examples (10 % of training examples)
         self.val_idxs = [idx for idx in self.val_idxs if self.train_split[idx][1] == self.normal_class]
         self.length = len(self.val_idxs)
 #--------------------------------------------------------------------
@@ -116,20 +116,24 @@ class MNIST(OneClassDataset):
         self.transform = self.test_transform
 
         # create test examples (normal)
-        self.test_idxs = [idx for idx in self.shuffled_test_idx if self.gest_split[idx][1] == self.normal_class]
+        self.test_idxs = [idx for idx in self.shuffled_test_idx if self.test_split[idx][1] == self.normal_class]
+
         normal_num = len(self.test_idxs)
 
         # add test examples (unnormal)
-        novel_num  = normal/(1-novel_ratio) - normal_num
+        novel_num  = int(normal_num/(1-novel_ratio) - normal_num)
         
-        novel_idx = [idx for idx in self.shuffled_test_idx[novel_num:] if self.gest_split[idx][1] != self.normal_class]
+        novel_idxs = [idx for idx in self.shuffled_test_idx if self.test_split[idx][1] != self.normal_class]
 
-        self.test_idxs = [self.test_idxs, novel_idx]
+        novel_idxs = novel_idxs[0:novel_num]
+
+        # combine normal and novel part
+        self.test_idxs = self.test_idxs+novel_idxs
         
         # testing examples (norm)
         self.length = len(self.test_idxs)
 
-        print(f"Test Set prepared, Num:{self.length},Novel_num:{len(novel_num)},Normal_num:{normal_num}")
+        print(f"Test Set prepared, Num:{self.length},Novel_num:{novel_num},Normal_num:{normal_num}")
 
 
     def __len__(self):

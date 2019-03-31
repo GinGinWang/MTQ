@@ -1,2 +1,1 @@
-from result_helpers.one_class import OneClassTestHelper
-from result_helpers.one_class import OneClassTrainHelper
+from result_helpers.test_one_class import OneClassTestHelper
