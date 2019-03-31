@@ -10,13 +10,21 @@
 
 ### How to run
 
-## For SoSLSA
+## For MAFLSA Experiments
 
-You will need to run **train.py** first.
+Firstly, we use MAF[1] estimator to replace the estimator in LSA[2].
 
-  python train.py mninst
-   
-After autoencoder was trained, from **test.py**, you need to call *main* function:  
-   Set of arguments is the same.
+Metric: AUROC (keep updating other metrics)
 
-   python test.py mnist
+All the experiments are described in run_mnist.sh and run_cifar10.sh.
+
+
+[1] Papamakarios G, Pavlakou T, Murray I. Masked autoregressive flow for density estimation[C]//Advances in Neural Information Processing Systems. 2017: 2338-2347.
+
+[2] Abati D, Porrello A, Calderara S, et al. Latent Space Autoregression for Novelty Detection[C]//International Conference on Computer Vision and Pattern Recognition. 2019. 
+
+Results will be uploaded later
+
+
+
+
