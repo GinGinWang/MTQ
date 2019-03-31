@@ -25,7 +25,7 @@ class EstimatorMAF(BaseModule):
     p(s) = q(z), pd
     """
 
-    def __init__(self, num_blocks, code_length, num_hidden=60, use_bn=True ):
+    def __init__(self, num_blocks, code_length, num_hidden=1024, use_bn=True ):
         # type: (int, List[int], int) -> None
         """
         Class constructor.

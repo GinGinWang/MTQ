@@ -2,6 +2,7 @@ import argparse
 from argparse import Namespace
 
 from datasets.mnist import MNIST
+from datasets.cifar10 import CIFAR10
 from models import LSA_MNIST
 
 from datasets.utils import set_random_seed
@@ -30,7 +31,7 @@ def main():
         dataset = MNIST(path='data/MNIST')
 
     elif args.dataset == 'cifar10':
-        dataset = MNIST(path='data/CIFAR')
+        dataset = CIFAR10(path='data/CIFAR10')
     
     else:
         raise ValueError('Unknown dataset')
