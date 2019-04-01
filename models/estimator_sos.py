@@ -21,7 +21,7 @@ class EstimatorSoS(BaseModule):
     p(s) = q(z), pd
     """
 
-    def __init__(self, num_blocks, code_length, num_hidden=60, K=5, M=3, use_bn=True ):
+    def __init__(self, num_blocks, code_length, num_hidden=1024, K=5, M=3, use_bn=True ):
         # type: (int, List[int], int) -> None
         """
         Class constructor.

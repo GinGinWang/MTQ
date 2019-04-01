@@ -81,12 +81,14 @@ class OneClassTestHelper(object):
 
             # Prepare test set for one class and control the novel ratio in test set
             dataset = self.dataset
+            
             dataset.test(cl,self.novel_ratio)
             loader = DataLoader(self.dataset)
 
             sample_llk = np.zeros(shape=(len(loader),))
             sample_rec = np.zeros(shape=(len(loader),))
             sample_y = np.zeros(shape=(len(loader),))
+            density = 0
 
             for i, (x, y) in tqdm(enumerate(loader), desc=f'Computing scores for {dataset}'):
                 x = x.to('cuda')
@@ -96,6 +98,10 @@ class OneClassTestHelper(object):
                 sample_llk[i] = - self.loss.autoregression_loss
                 sample_rec[i] = - self.loss.reconstruction_loss
                 sample_y[i] = y.item()
+                # print (sample_llk[i])
+                density += sample_llk[i]
+            
+            density = density/dataset.length
 
             if self.score_normed == True:
                 print(f'min_llk:{min_llk},max_llk:{max_llk}'
@@ -128,7 +134,9 @@ class OneClassTestHelper(object):
                 precision,
                 f1,
                 recall,
-                threshold
+                threshold,
+                density
+
             ]
             oc_table.add_row([cl_idx] + this_class_metrics)
 
@@ -187,7 +195,7 @@ class OneClassTestHelper(object):
         table.field_names = ['Class', 'AUROC-LLK', 'AUROC-REC', 'AUROC-NS', 'Precision',
                 'F1',
                 'Recall',
-                'Threshold']
+                'Threshold','Density']
         table.float_format = '0.3'
         return table
 

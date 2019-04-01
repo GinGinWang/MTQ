@@ -30,11 +30,11 @@ def main():
     # prepare dataset in train mode
     if args.dataset == 'mnist':
         dataset = MNIST(path='data/MNIST')
-        lam =1
+        lam =0.1
 
     elif args.dataset == 'cifar10':
         dataset = CIFAR10(path='data/CIFAR10')
-        lam = 1
+        lam = 0.1
     
     else:
         raise ValueError('Unknown dataset')

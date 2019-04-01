@@ -134,7 +134,7 @@ class OneClassTrainHelper(object):
 
              # converge?
 
-            if epoch- best_validation_epoch >= 30:
+            if epoch- best_validation_epoch >= 100:
                 break 
             
             if validation_loss < best_validation_loss:
