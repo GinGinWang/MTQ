@@ -132,7 +132,7 @@ def parse_arguments():
     parser.add_argument(
     '--code_length',
     type=int,
-    default=32,
+    default=64,
     help='length of hidden vector (default: 32)')
 
     # Normalize the novelty score

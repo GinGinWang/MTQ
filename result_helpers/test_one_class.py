@@ -17,8 +17,9 @@ from datasets.utils import normalize
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import f1_score
 from sklearn.metrics import recall_score
+from sklearn.metrics import precision_score
 
-from result_helpers import metric_method as mm
+# from result_helpers import metric_method as mm
 
 
 
@@ -79,14 +80,15 @@ class OneClassTestHelper(object):
                 min_llk, max_llk, min_rec, max_rec = self.compute_normalizing_coefficients(cl)
 
             # Prepare test set for one class and control the novel ratio in test set
-            self.dataset.test(cl,self.novel_ratio)
+            dataset = self.dataset
+            dataset.test(cl,self.novel_ratio)
             loader = DataLoader(self.dataset)
 
             sample_llk = np.zeros(shape=(len(loader),))
             sample_rec = np.zeros(shape=(len(loader),))
             sample_y = np.zeros(shape=(len(loader),))
 
-            for i, (x, y) in tqdm(enumerate(loader), desc=f'Computing scores for {self.dataset}'):
+            for i, (x, y) in tqdm(enumerate(loader), desc=f'Computing scores for {dataset}'):
                 x = x.to('cuda')
                 x_r, z, z_dist, s, log_jacob_s = self.model(x)
                 self.loss(x, x_r, z, z_dist,s,log_jacob_s)
@@ -105,19 +107,34 @@ class OneClassTestHelper(object):
 
                 sample_rec = normalize(sample_rec, min_rec, max_rec)
 
-            print(sample_llk)
+            #print(sample_llk)
             # Compute the normalized novelty score
             sample_ns = novelty_score(sample_llk, sample_rec)
+
+            # Compute precision, recall, f1_score based on threshold
+            threshold = self.compute_threshold(cl)
+            y_hat = np.less(sample_ns, threshold)
+
+            precision = precision_score(sample_y,y_hat)
+            f1 = f1_score(sample_y, y_hat)
+            recall = recall_score(sample_y, y_hat)
+
 
             # Compute AUROC for this class
             this_class_metrics = [
                 roc_auc_score(sample_y, sample_llk),  # likelihood metric
                 roc_auc_score(sample_y, sample_rec),  # reconstruction metric
-                roc_auc_score(sample_y, sample_ns)    # novelty score
+                roc_auc_score(sample_y, sample_ns),    # novelty score
+                precision,
+                f1,
+                recall,
+                threshold
             ]
             oc_table.add_row([cl_idx] + this_class_metrics)
 
             all_metrics.append(this_class_metrics)
+
+
 
         # Compute average AUROC and print table
         all_metrics = np.array(all_metrics)
@@ -138,8 +155,9 @@ class OneClassTestHelper(object):
         :param cl: the class to be considered normal.
         :return: a tuple of normalizing coefficients in the form (llk_min, llk_max, rec_min, rec_max).
         """
-        self.dataset.val(cl)
-        loader = DataLoader(self.dataset)
+        dataset = self.dataset
+        dataset.val(cl)
+        loader = DataLoader(dataset)
 
         sample_llk = np.zeros(shape=(len(loader),))
         sample_rec = np.zeros(shape=(len(loader),))
@@ -155,6 +173,8 @@ class OneClassTestHelper(object):
         return sample_llk.min(), sample_llk.max(), sample_rec.min(), sample_rec.max()
 
 
+
+
     @property
     def empty_table(self):
         # type: () -> PrettyTable
@@ -164,10 +184,64 @@ class OneClassTestHelper(object):
         :return: table to be filled with auroc metrics.
         """
         table = PrettyTable()
-        table.field_names = ['Class', 'AUROC-LLK', 'AUROC-REC', 'AUROC-NS']
+        table.field_names = ['Class', 'AUROC-LLK', 'AUROC-REC', 'AUROC-NS', 'Precision',
+                'F1',
+                'Recall',
+                'Threshold']
         table.float_format = '0.3'
         return table
 
 
 
+# compute best threshold 
+    def compute_threshold(self, cl):
 
+        dataset = self.dataset
+        dataset.val2(cl)
+
+        loader = DataLoader(dataset)
+
+        sample_score = np.zeros(shape=(len(loader),))
+        ytrue = np.zeros(shape=(len(loader),))
+        for i, (x, y) in enumerate(loader):
+            x = x.to('cuda')
+            x_r, z, z_dist, s, log_jacob_s = self.model(x)
+            self.loss(x, x_r, z, z_dist,s, log_jacob_s)
+            sample_score[i] = - self.loss.total_loss # large score -- normal
+            ytrue[i] =y.numpy()
+
+        best_e = 0
+        best_f = 0
+        best_e_ = 0
+        best_f_ = 0
+
+        # real label y  normal 0,  novel 1
+
+        # predict score  sample_score 
+        # predict label y_hat
+        minS = sample_score.min() - 0.1
+        maxS = sample_score.max() + 0.1
+
+        for e in np.arange(minS, maxS, 0.1):
+
+            y_hat = np.less(sample_score, e) #  normal 0  novel1
+            # # TP Predict novel as novel y =1, y_hat =1
+            true_positive = np.sum(np.logical_and(y_hat, ytrue))
+            # # FP Predict normal as novel y = 0, y_hat = 1
+            # false_positive = np.sum(np.logical_and(y_hat, logical_not(y)))
+            # # PN Predict novel as normal y =1, y_hat = 0
+            # false_negative = np.sum(np.logical_and(np.logical_not(y_hat),y))
+            if true_positive > 0:
+
+                f1 = f1_score(ytrue, y_hat)
+                if f1 > best_f:
+                    best_f = f1
+                    best_e = e
+                if f1 >= best_f_:
+                    best_f_ = f1
+                    best_e_ = e
+
+        best_e = (best_e + best_e_) / 2.0
+
+        print("Best e: ", best_e)
+        return best_e

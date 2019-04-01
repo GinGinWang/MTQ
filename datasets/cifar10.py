@@ -32,9 +32,10 @@ class CIFAR10(OneClassDataset):
 
         # Get train and test split
         self.train_split = datasets.CIFAR10(self.path, train=True, download=True, transform=None)
+
         self.test_split = datasets.CIFAR10(self.path, train=False, download=True, transform=None)
 
-        # Shuffle training indexes to build a validation set (see val())
+        # Shuffle training indexes to build a training set (see train())
         train_idx = np.arange(len(self.train_split))
         np.random.shuffle(train_idx)
         self.shuffled_train_idx = train_idx
@@ -75,8 +76,26 @@ class CIFAR10(OneClassDataset):
         self.mode = 'val'
         self.transform = self.val_transform
         self.val_idxs = self.shuffled_train_idx[int(0.9 * len(self.shuffled_train_idx)):]
+
         self.val_idxs = [idx for idx in self.val_idxs if self.train_split[idx][1] == self.normal_class]
+        
         self.length = len(self.val_idxs)
+
+    def val2(self, normal_class):
+        # type: (int) -> None
+        """
+        Sets CIFAR10 in validation mode.
+
+        :param normal_class: the class to be considered normal.
+        """
+        # Update mode, indexes, length and transform
+        self.normal_class = int(normal_class)
+        self.mode = 'val2'
+        self.transform = self.test_transform
+        self.val_idxs = self.shuffled_train_idx[int(0.9 * len(self.shuffled_train_idx)):]
+        
+        self.length = len(self.val_idxs)
+        print(f'Val2 Set prepared, Num:{self.length}')
 #--------------------------------------------------------------------
     def train(self, normal_class):
         # type: (int) -> None
@@ -162,9 +181,14 @@ class CIFAR10(OneClassDataset):
         elif self.mode == 'val':
             x, _ = self.train_split[self.val_idxs[i]]
             sample = x, x
+        elif self.mode == 'val2':
+            x, y = self.train_split[i]
+            sample = x, int(y == self.normal_class)
+
         elif self.mode == 'train':
             x, _ = self.train_split[self.train_idxs[i]]
             sample = x, x
+
         else:
             raise ValueError
 

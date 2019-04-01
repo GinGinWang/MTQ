@@ -187,6 +187,7 @@ class OCToFloatTensor2D(object):
 
         # swap color axis because
         # numpy image: B x H x W x C
+        
         X = X.transpose(2, 0, 1) / 255.
 
         X = np.float32(X)

@@ -1,21 +1,3 @@
-Skip to content
- 
-Search or jump to…
-
-Pull requests
-Issues
-Marketplace
-Explore
- 
-@GinGinWang Sign out
-5
-21 6 podgorskiy/GPND
- Code  Issues 4  Pull requests 0  Projects 0  Wiki  Insights
-GPND/novelty_detector.py
-@podgorskiy podgorskiy Removed batch_norm_track_statisticks
-0ede3ee on 29 Aug 2018
-@podgorskiy @syglassbuild
-550 lines (424 sloc)  18.2 KB
   
 # Copyright 2018 Stanislav Pidhorskyi
 # 
