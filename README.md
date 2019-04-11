@@ -10,12 +10,12 @@
 * **train.py** - code for training novelty dector.
 * **test.py** - code for testing/run novelty dector.
 
-### Model
-## *LSA*
+### *Model*
+#### *LSA*
 * Only use the Autoencoder  in [2] 
 * loss = reconstruction loss
 
-## *LSA_EN*
+#### *LSA_EN*
 * same as [2], Autoencoder + Density Estimator (estimated network)
 * loss = reconstruction loss+ negative llk
 
