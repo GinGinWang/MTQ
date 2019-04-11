@@ -33,7 +33,16 @@ def normalize(samples, min, max):
     :param max: the maximum of the desired scores.
     :return: the normalized scores
     """
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
     return (samples - min) / (max - min)
+=======
+    if (max - min) == 0:
+        result = samples -min
+    else: 
+        result =  (samples - min) / (max - min)
+        
+    return result
+>>>>>>> message
 
 
 def novelty_score(sample_llk_norm, sample_rec_norm):

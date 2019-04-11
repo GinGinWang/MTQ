@@ -5,6 +5,10 @@ from datasets.mnist import MNIST
 from datasets.cifar10 import CIFAR10
 from models import LSA_MNIST
 from models import LSA_CIFAR10
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
+=======
+from models import DE
+>>>>>>> message
 
 from datasets.utils import set_random_seed
 from result_helpers import OneClassTestHelper
@@ -38,6 +42,7 @@ def main():
     
 
     # Build Model
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
     if args.autoencoder == "LSA":
         
         if args.dataset == 'mnist':
@@ -53,6 +58,30 @@ def main():
 
     # Initialize training process
     helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, checkpoints_dir= dirName, output_file= f"{args.autoencoder}_{args.estimator}_{args.dataset}_cd{args.combine_density}_nml{args.score_normed}_nlration{args.novel_ratio}")
+=======
+    if (not args.coder):
+            # directly estimate density by model
+            print (f'NoAutoencoder, use eistmator: {args.estimator}')
+            model = DE(input_shape = dataset.shape, num_blocks = args.num_blocks, est_name = args.estimator, combine_density =args.cd).cuda().eval()
+
+    else:
+        if args.autoencoder == "LSA":
+            print(f'Autoencoder:{args.autoencoder},Estimator: {args.estimator}')
+
+            if args.dataset == 'mnist':        
+                model =LSA_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.cd).cuda().eval()
+            
+            elif args.dataset == 'cifar10':
+                model =LSA_CIFAR10(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.cd).cuda().eval()
+
+    # (add other models here)    
+   
+    # trained model save_dir
+    dirName = f'checkpoints/{args.dataset}/combined{args.cd}/'
+
+    # Initialize training process
+    helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, checkpoints_dir= dirName, output_file= f"{args.coder}_{args.estimator}_{args.dataset}_cd{args.cd}_nml{args.score_normed}_nlration{args.novel_ratio}")
+>>>>>>> message
 
     # Start training 
     helper.test_one_class_classification()
@@ -95,6 +124,13 @@ def parse_arguments():
                         help='The name of the dataset to perform tests on.'
                         'Choose among `mnist`, `cifar10`', metavar='')
     
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
+=======
+    parser.add_argument('--Combine_density', dest='cd',action = 'store_true',default = False)
+
+    parser.add_argument('--NoAutoencoder', dest='coder',action='store_false', default = True)
+
+>>>>>>> message
     # batch size for training
     parser.add_argument(
     '--batch_size',
@@ -102,6 +138,7 @@ def parse_arguments():
     default=100,
     help='input batch size for training (default: 100)')
     
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
     # epochs 
     parser.add_argument(
     '--epochs',
@@ -109,6 +146,8 @@ def parse_arguments():
     default=1000,
     help='number of epochs to train (default: 1000)')
     
+=======
+>>>>>>> message
     # learning rate 
     parser.add_argument(
     '--lr', type=float, default=0.0001, help='learning rate (default: 0.0001)')
@@ -138,7 +177,12 @@ def parse_arguments():
     # Normalize the novelty score
     parser.add_argument(
         '--score_normed',
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
         default= True,
+=======
+        action ='store_true',
+        default= False,
+>>>>>>> message
         help ='For Test: Normalize novelty score by Valid Set' )
 
     # novel ratio
@@ -149,12 +193,15 @@ def parse_arguments():
         default= 0.1,
         help ='For Test: Ratio, novel examples in test sets: [0,1,0.5]' )
     
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
     # join density
     parser.add_argument(
         '--combine_density',
         default= False,
         help = 'Combine reconstruction loss in the input of density estimator'
         )
+=======
+>>>>>>> message
 
     #K  (only for SOS flow) 
     

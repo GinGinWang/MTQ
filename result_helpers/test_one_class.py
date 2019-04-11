@@ -88,7 +88,11 @@ class OneClassTestHelper(object):
             sample_llk = np.zeros(shape=(len(loader),))
             sample_rec = np.zeros(shape=(len(loader),))
             sample_y = np.zeros(shape=(len(loader),))
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
             density = 0
+=======
+            # density = 0
+>>>>>>> message
 
             for i, (x, y) in tqdm(enumerate(loader), desc=f'Computing scores for {dataset}'):
                 x = x.to('cuda')
@@ -99,9 +103,15 @@ class OneClassTestHelper(object):
                 sample_rec[i] = - self.loss.reconstruction_loss
                 sample_y[i] = y.item()
                 # print (sample_llk[i])
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
                 density += sample_llk[i]
             
             density = density/dataset.length
+=======
+                # density += sample_llk[i]
+            
+            # density = density/dataset.length
+>>>>>>> message
 
             if self.score_normed == True:
                 print(f'min_llk:{min_llk},max_llk:{max_llk}'
@@ -115,6 +125,7 @@ class OneClassTestHelper(object):
 
             #print(sample_llk)
             # Compute the normalized novelty score
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
             sample_ns = novelty_score(sample_llk, sample_rec)
 
             # Compute precision, recall, f1_score based on threshold
@@ -124,18 +135,41 @@ class OneClassTestHelper(object):
             precision = precision_score(sample_y,y_hat)
             f1 = f1_score(sample_y, y_hat)
             recall = recall_score(sample_y, y_hat)
+=======
+            print (sample_llk)
+            sample_ns = novelty_score(sample_llk, sample_rec)
+
+            # # Compute precision, recall, f1_score based on threshold
+            # threshold = self.compute_threshold(cl)
+            
+            # #1 normal 0 novel 
+            # y_hat = np.greater(sample_ns, threshold)
+
+            # precision = precision_score(sample_y,y_hat)
+            # f1 = f1_score(sample_y, y_hat)
+            # recall = recall_score(sample_y, y_hat)
+>>>>>>> message
 
 
             # Compute AUROC for this class
             this_class_metrics = [
                 roc_auc_score(sample_y, sample_llk),  # likelihood metric
                 roc_auc_score(sample_y, sample_rec),  # reconstruction metric
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
                 roc_auc_score(sample_y, sample_ns),    # novelty score
                 precision,
                 f1,
                 recall,
                 threshold,
                 density
+=======
+                roc_auc_score(sample_y, sample_ns)    # novelty score
+                # precision,
+                # f1,
+                # recall,
+                # threshold,
+                # density
+>>>>>>> message
 
             ]
             oc_table.add_row([cl_idx] + this_class_metrics)
@@ -192,10 +226,18 @@ class OneClassTestHelper(object):
         :return: table to be filled with auroc metrics.
         """
         table = PrettyTable()
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
         table.field_names = ['Class', 'AUROC-LLK', 'AUROC-REC', 'AUROC-NS', 'Precision',
                 'F1',
                 'Recall',
                 'Threshold','Density']
+=======
+        table.field_names = ['Class', 'AUROC-LLK', 'AUROC-REC', 'AUROC-NS'
+                # , 'Precision',
+                # 'F1',
+                # 'Recall', 'Threshold','Density'
+                ]
+>>>>>>> message
         table.float_format = '0.3'
         return table
 

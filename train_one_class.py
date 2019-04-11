@@ -11,8 +11,15 @@ from tqdm import tqdm
 
 from datasets.base import OneClassDataset
 from models.base import BaseModule
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
 from models.loss_functions import SumLoss
 
+=======
+
+from models.loss_functions import SumLoss
+
+import math
+>>>>>>> message
 
 
 class OneClassTrainHelper(object):
@@ -20,7 +27,11 @@ class OneClassTrainHelper(object):
     Performs tests for one-class datasets (MNIST or CIFAR-10).
     """
 
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
     def __init__(self, dataset, model, optimizer,lam, checkpoints_dir,log_interval=1000, train_epoch=100, batch_size = 100):
+=======
+    def __init__(self, dataset, model, optimizer, lam, checkpoints_dir, train_epoch=100, batch_size = 100):
+>>>>>>> message
         # type: (OneClassDataset, BaseModule, str, str) -> None
         """
         Class constructor.
@@ -32,7 +43,11 @@ class OneClassTrainHelper(object):
         """
         self.dataset = dataset
         self.model = model
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
         # self.model_name = model_name
+=======
+        self.name = model.name
+>>>>>>> message
 
         self.checkpoints_dir = checkpoints_dir
         self.train_epoch = train_epoch
@@ -41,17 +56,28 @@ class OneClassTrainHelper(object):
 
 
         self.cl = self.dataset.normal_class
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
         # Set up loss function
         # if self.model.name =="SOSLSA":
         #     self.loss= SumLoss(self.model.name, lam = 0.1)
         self.loss = SumLoss(self.model.name,lam=lam)
         self.log_interval = log_interval
+=======
+
+        # class for computing loss
+        self.loss = SumLoss(self.model.name,lam=lam)
+
+>>>>>>> message
     def train_every_epoch(self, epoch):
             
             self.model.train()
             epoch_loss = 0
             epoch_recloss = 0
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
             epoch_regloss = 0
+=======
+            epoch_nllk = 0
+>>>>>>> message
 
             loader = DataLoader(self.dataset, batch_size=self.batch_size)
             print(len(loader))
@@ -63,6 +89,7 @@ class OneClassTrainHelper(object):
                 
                 # x_tra
                 x = x.to('cuda')
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
                 x_r, z, z_dist,s,log_jacob_s = self.model(x)
 
                 self.loss(x, x_r, z, z_dist, s, log_jacob_s) 
@@ -78,6 +105,45 @@ class OneClassTrainHelper(object):
             # print epoch result
             print('Train Epoch: {} \tLoss: {:.6f}\tRec: {:.6f},Reg: {:.6f}'.format(
                         epoch, epoch_loss, epoch_recloss,epoch_regloss))
+=======
+
+                if self.name == 'LSA':
+                    x_r = self.model(x)
+                    self.loss.lsa(x, x_r)
+
+                elif self.name == 'LSA_EN':
+                    x_r, z, z_dist = self.model(x)
+                    self.loss.lsa_en(x, x_r, z, z_dist)
+                
+                elif self.name in ['LSA_SOS', 'LSA_MAF']:
+                    x_r, z, s, log_jacob_T_inverse = self.model(x)
+                    self.loss.lsa_flow(x,x_r,s,log_jacob_T_inverse)
+                
+                elif self.name in ['SOS', 'MAF']:
+                    s, log_jacob_T_inverse = self.model(x)
+                    self.loss.flow(s,log_jacob_T_inverse)
+                
+                elif self.name == 'EN':
+                    z_dist = model(x)
+                    self.loss.en(z_dist)
+
+
+
+                # backward average loss along batch
+                (self.loss.total_loss).backward()
+
+                # update params
+                self.optimizer.step()
+
+                epoch_loss = + self.loss.total_loss
+                if self.name in ['LSA','LSA_EN','LSA_SOS','LSA_MAF']:
+                    epoch_recloss =+ self.loss.reconstruction_loss
+                    epoch_nllk = + self.loss.epoch_nllk
+
+            # print epoch result
+            print('Train Epoch: {} \tLoss: {:.6f}\tRec: {:.6f},Nllk: {:.6f}'.format(
+                        epoch, epoch_loss, epoch_recloss,epoch_nllk))
+>>>>>>> message
         
     
     def validate(self, epoch, model, valid_dataset, prefix = 'Validation'):
@@ -85,18 +151,48 @@ class OneClassTrainHelper(object):
         model.eval()
         val_loss = 0
 
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
         loader = DataLoader(valid_dataset)
         
+=======
+        loader = DataLoader(valid_dataset,batch_size=100)
+
+>>>>>>> message
         pbar = tqdm(total=len(loader.dataset))
         pbar.set_description('Eval')
 
         for batch_idx, (x,y) in enumerate(loader):
         
             x = x.to('cuda')
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
             
             with torch.no_grad():
                 x_r, z, z_dist, s, log_jacob_s = self.model(x)
                 self.loss(x, x_r, z, z_dist,s, log_jacob_s)
+=======
+
+            with torch.no_grad():
+                if self.name == 'LSA':
+                    x_r = self.model(x)
+                    self.loss.lsa(x, x_r)
+
+                elif self.name == 'LSA_EN':
+                    x_r, z, z_dist = self.model(x)
+                    self.loss.lsa_en(x, x_r, z, z_dist)
+                
+                elif self.name in ['LSA_SOS', 'LSA_MAF']:
+                    x_r, z, s, log_jacob_T_inverse = self.model(x)
+                    self.loss.lsa_flow(x,x_r,s,log_jacob_T_inverse)
+                
+                elif self.name in ['SOS', 'MAF']:
+                    s, log_jacob_T_inverse = self.model(x)
+                    self.loss.flow(s,log_jacob_T_inverse)
+                
+                elif self.name == 'EN':
+                    z_dist = model(x)
+                    self.loss.en(z_dist)
+
+>>>>>>> message
                 val_loss += self.loss.total_loss.item()
             
             pbar.update(x.size(0))
@@ -122,19 +218,34 @@ class OneClassTrainHelper(object):
         best_validation_loss = float('inf')
 
         valid_dataset = self.dataset
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
         valid_dataset.val(self.cl)
 
         for epoch in range(self.train_epoch):
             # train every epoch
             
+=======
+        
+        # set normal class
+        valid_dataset.val(self.cl)
+
+        for epoch in range(self.train_epoch):
+            
+            # train every epoch
+>>>>>>> message
             self.train_every_epoch(epoch)
             
             # validate
             validation_loss = self.validate(epoch, self.model,valid_dataset)
 
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
              # converge?
 
             if epoch- best_validation_epoch >= 100:
+=======
+
+            if epoch- best_validation_epoch >= 30: # converge?
+>>>>>>> message
                 break 
             
             if validation_loss < best_validation_loss:

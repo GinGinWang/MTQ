@@ -10,8 +10,18 @@ from models.blocks_2d import DownsampleBlock
 from models.blocks_2d import ResidualBlock
 from models.blocks_2d import UpsampleBlock
 
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
 from models.estimator_sos import EstimatorSoS
 from models.estimator_maf import EstimatorMAF
+=======
+# flows
+from models.transform_sos import TinvSOS
+from models.transform_maf import TinvMAF
+
+# estimator
+from models.estimator_1D import Estimator1D
+
+>>>>>>> message
 import torch.nn.functional as F
 
 
@@ -153,12 +163,23 @@ class LSA_CIFAR10(BaseModule):
         self.input_shape = input_shape
         self.code_length = code_length
         self.est_name = est_name
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
         self.name = f"{est_name}LSA"
 
         # the input of estimator is density z / combine_density (z,|x-x_r|^2)
         self.combine_density = combine_density
 
 
+=======
+        self.coder_name = 'LSA'
+        if est_name == None:  
+            self.name = f'LSA_{est_name}'
+        else:
+            self.name = 'LSA'
+        # the input of estimator is latent vector z / combine_latentvector (z,|x-x_r|^2)
+        self.combine_density = combine_density
+
+>>>>>>> message
         # Build encoder
         self.encoder = Encoder(
             input_shape=input_shape,
@@ -172,6 +193,7 @@ class LSA_CIFAR10(BaseModule):
             output_shape=input_shape
         )
 
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
         # # Build estimator
         # self.estimator = Estimator1D(
         #     code_length=code_length,
@@ -197,6 +219,50 @@ class LSA_CIFAR10(BaseModule):
             elif est_name == "MAF":
                 self.estimator = EstimatorMAF(num_blocks, code_length+1)
 
+=======
+        # Build estimator
+        # Build estimator
+        if combine_density:
+            # sos- flow : T-inverse(z) = s,
+            # output: s, -log_jacobian 
+            if est_name == 'SOS':
+                self.estimator = EstimatorSoS(num_blocks, code_length+1)  
+            
+            # maf- flow : T-inverse(z) = s,
+            # output: s, -log_jacobian 
+            elif est_name == 'MAF':
+                self.estimator = EstimatorMAF(num_blocks, code_length+1)
+            
+            # estimation network: T(z)= p(z)
+            # output p(z)
+            elif est_name == 'EN':
+                self.estimator = Estimator1D(
+                code_length=code_length+1,
+                fm_list=[32, 32, 32, 32],
+                cpd_channels=100)
+            # No estimator
+            elif est_name == None:
+                self.estimator = None
+
+
+        else:
+            if est_name == "SOS":
+                self.estimator = EstimatorSoS(num_blocks, code_length)      
+            elif est_name == "MAF":
+                self.estimator = EstimatorMAF(num_blocks, code_length)
+            elif est_name == 'EN':
+                self.estimator = Estimator1D(
+                code_length=code_length,
+                fm_list=[32, 32, 32, 32],
+                cpd_channels=100
+        )   
+            # No estimator
+            elif est_name == None:
+                self.estimator = None
+
+
+        
+>>>>>>> message
     def forward(self, x):
         # type: (torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
         """
@@ -209,15 +275,23 @@ class LSA_CIFAR10(BaseModule):
         # Produce representations
         z = self.encoder(x)
         
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
 
         # Reconstruct x
         x_r = self.decoder(z)
         x_r = x_r.view(-1, *self.input_shape)
         z_dist = None
+=======
+        # Reconstruct x
+        x_r = self.decoder(z)
+        x_r = x_r.view(-1, *self.input_shape)
+        
+>>>>>>> message
 
 
         # Estimate CPDs with autoregression
         # density estimator
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
         if self.combine_density == False:
             s,log_jacob_s = self.estimator(z)
         
@@ -234,3 +308,35 @@ class LSA_CIFAR10(BaseModule):
             s,log_jacob_s = self.estimator(new_z)
 
         return x_r, z, z_dist,s,log_jacob_s
+=======
+        if self.combine_density:
+            
+            # whether need normalize?
+            L = torch.pow((x - x_r), 2)
+            
+            while L.dim() > 1:
+                 L = torch.sum(L, dim=-1)
+            # L = L.view(-1,len(z))
+            L.unsqueeze_(-1)     
+            new_z = torch.cat((z,L),1)
+            if est_name == 'EN':
+                # density distribution of z 
+                z_dist= self.estimator(new_z)
+            elif est_name == 'SOS' or est_name =='MAF':
+                s, log_jacob_T_inverse = self.estimator(new_z)
+        else:
+            if est_name == 'EN':
+                # density distribution of z 
+                z_dist= self.estimator(z)
+            elif est_name == 'SOS' or est_name =='MAF':
+                s, log_jacob_T_inverse = self.estimator(z)
+
+        # Without Estimator
+        if self.estimator == None:
+            return x_r
+        elif self.estimator == 'EN':
+            return x_r, z, z_dist
+        elif self.estimator == 'MAF' or self.estimator == 'SOS':
+            return x_r, z, s, log_jacob_T_inverse
+
+>>>>>>> message

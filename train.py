@@ -3,9 +3,22 @@ from argparse import Namespace
 
 from datasets.mnist import MNIST
 from datasets.cifar10 import CIFAR10
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
 from models import LSA_MNIST
 from models import LSA_CIFAR10
 
+=======
+
+# LSA
+from models import LSA_MNIST
+from models import LSA_CIFAR10
+
+# Estimator
+from models.estimator_1D import Estimator1D
+from models.transform_maf import TinvMAF
+from models.transform_sos import TinvSOS
+
+>>>>>>> message
 from datasets.utils import set_random_seed
 from train_one_class import OneClassTrainHelper
 
@@ -29,6 +42,7 @@ def main():
 
     # prepare dataset in train mode
     if args.dataset == 'mnist':
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
         dataset = MNIST(path='data/MNIST')
         lam =0.1
 
@@ -36,10 +50,16 @@ def main():
         dataset = CIFAR10(path='data/CIFAR10')
         lam = 0.1
     
+=======
+        dataset = MNIST(path='data/MNIST', n_class = args.n_class)
+    elif args.dataset == 'cifar10':
+        dataset = CIFAR10(path='data/CIFAR10', n_class = args.n_class)
+>>>>>>> message
     else:
         raise ValueError('Unknown dataset')
     
     print ("dataset shape: ",dataset.shape)
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
     
 
     
@@ -49,6 +69,12 @@ def main():
 
     # trained model save_dir
     dirName = f'checkpoints/{args.dataset}/combined{args.combine_density}/'
+=======
+    c, h , w = dataset.shape
+     
+    # trained model save_dir
+    dirName = f'checkpoints/{args.dataset}/combined{args.cd}/'
+>>>>>>> message
     if not os.path.exists(dirName):
         os.makedirs(dirName)
         print(f'Make Dir:{dirName}')
@@ -59,6 +85,7 @@ def main():
 
         dataset.train(cl)
         # Build Model
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
         if args.autoencoder == "LSA":
             
             if args.dataset == 'mnist':        
@@ -67,6 +94,45 @@ def main():
             elif args.dataset == 'cifar10':
                 model =LSA_CIFAR10(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.combine_density).cuda()
 
+=======
+        if (not args.coder):
+            # directly estimate density by model
+
+            # build Density Estimator
+            if args.estimator == 'MAF':
+                model = TinvMAF(args.num_blocks, c*h*w).cuda()
+
+            elif args.estimator == 'SOS':
+                model = TinvSOS(args.num_blocks, c*h*w).cuda()
+
+        # 1-D estimator from LSA
+            elif args.estimator == 'EN':
+                self.model = Estimator1D(
+                code_length=c*h*w,
+                fm_list=[32, 32, 32, 32],
+                cpd_channels=100).cuda()
+            else:
+                raise ValueError('Unknown Estimator')
+            
+            print (f'No Autoencoder, only use Density Estimator: {args.estimator}')
+
+
+        else:
+            if args.autoencoder == "LSA":
+                print(f'Autoencoder:{args.autoencoder}')
+                print(f'Density Estimator:{args.estimator}')
+                
+                if args.dataset == 'mnist': 
+
+                    model =LSA_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.cd).cuda()
+                
+                # elif args.dataset == 'cifar10':
+                
+                #     model =LSA_CIFAR10(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.cd).cuda()
+            else:
+                raise ValueError('Unknown MODEL')
+            
+>>>>>>> message
 
         # (add other models here)    
 
@@ -77,7 +143,11 @@ def main():
 
         
         # Initialize training process
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
         helper = OneClassTrainHelper(dataset, model, optimizer, lam = lam, checkpoints_dir=dirName, train_epoch=args.epochs, batch_size= args.batch_size)
+=======
+        helper = OneClassTrainHelper(dataset, model, optimizer, lam = args.lam,  checkpoints_dir=dirName, train_epoch=args.epochs, batch_size= args.batch_size)
+>>>>>>> message
 
         # Start training 
         helper.train_one_class_classification()
@@ -100,6 +170,20 @@ def main():
 
 
 
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
+=======
+
+
+
+
+
+
+
+
+
+
+
+>>>>>>> message
 def parse_arguments():
     # type: () -> Namespace
     """
@@ -110,18 +194,36 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description = 'Train autoencoder with density estimation',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
     # autoencoder name 
     parser.add_argument('--autoencoder', type=str,
                         help='The Autoencoder framework.'
                         'Choose among `LSA`', metavar='')
     # density estimator
     parser.add_argument('--estimator', type=str, default='SOS', help='The name of density estimator.'
+=======
+
+    # autoencoder name 
+    parser.add_argument('--autoencoder', type=str,default ='LSA',
+                        help='The Autoencoder framework.'
+                        'Choose among `LSA`', metavar='')
+    # density estimator
+    parser.add_argument('--estimator', type=str, default=None, help='The name of density estimator.'
+>>>>>>> message
                         'Choose among `SOS`, `MAF`', metavar='')
     # dataset 
     parser.add_argument('--dataset', type=str,
                         help='The name of the dataset to perform tests on.'
                         'Choose among `mnist`, `cifar10`', metavar='')
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
     
+=======
+
+    parser.add_argument('--Combine_density', dest='cd',action = 'store_true',default = False)
+
+    parser.add_argument('--NoAutoencoder', dest='coder',action='store_false', default = True)
+
+>>>>>>> message
     # batch size for training
     parser.add_argument(
     '--batch_size',
@@ -159,6 +261,7 @@ def parse_arguments():
     parser.add_argument(
     '--code_length',
     type=int,
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
     default=64,
     help='length of hidden vector (default: 32)')
 
@@ -169,6 +272,23 @@ def parse_arguments():
         help = 'Combine reconstruction loss in the input of density estimator'
         )
 
+=======
+    default=32,
+    help='length of hidden vector (default: 32)')
+
+    # number of blocks
+    parser.add_argument(
+    '--lam',
+    type=float,
+    default=1,
+    help='tradeoff between reconstruction loss and autoregression loss')
+    
+    parser.add_argument(
+    '--n_class',
+    type = int,
+    default = 2,
+    help = 'Number of classes used in experiments')
+>>>>>>> message
 
     #K  (only for SOS flow) 
     #M (only for SOS flow)

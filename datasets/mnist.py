@@ -16,7 +16,11 @@ class MNIST(OneClassDataset):
     """
     Models MNIST dataset for one class classification.
     """
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
     def __init__(self, path):
+=======
+    def __init__(self, path, n_class = 10):
+>>>>>>> message
         # type: (str) -> None
         """
         Class constructor.
@@ -29,6 +33,11 @@ class MNIST(OneClassDataset):
 
         self.normal_class = None
 
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
+=======
+        self.n_class = n_class
+
+>>>>>>> message
         # Get train and test split
         self.train_split = datasets.MNIST(self.path, train=True, download=True, transform=None)
         
@@ -60,6 +69,27 @@ class MNIST(OneClassDataset):
         # test idx with 50%->90% normal class(50% -> 10% novelty)
         self.test_idxs = None 
 
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
+=======
+    def min_size(self):
+        if self.mode == 'train' or self.mode == 'valid':
+
+            train_idx = [idx for idx in self.shuffled_train_idx if self.train_split[idx][1] == 0]
+            minsize = len(train_idx)
+            for normal_class in range(1,10):
+                train_idx = [idx for idx in self.shuffled_train_idx if self.train_split[idx][1] == self.normal_class]
+                minsize = min(len(train_idx),minsize)
+            return minsize
+        elif self.mode == 'test':
+
+            train_idx = [idx for idx in self.shuffled_train_idx if self.train_split[idx][1] == 0]
+            minsize = len(train_idx)
+
+            for normal_class in range(1,10):
+                train_idx = [idx for idx in self.shuffled_train_idx if self.train_split[idx][1] == self.normal_class]
+                minsize = min(len(train_idx),minsize)
+            return minsize
+>>>>>>> message
 
     def val(self, normal_class):
         # type: (int) -> None
@@ -78,7 +108,14 @@ class MNIST(OneClassDataset):
 
         # valid examples (10 % of training examples)
         self.val_idxs = [idx for idx in self.val_idxs if self.train_split[idx][1] == self.normal_class]
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
 
+=======
+        minsize = self.min_size()
+
+        self.val_idxs = self.val_idxs[0:minsize]
+        
+>>>>>>> message
         self.length = len(self.val_idxs)
 #--------------------------------------------------------------------
     def val2(self, normal_class):
@@ -97,6 +134,11 @@ class MNIST(OneClassDataset):
         self.length = len(self.val_idxs)
         print(f'Val2 Set prepared, Num:{self.length}')
 #---
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
+=======
+    
+
+>>>>>>> message
     def train(self, normal_class):
         # type: (int) -> None
         """
@@ -112,6 +154,13 @@ class MNIST(OneClassDataset):
         self.transform = self.val_transform
         # training examples are all normal
         self.train_idxs = [idx for idx in self.shuffled_train_idx if self.train_split[idx][1] == self.normal_class]
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
+=======
+        
+        # control all the train-set same
+        # minsize = self.min_size()
+        # self.train_idxs = self.train_idxs[0:minsize]
+>>>>>>> message
 
         self.length = len(self.train_idxs)
         # print 
@@ -141,6 +190,13 @@ class MNIST(OneClassDataset):
         else:
             # create test examples (normal)
             self.test_idxs = [idx for idx in self.shuffled_test_idx if self.test_split[idx][1] == self.normal_class]
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
+=======
+            
+            # contral all test sets have same size 
+            minsize = self.min_size()
+            self.test_idxs = self.test_idxs[0:minsize]
+>>>>>>> message
 
             normal_num = len(self.test_idxs)
 
@@ -207,14 +263,22 @@ class MNIST(OneClassDataset):
         """
         Returns all test possible test sets (the 10 classes).
         """
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
         return np.arange(0, 10)
+=======
+        return np.arange(0,self.n_class)
+>>>>>>> message
     @property
     def train_classes(self):
         # type: () -> np.ndarray
         """
         Returns all test possible test sets (the 10 classes).
         """
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
         return np.arange(0, 10)
+=======
+        return np.arange(0,self.n_class)
+>>>>>>> message
 
 
     @property
