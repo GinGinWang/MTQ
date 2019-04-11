@@ -10,6 +10,13 @@ from models.blocks_2d import DownsampleBlock
 from models.blocks_2d import ResidualBlock
 from models.blocks_2d import UpsampleBlock
 
+<<<<<<< HEAD
+=======
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
+from models.estimator_sos import EstimatorSoS
+from models.estimator_maf import EstimatorMAF
+=======
+>>>>>>> temp
 # flows
 from models.transform_sos import TinvSOS
 from models.transform_maf import TinvMAF
@@ -17,6 +24,10 @@ from models.transform_maf import TinvMAF
 # estimator
 from models.estimator_1D import Estimator1D
 
+<<<<<<< HEAD
+=======
+>>>>>>> message
+>>>>>>> temp
 import torch.nn.functional as F
 
 
@@ -158,6 +169,17 @@ class LSA_CIFAR10(BaseModule):
         self.input_shape = input_shape
         self.code_length = code_length
         self.est_name = est_name
+<<<<<<< HEAD
+=======
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
+        self.name = f"{est_name}LSA"
+
+        # the input of estimator is density z / combine_density (z,|x-x_r|^2)
+        self.combine_density = combine_density
+
+
+=======
+>>>>>>> temp
         self.coder_name = 'LSA'
         if est_name == None:  
             self.name = f'LSA_{est_name}'
@@ -166,6 +188,10 @@ class LSA_CIFAR10(BaseModule):
         # the input of estimator is latent vector z / combine_latentvector (z,|x-x_r|^2)
         self.combine_density = combine_density
 
+<<<<<<< HEAD
+=======
+>>>>>>> message
+>>>>>>> temp
         # Build encoder
         self.encoder = Encoder(
             input_shape=input_shape,
@@ -179,6 +205,36 @@ class LSA_CIFAR10(BaseModule):
             output_shape=input_shape
         )
 
+<<<<<<< HEAD
+=======
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
+        # # Build estimator
+        # self.estimator = Estimator1D(
+        #     code_length=code_length,
+        #     fm_list=[32, 32, 32, 32],
+        #     cpd_channels=cpd_channels
+        # )
+
+        # Build estimator
+        # Use New density estimator
+            #sosflow
+        if combine_density == False:
+            if est_name == "SOS":
+                self.estimator = EstimatorSoS(num_blocks, code_length)  
+                # maf    
+            elif est_name == "MAF":
+                self.estimator = EstimatorMAF(num_blocks, code_length)
+        else:
+
+        # density = [z,dist(x,x_r)], code_length+1
+            if est_name == "SOS":
+                self.estimator = EstimatorSoS(num_blocks, code_length+1)  
+                # maf    
+            elif est_name == "MAF":
+                self.estimator = EstimatorMAF(num_blocks, code_length+1)
+
+=======
+>>>>>>> temp
         # Build estimator
         # Build estimator
         if combine_density:
@@ -221,6 +277,10 @@ class LSA_CIFAR10(BaseModule):
 
 
         
+<<<<<<< HEAD
+=======
+>>>>>>> message
+>>>>>>> temp
     def forward(self, x):
         # type: (torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
         """
@@ -233,14 +293,49 @@ class LSA_CIFAR10(BaseModule):
         # Produce representations
         z = self.encoder(x)
         
+<<<<<<< HEAD
+=======
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
+
+        # Reconstruct x
+        x_r = self.decoder(z)
+        x_r = x_r.view(-1, *self.input_shape)
+        z_dist = None
+=======
+>>>>>>> temp
         # Reconstruct x
         x_r = self.decoder(z)
         x_r = x_r.view(-1, *self.input_shape)
         
+<<<<<<< HEAD
+=======
+>>>>>>> message
+>>>>>>> temp
 
 
         # Estimate CPDs with autoregression
         # density estimator
+<<<<<<< HEAD
+=======
+<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
+        if self.combine_density == False:
+            s,log_jacob_s = self.estimator(z)
+        
+        # [z,|x-xr|^2]
+        else:
+            L = torch.pow((x - x_r), 2)
+
+            while L.dim() > 1:
+                L = torch.sum(L, dim=-1)
+            
+            L= torch.unsqueeze(L,1)
+            new_z = torch.cat((z,L),1)
+
+            s,log_jacob_s = self.estimator(new_z)
+
+        return x_r, z, z_dist,s,log_jacob_s
+=======
+>>>>>>> temp
         if self.combine_density:
             
             # whether need normalize?
@@ -271,3 +366,7 @@ class LSA_CIFAR10(BaseModule):
         elif self.estimator == 'MAF' or self.estimator == 'SOS':
             return x_r, z, s, log_jacob_T_inverse
 
+<<<<<<< HEAD
+=======
+>>>>>>> message
+>>>>>>> temp
