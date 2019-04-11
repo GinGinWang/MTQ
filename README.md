@@ -19,23 +19,23 @@
 * same as [2], Autoencoder + Density Estimator (estimated network)
 * loss = reconstruction loss+ negative llk
 
-## *LSA_SOS*
+#### *LSA_SOS*
 * replace density estimator in *LSA_EN* with SoS flow
 * loss = reconstruction loss+ negative llk
 
-## *LSA_MAF*
+#### *LSA_MAF*
 * replace density estimator in *LSA_EN* with MAF flow
 * loss = reconstruction loss+ negative llk
 
-## *EN*
+#### *EN*
 * Only use density estimator EN
 * loss = negative llk
 
-## *SOS*: 
+#### *SOS*: 
 * Only use density estimator SOS
 * loss = negative llk
 
-## *MAF*: 
+#### *MAF*: 
 * Only use density estimator MAF
 * loss = negative llk
 
