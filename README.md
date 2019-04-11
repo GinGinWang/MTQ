@@ -13,8 +13,7 @@
 * **test.py** - code for testing/run novelty dector.
 
 ### *Model*
-An example to build and train model in train_mnist.sh
-#### Args
+An example to build and train model in train_mnist.sh. Args:
 * --NoAuencoder: only use estimator
 * --Combine_density: use reconstruction loss as one dimension of latent vector
 
@@ -24,7 +23,8 @@ An example to build and train model in train_mnist.sh
 * loss = reconstruction loss
 
 #### *LSA_EN*
-* same as [2]: Autoencoder + Density Estimator (estimated network)
+* same as [2]: 
+Autoencoder + Density Estimator (estimated network)
 * loss = reconstruction loss+ negative llk
 
 #### *LSA_SOS*
