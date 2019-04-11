@@ -5,12 +5,18 @@
 
 * **transform_sos.py** -  SoS flow.
 * **transfrom_maf.py** - MAF flow.
-* **LSA_mnist.py** - LSA autoencoder with/without density estimator.
+
+* **LSA_mnist.py** - LSA autoencoder with/without density estimator for mnist.
+* **LSA_cifar.py** - LSA autoencoder with/without density estimator for cifar10.
 
 * **train.py** - code for training novelty dector.
 * **test.py** - code for testing/run novelty dector.
 
 ### *Model*
+An example of how to build and train model in train_mnist.sh
+--NoAuencoder: only use estimator
+--Combine_density: use reconstruction loss as one dimension of latent vector
+
 #### *LSA*
 * Only use the Autoencoder  in [2] 
 * loss = reconstruction loss
