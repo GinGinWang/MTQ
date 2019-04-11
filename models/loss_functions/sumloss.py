@@ -38,6 +38,7 @@ class SumLoss(nn.Module):
 
         self.flow_loss_fn = FlowLoss()
 
+        
         # Reconstruction Loss
         self.reconstruction_loss = None
         # Negative Log-likelihood of latent vector z 

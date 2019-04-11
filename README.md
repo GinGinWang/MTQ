@@ -13,9 +13,11 @@
 * **test.py** - code for testing/run novelty dector.
 
 ### *Model*
-An example of how to build and train model in train_mnist.sh
---NoAuencoder: only use estimator
---Combine_density: use reconstruction loss as one dimension of latent vector
+An example to build and train model in train_mnist.sh
+#### Args
+* --NoAuencoder: only use estimator
+* --Combine_density: use reconstruction loss as one dimension of latent vector
+
 
 #### *LSA*
 * Only use the Autoencoder  in [2] 
@@ -51,6 +53,8 @@ An example of how to build and train model in train_mnist.sh
                 'F1',
                 'Recall',
                 'Threshold'
+
+First, we only consider AUROC
 
 
 [1] Papamakarios G, Pavlakou T, Murray I. Masked autoregressive flow for density estimation[C]//Advances in Neural Information Processing Systems. 2017: 2338-2347.

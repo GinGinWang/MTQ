@@ -168,6 +168,7 @@ class SOSFlow(nn.Module):
         S = self._transform(Z, C / self.filter) * inputs + const
         # S: bs x d x 1 x m x 1
         # S = T-inverse(X), T-inverse is SoS-flow, i.e., si =T_i-inverse(x_i)= c+ integral_0^{x_i}(sum of squares dependent on x_1,..x_{i-1})
+        
         # logdet(T-inverse)= log(abs((partial T_1/partial x_1)*(partial T_2/partial x_2),....(partial T_d/partial x_d)))
         # (partial T_i/partial x_i)= sum of squares (where u = x_i)
         
