@@ -1,0 +1,12 @@
+*.pyc
+*.ckpt
+*.pkl
+*.mat
+*.txt
+
+__pycache__/
+
+results*/
+checkpoints/
+*results/
+data/
