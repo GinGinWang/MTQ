@@ -20,11 +20,11 @@ An example to build and train model in train_mnist.sh
 
 
 #### *LSA*
-* Only use the Autoencoder  in [2] 
+* Only use the Autoencoder part in [2] 
 * loss = reconstruction loss
 
 #### *LSA_EN*
-* same as [2], Autoencoder + Density Estimator (estimated network)
+* same as [2]: Autoencoder + Density Estimator (estimated network)
 * loss = reconstruction loss+ negative llk
 
 #### *LSA_SOS*
