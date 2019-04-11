@@ -5,25 +5,13 @@ from typing import Tuple
 import torch
 import torch.nn as nn
 
-<<<<<<< HEAD
+
 # LSA
-=======
-<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
-=======
-# LSA
->>>>>>> message
->>>>>>> temp
 from models.base import BaseModule
 from models.blocks_2d import DownsampleBlock
 from models.blocks_2d import UpsampleBlock 
 
-<<<<<<< HEAD
-=======
-<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
-from models.estimator_sos import EstimatorSoS
-from models.estimator_maf import EstimatorMAF
-=======
->>>>>>> temp
+
 # flows
 from models.transform_sos import TinvSOS
 from models.transform_maf import TinvMAF
@@ -31,10 +19,7 @@ from models.transform_maf import TinvMAF
 # estimator
 from models.estimator_1D import Estimator1D
 
-<<<<<<< HEAD
-=======
->>>>>>> message
->>>>>>> temp
+
 import torch.nn.functional as F
 
 
@@ -65,14 +50,7 @@ class Encoder(BaseModule):
             DownsampleBlock(channel_in=c, channel_out=32, activation_fn=activation_fn),
             DownsampleBlock(channel_in=32, channel_out=64, activation_fn=activation_fn),
         )
-<<<<<<< HEAD
 
-=======
-<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
-=======
-
->>>>>>> message
->>>>>>> temp
         self.deepest_shape = (64, h // 4, w // 4)
 
         # FC network
@@ -97,14 +75,7 @@ class Encoder(BaseModule):
         h = self.conv(h)
         h = h.view(len(h), -1)
         o = self.fc(h)
-<<<<<<< HEAD
 
-=======
-<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
-=======
-
->>>>>>> message
->>>>>>> temp
         return o
 
 
@@ -116,15 +87,7 @@ class Decoder(BaseModule):
         # type: (int, Tuple[int, int, int], Tuple[int, int, int]) -> None
         """
         Class constructor.
-<<<<<<< HEAD
-        same as LSA 
-=======
-<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
         same as LSA
-=======
-        same as LSA 
->>>>>>> message
->>>>>>> temp
 
         :param code_length: the dimensionality of latent vectors.
         :param deepest_shape: the dimensionality of the encoder's deepest convolutional map.
@@ -177,15 +140,9 @@ class LSA_MNIST(BaseModule):
     """
     LSA model for MNIST one-class classification.
     """
-<<<<<<< HEAD
+ 
+
     def __init__(self,  input_shape, code_length, num_blocks, est_name = None, combine_density= False):
-=======
-<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
-    def __init__(self,  input_shape, code_length,num_blocks, est_name,combine_density):
-=======
-    def __init__(self,  input_shape, code_length, num_blocks, est_name = None, combine_density= False):
->>>>>>> message
->>>>>>> temp
         # type: (Tuple[int, int, int], int, int) -> None
         """
         Class constructor.
@@ -197,40 +154,23 @@ class LSA_MNIST(BaseModule):
         :param est_name: density estimator {"sos","maf"}
         :param combine_density: 
                             False =  input of estimator is z
-<<<<<<< HEAD
-                            True  =  input of estimator is [z,|x-xr|^2/|x|^2]
-=======
-<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
                             True  =  input of estimator is (z,|x-xr|^2)
-=======
-                            True  =  input of estimator is [z,|x-xr|^2/|x|^2]
->>>>>>> message
->>>>>>> temp
+
         """
         super(LSA_MNIST, self).__init__()
 
         self.input_shape = input_shape
         self.code_length = code_length
         self.est_name = est_name
-<<<<<<< HEAD
-=======
-<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
-        self.name = f"{est_name}LSA"
 
-        
-        # the input of estimator is density z / combine_density (z,|x-x_r|^2)
-=======
->>>>>>> temp
         self.coder_name = 'LSA'
+
         if est_name == None:  
             self.name = f'LSA_{est_name}'
         else:
             self.name = 'LSA'
         # the input of estimator is latent vector z / combine_latentvector (z,|x-x_r|^2)
-<<<<<<< HEAD
-=======
->>>>>>> message
->>>>>>> temp
+
         self.combine_density = combine_density
 
         # Build encoder
@@ -247,27 +187,6 @@ class LSA_MNIST(BaseModule):
         )
 
         # Build estimator
-<<<<<<< HEAD
-=======
-<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
-        # Use New density estimator
-            #sosflow
-        if combine_density == False:
-            if est_name == "SOS":
-                self.estimator = EstimatorSoS(num_blocks, code_length)  
-                # maf    
-            elif est_name == "MAF":
-                self.estimator = EstimatorMAF(num_blocks, code_length)
-        else:
-
-        # density = [z,dist(x,x_r)], code_length+1
-            if est_name == "SOS":
-                self.estimator = EstimatorSoS(num_blocks, code_length+1)  
-                # maf    
-            elif est_name == "MAF":
-                self.estimator = EstimatorMAF(num_blocks, code_length+1)
-=======
->>>>>>> temp
         if combine_density:
             # sos- flow : T-inverse(z) = s,
             # output: s, -log_jacobian 
@@ -305,10 +224,6 @@ class LSA_MNIST(BaseModule):
             # No estimator
             elif est_name == None:
                 self.estimator = None
-<<<<<<< HEAD
-=======
->>>>>>> message
->>>>>>> temp
 
 
 
@@ -324,54 +239,20 @@ class LSA_MNIST(BaseModule):
         # Produce representations
         z = self.encoder(x)
         
-<<<<<<< HEAD
-=======
-<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
-
-        # Reconstruct x
-        x_r = self.decoder(z)
-        x_r = x_r.view(-1, *self.input_shape)
-        z_dist = None
-=======
->>>>>>> temp
         # Reconstruct x
         x_r = self.decoder(z)
         x_r = x_r.view(-1, *self.input_shape)
         
-<<<<<<< HEAD
-=======
->>>>>>> message
->>>>>>> temp
+
 
 
         # Estimate CPDs with autoregression
         # density estimator
-<<<<<<< HEAD
-=======
-<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
-        if self.combine_density == False:
-            s,log_jacob_s = self.estimator(z)
-        
-        # [z,|x-xr|^2]
-        else:
-            L = torch.pow((x - x_r), 2)
 
-            while L.dim() > 1:
-                L = torch.sum(L, dim=-1)
-            
-            L= torch.unsqueeze(L,1)
-            new_z = torch.cat((z,L),1)
-
-            s,log_jacob_s = self.estimator(new_z)
-
-        return x_r, z, z_dist,s,log_jacob_s
-=======
->>>>>>> temp
         if self.combine_density:
             
             # whether need normalize?
             L = torch.pow((x - x_r), 2)
-            
             while L.dim() > 1:
                  L = torch.sum(L, dim=-1)
             # L = L.view(-1,len(z))
@@ -396,8 +277,3 @@ class LSA_MNIST(BaseModule):
             return x_r, z, z_dist
         elif self.estimator == 'MAF' or self.estimator == 'SOS':
             return x_r, z, s, log_jacob_T_inverse
-
-<<<<<<< HEAD
-=======
->>>>>>> message
->>>>>>> temp

@@ -98,15 +98,8 @@ class Estimator1D(BaseModule):
         self.code_length = code_length
         self.fm_list = fm_list
         self.cpd_channels = cpd_channels
-<<<<<<< HEAD
         self.name = 'EN'
-=======
-<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
-=======
-        self.name = 'EN'
->>>>>>> message
->>>>>>> temp
-
+        
         activation_fn = nn.LeakyReLU()
 
         # Add autoregressive layers

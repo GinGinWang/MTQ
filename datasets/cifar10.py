@@ -17,15 +17,9 @@ class CIFAR10(OneClassDataset):
     """
     Models CIFAR10 dataset for one class classification.
     """
-<<<<<<< HEAD
+
     def __init__(self, path, n_class = 10):
-=======
-<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
-    def __init__(self, path):
-=======
-    def __init__(self, path, n_class = 10):
->>>>>>> message
->>>>>>> temp
+
         # type: (str) -> None
         """
         Class constructor.
@@ -35,15 +29,10 @@ class CIFAR10(OneClassDataset):
         super(CIFAR10, self).__init__()
 
         self.path = path
-<<<<<<< HEAD
         self.n_class = n_class
-=======
-<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
 
-=======
         self.n_class = n_class
->>>>>>> message
->>>>>>> temp
+
         self.normal_class = None
 
         # Get train and test split
@@ -220,15 +209,9 @@ class CIFAR10(OneClassDataset):
         """
         Returns all test possible test sets (the 10 classes).
         """
-<<<<<<< HEAD
+
         return np.arange(0, self.n_class)
-=======
-<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
-        return np.arange(0, 10)
-=======
-        return np.arange(0, self.n_class)
->>>>>>> message
->>>>>>> temp
+
 
     @property
     def train_classes(self):
@@ -236,16 +219,8 @@ class CIFAR10(OneClassDataset):
         """
         Returns all test possible test sets (the 10 classes).
         """
-<<<<<<< HEAD
-        return np.arange(0, self.n_class)
-=======
-<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
-        return np.arange(0, 10)
-=======
-        return np.arange(0, self.n_class)
->>>>>>> message
->>>>>>> temp
 
+        return np.arange(0, self.n_class)
 
     @property
     def shape(self):

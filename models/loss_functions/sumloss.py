@@ -1,38 +1,20 @@
 import torch
 import torch.nn as nn
 
-<<<<<<< HEAD
-=======
-<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
-from models.loss_functions.autoregression_loss import AutoregressionLoss
-from models.loss_functions.reconstruction_loss import ReconstructionLoss
 
-from models.loss_functions.sos_loss import SoSLoss
-=======
->>>>>>> temp
 from models.loss_functions.lsa_autoregression_loss import AutoregressionLoss
 from models.loss_functions.reconstruction_loss import ReconstructionLoss
 
 from models.loss_functions.flow_loss import FlowLoss
-<<<<<<< HEAD
-=======
->>>>>>> message
->>>>>>> temp
 
 class SumLoss(nn.Module):
     """
     Implements the loss of a LSA model.
     It is a sum of the reconstruction loss and the autoregression loss.
     """
-<<<<<<< HEAD
+
     def __init__(self, model_name, cpd_channels=100, lam=1):
-=======
-<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
-    def __init__(self, lossname, cpd_channels=100, lam=1):
-=======
-    def __init__(self, model_name, cpd_channels=100, lam=1):
->>>>>>> message
->>>>>>> temp
+
         # type: (int, float) -> None
         """
         Class constructor.
@@ -44,21 +26,8 @@ class SumLoss(nn.Module):
 
         self.cpd_channels = cpd_channels
         self.lam = lam
-<<<<<<< HEAD
-=======
-<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
+
         self.lossname =lossname
-
-        # Set up loss modules
-        self.reconstruction_loss_fn = ReconstructionLoss()
-        self.autoregression_loss_fn = AutoregressionLoss(self.cpd_channels)
-        self.sos_loss_fn = SoSLoss()
-
-        # Numerical variables
-        self.reconstruction_loss = None
-        self.autoregression_loss = None
-=======
->>>>>>> temp
 
         self.name = model_name
 
@@ -73,79 +42,11 @@ class SumLoss(nn.Module):
         self.reconstruction_loss = None
         # Negative Log-likelihood of latent vector z 
         self.nnlk = None
-<<<<<<< HEAD
-=======
->>>>>>> message
->>>>>>> temp
 
         # Add all needed loss
         self.total_loss = None
 
-<<<<<<< HEAD
-    # def forward(self, x, x_r, z, z_dist, s, log_jacob_s):
-=======
-<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
-    def forward(self, x, x_r, z, z_dist, s, log_jacob_s):
-=======
-    # def forward(self, x, x_r, z, z_dist, s, log_jacob_s):
->>>>>>> message
->>>>>>> temp
-        # type: (torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor) -> torch.Tensor
-        """
-        Forward propagation.
 
-        :param x: the batch of input samples.
-        :param x_r: the batch of reconstructions.
-        :param z: the batch of latent representations.
-        :param z_dist: the batch of estimated cpds.
-        :
-        :
-        :return: the loss of the model (averaged along the batch axis).
-        """
-<<<<<<< HEAD
-=======
-<<<<<<< e68b04d9643bf8aa75b53953df98d650ab4d948c
-        # Compute pytorch loss
-        if self.lossname == "LSA":
-            self.autoregression_loss = self.autoregression_loss_fn(z, z_dist)
-        if self.lossname == "SOSLSA":
-            # rec_loss = self.reconstruction_loss_fn(x, x_r)
-            self.autoregression_loss = self.sos_loss_fn(s,log_jacob_s)
-
-        if self.lossname == "MAFLSA":
-            # rec_loss = self.reconstruction_loss_fn(x, x_r)
-            self.autoregression_loss = self.sos_loss_fn(s,log_jacob_s)
-
-        # Store numerical
-        self.reconstruction_loss = self.reconstruction_loss_fn(x,x_r)
-
-        self.total_loss = self.reconstruction_loss+self.lam *self.autoregression_loss
-        
-=======
->>>>>>> temp
-#         # Compute pytorch loss
-#         if self.name == 'LSA':
-#             self.autoregression_loss = self.autoregression_loss_fn(z, z_dist)
-#             # Store numerical
-#             self.reconstruction_loss = self.reconstruction_loss_fn(x,x_r)
-
-#         if self.name == "SOSLSA":
-#             # rec_loss = self.reconstruction_loss_fn(x, x_r)
-#             self.autoregression_loss = self.sos_loss_fn(s,log_jacob_s)
-# # Store numerical
-#             self.reconstruction_loss = self.reconstruction_loss_fn(x,x_r)
-
-#         if self.name == "MAFLSA":
-#             # rec_loss = self.reconstruction_loss_fn(x, x_r)
-#             self.autoregression_loss = self.autoregression_loss(s,log_jacob_s)
-#             # Store numerical
-#             self.reconstruction_loss = self.reconstruction_loss_fn(x,x_r)
-#         if self.name == 'DEMAF':
-#             self.autoregression_loss = self.autoregression_loss(s,log_jacob_s)
-#             self.reconstruction_loss = 0
-        
-#         self.total_loss = self.reconstruction_loss+self.lam *self.autoregression_loss
-    
     def lsa(x,x_r):
         self.reconstruction_loss = self.reconstruction_loss_fn( x, x_r)
         self.total_loss = self.reconstruction_loss
@@ -166,9 +67,4 @@ class SumLoss(nn.Module):
     
     def en(z_dist):
         self.nllk = self.autoregression_loss_fn(z_dist)
-<<<<<<< HEAD
         self.total_loss = self.nnlk
-=======
-        self.total_loss = self.nnlk
->>>>>>> message
->>>>>>> temp
