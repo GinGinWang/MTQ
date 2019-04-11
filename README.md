@@ -12,24 +12,36 @@
 
 ### Model
 ## *LSA*
-* Only use autoencoder  of [2] 
+* Only use the Autoencoder  in [2] 
 * loss = reconstruction loss
 
-## *LSA_EN*: same as [2], Autoencoder + Density Estimator (estimated network), loss = reconstruction loss+ negative llk
+## *LSA_EN*
+* same as [2], Autoencoder + Density Estimator (estimated network)
+* loss = reconstruction loss+ negative llk
 
-## *LSA_SOS*: replace density estimator in *LSA_EN* with SoS flow, loss = reconstruction loss+ negative llk
+## *LSA_SOS*
+* replace density estimator in *LSA_EN* with SoS flow
+* loss = reconstruction loss+ negative llk
 
-## *LSA_MAF*: replace density estimator in *LSA_EN* with MAF flow, loss = reconstruction loss+ negative llk
+## *LSA_MAF*
+* replace density estimator in *LSA_EN* with MAF flow
+* loss = reconstruction loss+ negative llk
 
-## *EN*: Only use density estimator EN, loss = negative llk
+## *EN*
+* Only use density estimator EN
+* loss = negative llk
 
-## *SOS*: Only use density estimator SOS, loss = negative llk
+## *SOS*: 
+* Only use density estimator SOS
+* loss = negative llk
 
-## *MAF*: Only use density estimator MAF, loss = negative llk
+## *MAF*: 
+* Only use density estimator MAF
+* loss = negative llk
 
 
 ### Metric 
-Metric: 'Class', 'AUROC-LLK', 'AUROC-REC', 'AUROC-NS', 'Precision',
+* Metric: 'Class', 'AUROC-LLK', 'AUROC-REC', 'AUROC-NS', 'Precision',
                 'F1',
                 'Recall',
                 'Threshold'
