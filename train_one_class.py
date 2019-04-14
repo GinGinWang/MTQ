@@ -23,7 +23,7 @@ class OneClassTrainHelper(object):
     """
 
 
-    def __init__(self, dataset, model, optimizer, lam, checkpoints_dir, train_epoch=100, batch_size = 100):
+    def __init__(self, dataset, model, optimizer, lam, checkpoints_dir, device,train_epoch=1000, batch_size = 100):
 
         # type: (OneClassDataset, BaseModule, str, str) -> None
         """
@@ -36,6 +36,7 @@ class OneClassTrainHelper(object):
         """
         self.dataset = dataset
         self.model = model
+
         self.name = model.name
 
         self.checkpoints_dir = checkpoints_dir
@@ -48,6 +49,7 @@ class OneClassTrainHelper(object):
 
         # class for computing loss
         self.loss = SumLoss(self.model.name,lam=lam)
+        self.device = device
 
 
     def train_every_epoch(self, epoch):
@@ -58,15 +60,13 @@ class OneClassTrainHelper(object):
             epoch_nllk = 0
 
             loader = DataLoader(self.dataset, batch_size=self.batch_size)
-            print(len(loader))
 
-            for batch_idx, (x,y) in tqdm(enumerate(loader), desc=f'Training models for {self.dataset}'):
+            for batch_idx, (x , y) in tqdm(enumerate(loader), desc=f'Training models for {self.dataset}'):
                 # Clear grad for every batch
 
                 self.model.zero_grad()
-                
-                # x_tra
-                x = x.to('cuda')
+               
+                x = x.to(self.device)
 
                 if self.name == 'LSA':
                     x_r = self.model(x)
@@ -96,14 +96,20 @@ class OneClassTrainHelper(object):
                 # update params
                 self.optimizer.step()
 
-                epoch_loss = + self.loss.total_loss
-                if self.name in ['LSA','LSA_EN','LSA_SOS','LSA_MAF']:
-                    epoch_recloss =+ self.loss.reconstruction_loss
-                    epoch_nllk = + self.loss.epoch_nllk
+                epoch_loss = + self.loss.total_loss.item()
+                if self.name in ['LSA_EN','LSA_SOS','LSA_MAF']:
+                    epoch_recloss =+ self.loss.reconstruction_loss.item()
+                    epoch_nllk = + self.loss.nllk.item()
 
-            # print epoch result
-            print('Train Epoch: {} \tLoss: {:.6f}\tRec: {:.6f},Nllk: {:.6f}'.format(
-                        epoch, epoch_loss, epoch_recloss,epoch_nllk))
+                    
+                    
+                    # print epoch result
+                    print('Train Epoch: {} \tLoss: {:.6f}\tRec: {:.6f},Nllk: {:.6f}'.format(
+                                epoch, epoch_loss, epoch_recloss,epoch_nllk))
+
+                else:
+                    print('Train Epoch: {} \tLoss: {:.6f}\t'.format(
+                                epoch, epoch_loss))
 
 
     def validate(self, epoch, model, valid_dataset, prefix = 'Validation'):
@@ -166,6 +172,7 @@ class OneClassTrainHelper(object):
         """     
         best_validation_epoch = 0
         best_validation_loss = float('inf')
+        best_model = None  
 
         valid_dataset = self.dataset
 
@@ -181,22 +188,24 @@ class OneClassTrainHelper(object):
 
 
 
-            if epoch- best_validation_epoch >= 30: # converge?
+            if epoch- best_validation_epoch >= 100: # converge?
 
                 break 
             
             if validation_loss < best_validation_loss:
                 best_validation_loss = validation_loss
                 best_validation_epoch = epoch
-                print(join(self.checkpoints_dir,f'{self.cl}{self.model.name}.pkl'))
+                best_model = self.model 
 
-                torch.save(self.model.state_dict(), join(self.checkpoints_dir,f'{self.dataset.normal_class}{self.model.name}.pkl'))
-    
+            
+
                 
             print(f'Best_epoch at :{best_validation_epoch} with valid_loss:{best_validation_loss}' ) 
 
         print("Training finish! Normal_class:>>>>>",self.cl)
+        print(join(self.checkpoints_dir,f'{self.cl}{best_model.name}.pkl'))
 
+        torch.save(best_model.state_dict(), join(self.checkpoints_dir,f'{self.dataset.normal_class}{self.name}.pkl'))
         
     
 

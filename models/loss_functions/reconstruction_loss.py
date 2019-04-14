@@ -27,5 +27,5 @@ class ReconstructionLoss(BaseModule):
 
         while L.dim() > 1:
             L = torch.sum(L, dim=-1)
-
+        
         return torch.mean(L)

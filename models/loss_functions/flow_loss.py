@@ -11,7 +11,7 @@ class FlowLoss(BaseModule):
     loss = -mean( log q(z_i)), average loss in every batch
     """
     def __init__(self):
-        super(SoSLoss, self).__init__()
+        super(FlowLoss, self).__init__()
 
     def forward(self, s, log_jacob, use_J=True, size_average=True):
         '''

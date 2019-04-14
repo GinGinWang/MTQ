@@ -36,7 +36,7 @@ class TinvSOS(BaseModule):
 
         super(TinvSOS, self).__init__()
         self.name = 'SOS'
-
+        self.input_size = input_size
         modules = []
         for i in range(n_blocks):
             modules += [

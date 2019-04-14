@@ -14,15 +14,12 @@ from models.transform_maf import TinvMAF
 from models.transform_sos import TinvSOS
 
 from datasets.utils import set_random_seed
-from train_one_class import OneClassTrainHelper
 
 
-import torch.optim as optim
+from result_helpers import OneClassTestHelper
 import os
 
 import torch
-
-
 
 def main():
     # type: () -> None
@@ -32,7 +29,6 @@ def main():
 
     ## Parse command line arguments
     args = parse_arguments()
-
     device = torch.device("cuda:0")
     # Lock seeds
     set_random_seed(30101990)
@@ -40,10 +36,13 @@ def main():
     # prepare dataset in train mode
     if args.dataset == 'mnist':
         dataset = MNIST(path='data/MNIST', n_class = args.n_class)
+
     elif args.dataset == 'cifar10':
-        dataset = CIFAR10(path='data/CIFAR10', n_class = args.n_class)
+        dataset = CIFAR10(path='data/CIFAR', n_class = args.n_class)
+    
     else:
         raise ValueError('Unknown dataset')
+    
     
     print ("dataset shape: ",dataset.shape)
 
@@ -51,76 +50,53 @@ def main():
 
     c, h , w = dataset.shape
 
-    if not os.path.exists(dirName):
-        os.makedirs(dirName)
-        print(f'Make Dir:{dirName}')
+    # Build Model
+    # Build Model
+    if (not args.coder):
+        # directly estimate density by model
 
+        # build Density Estimator
+        if args.estimator == 'MAF':
+            model = TinvMAF(args.num_blocks, c*h*w).cuda()
 
+        elif args.estimator == 'SOS':
+            model = TinvSOS(args.num_blocks, c*h*w).cuda()
 
-    for cl_idx, cl in enumerate(dataset.train_classes):
-
-        dataset.train(cl)
-        # Build Model
-        if (not args.coder):
-            # directly estimate density by model
-
-            # build Density Estimator
-            if args.estimator == 'MAF':
-                model = TinvMAF(args.num_blocks, c*h*w).cuda()
-
-            elif args.estimator == 'SOS':
-                model = TinvSOS(args.num_blocks, c*h*w).cuda()
-
-        # 1-D estimator from LSA
-            elif args.estimator == 'EN':
-                self.model = Estimator1D(
-                code_length=c*h*w,
-                fm_list=[32, 32, 32, 32],
-                cpd_channels=100).cuda()
-            else:
-                raise ValueError('Unknown Estimator')
-            
-            print (f'No Autoencoder, only use Density Estimator: {args.estimator}')
-
-
+    # 1-D estimator from LSA
+        elif args.estimator == 'EN':
+            self.model = Estimator1D(
+            code_length=c*h*w,
+            fm_list=[32, 32, 32, 32],
+            cpd_channels=100).cuda()
         else:
-            if args.autoencoder == "LSA":
-                print(f'Autoencoder:{args.autoencoder}')
-                print(f'Density Estimator:{args.estimator}')
-                
-                if args.dataset == 'mnist': 
-
-                    model =LSA_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator, combine_density = args.cd)
-                
-                elif args.dataset == 'cifar10':
-                
-                    model =LSA_CIFAR10(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.cd)
-            else:
-                raise ValueError('Unknown MODEL')
+            raise ValueError('Unknown Estimator')
         
-        model.to(device)
-        optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-6)
-
-        
-
-        
-        # Initialize training process
-
-        helper = OneClassTrainHelper(dataset, model, optimizer, lam = args.lam,  checkpoints_dir=dirName, train_epoch=args.epochs, batch_size= args.batch_size, device= device)
-
-        # Start training 
-        helper.train_one_class_classification()
+        print (f'No Autoencoder, only use Density Estimator: {args.estimator}')
 
 
+    else:
+        if args.autoencoder == "LSA":
+            print(f'Autoencoder:{args.autoencoder}')
+            print(f'Density Estimator:{args.estimator}')
+            
+            if args.dataset == 'mnist': 
 
+                model =LSA_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator, combine_density = args.cd)
+            
+            elif args.dataset == 'cifar10':
+            
+                model =LSA_CIFAR10(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.cd)
+        else:
+            raise ValueError('Unknown MODEL')
+    
+    # set to Test mode
+    model.to(device).eval()
+    
+    # Initialize training process
+    helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, lam = args.lam, checkpoints_dir= dirName, output_file= f"{model.name}_{args.dataset}_cd{args.combine_density}_nml{args.score_normed}_nlration{args.novel_ratio}",device = device)
 
-
-
-
-
-
-
-
+    # Start training 
+    helper.test_one_class_classification()
 
 
 
@@ -148,31 +124,26 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description = 'Train autoencoder with density estimation',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-
-
     # autoencoder name 
-    parser.add_argument('--autoencoder', type=str,default ='LSA',
+    parser.add_argument('--autoencoder', type=str,
                         help='The Autoencoder framework.'
                         'Choose among `LSA`', metavar='')
     # density estimator
-    parser.add_argument('--estimator', type=str, default=None, help='The name of density estimator.'
+    parser.add_argument('--estimator', type=str, help='The name of density estimator.'
                         'Choose among `SOS`, `MAF`', metavar='')
     # dataset 
     parser.add_argument('--dataset', type=str,
                         help='The name of the dataset to perform tests on.'
                         'Choose among `mnist`, `cifar10`', metavar='')
-
-
+    
     parser.add_argument('--Combine_density', dest='cd',action = 'store_true',default = False)
 
     parser.add_argument('--NoAutoencoder', dest='coder',action='store_false', default = True)
-
-
     # batch size for training
     parser.add_argument(
     '--batch_size',
     type=int,
-    default=1000,
+    default=100,
     help='input batch size for training (default: 100)')
     
     # epochs 
@@ -181,7 +152,6 @@ def parse_arguments():
     type=int,
     default=1000,
     help='number of epochs to train (default: 1000)')
-    
     # learning rate 
     parser.add_argument(
     '--lr', type=float, default=0.0001, help='learning rate (default: 0.0001)')
@@ -190,7 +160,7 @@ def parse_arguments():
     parser.add_argument(
     '--no_cuda',
     action='store_true',
-    default=False,
+    default= False,
     help='disables CUDA training')
 
     # number of blocks
@@ -208,13 +178,28 @@ def parse_arguments():
     default=64,
     help='length of hidden vector (default: 32)')
 
-    # number of blocks
+    # Normalize the novelty score
     parser.add_argument(
-    '--lam',
-    type=float,
-    default=1,
-    help='tradeoff between reconstruction loss and autoregression loss')
+        '--score_normed',
+        action ='store_true',
+        default= False,
+        help ='For Test: Normalize novelty score by Valid Set' )
+
+    # novel ratio
+    # default use 10% novel examples in test set
+    parser.add_argument(
+        '--novel_ratio',
+        type = float,
+        default= 1,
+        help ='For Test: Ratio, novel examples in test sets: [0.1,1]' )
     
+    # join density
+    parser.add_argument(
+        '--combine_density',
+        default= False,
+        help = 'Combine reconstruction loss in the input of density estimator'
+        )
+
     parser.add_argument(
     '--n_class',
     type = int,
@@ -222,10 +207,17 @@ def parse_arguments():
     help = 'Number of classes used in experiments')
 
     #K  (only for SOS flow) 
+    
     #M (only for SOS flow)
+    parser.add_argument(
+    '--lam',
+    type=float,
+    default=1,
+    help='tradeoff between reconstruction loss and autoregression loss')
+    
 
     return parser.parse_args()
-    
+
 # Entry point
 if __name__ == '__main__':
     main()

@@ -166,9 +166,12 @@ class LSA_MNIST(BaseModule):
         self.coder_name = 'LSA'
 
         if est_name == None:  
-            self.name = f'LSA_{est_name}'
-        else:
             self.name = 'LSA'
+            print(f'{self.name}_cd_{combine_density}')
+        else:
+            self.name = f'LSA_{est_name}'
+            print(f'{self.name}_cd_{combine_density}')
+        
         # the input of estimator is latent vector z / combine_latentvector (z,|x-x_r|^2)
 
         self.combine_density = combine_density
@@ -250,30 +253,26 @@ class LSA_MNIST(BaseModule):
         # density estimator
 
         if self.combine_density:
-            
+
             # whether need normalize?
             L = torch.pow((x - x_r), 2)
             while L.dim() > 1:
                  L = torch.sum(L, dim=-1)
             # L = L.view(-1,len(z))
             L.unsqueeze_(-1)     
-            new_z = torch.cat((z,L),1)
-            if est_name == 'EN':
+            z = torch.cat((z,L),1)
+
+
+        if self.est_name == 'EN':
                 # density distribution of z 
-                z_dist= self.estimator(new_z)
-            elif est_name == 'SOS' or est_name =='MAF':
-                s, log_jacob_T_inverse = self.estimator(new_z)
-        else:
-            if est_name == 'EN':
-                # density distribution of z 
-                z_dist= self.estimator(z)
-            elif est_name == 'SOS' or est_name =='MAF':
-                s, log_jacob_T_inverse = self.estimator(z)
+            z_dist= self.estimator(z)
+        elif self.est_name in ['SOS','MAF']:
+            s, log_jacob_T_inverse = self.estimator(z)
 
         # Without Estimator
-        if self.estimator == None:
-            return x_r
-        elif self.estimator == 'EN':
+        if self.est_name == 'EN':
             return x_r, z, z_dist
-        elif self.estimator == 'MAF' or self.estimator == 'SOS':
+        elif self.est_name in ['MAF','SOS']:
             return x_r, z, s, log_jacob_T_inverse
+        else:
+            return x_r

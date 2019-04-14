@@ -28,7 +28,7 @@ class OneClassTestHelper(object):
     Performs tests for one-class datasets (MNIST or CIFAR-10).
     """
 
-    def __init__(self, dataset, model, score_normed, novel_ratio, checkpoints_dir, output_file):
+    def __init__(self, dataset, model, score_normed, novel_ratio, lam, checkpoints_dir, output_file, device):
         # type: (OneClassDataset, BaseModule, str, str) -> None
         """
         Class constructor.
@@ -45,14 +45,16 @@ class OneClassTestHelper(object):
         self.model = model
         self.checkpoints_dir = checkpoints_dir
         self.output_file = output_file
-
+        self.device = device
+        self.name = model.name
+        
         # control novel ratio in test sets.
         self.novel_ratio = novel_ratio
 
         # normalized novelty score
         self.score_normed = score_normed
         # Set up loss function
-        self.loss = SumLoss(self.model.name)
+        self.loss = SumLoss(self.model.name, lam = lam)
 
     @torch.no_grad()
     #temporarily set all the requires_graph flag to false
@@ -89,28 +91,46 @@ class OneClassTestHelper(object):
             sample_rec = np.zeros(shape=(len(loader),))
             sample_y = np.zeros(shape=(len(loader),))
 
-            density = 0
-
 
             for i, (x, y) in tqdm(enumerate(loader), desc=f'Computing scores for {dataset}'):
-                x = x.to('cuda')
-                x_r, z, z_dist, s, log_jacob_s = self.model(x)
-                self.loss(x, x_r, z, z_dist,s,log_jacob_s)
+                x = x.to(self.device)
 
-                sample_llk[i] = - self.loss.autoregression_loss
-                sample_rec[i] = - self.loss.reconstruction_loss
+                if self.name == 'LSA':
+                    x_r = self.model(x)
+                    self.loss.lsa(x, x_r)
+
+                elif self.name == 'LSA_EN':
+                    
+                    x_r, z, z_dist = self.model(x)
+                    self.loss.lsa_en(x, x_r, z, z_dist)
+                
+                elif self.name in ['LSA_SOS', 'LSA_MAF']:
+                    x_r, z, s, log_jacob_T_inverse = self.model(x)
+                    self.loss.lsa_flow(x,x_r,s,log_jacob_T_inverse)
+                
+                elif self.name in ['SOS', 'MAF']:
+                    s, log_jacob_T_inverse = self.model(x)
+                    self.loss.flow(s,log_jacob_T_inverse)
+                
+                elif self.name == 'EN':
+                    z_dist = model(x)
+                    self.loss.en(z_dist)
+
+                
                 sample_y[i] = y.item()
-                # print (sample_llk[i])
-
-                density += sample_llk[i]
+                # score larger-->normal data
+                if self.name in ['LSA','LSA_MAF','LSA_SOS','LSA_EN']:
+                    sample_rec[i] = - self.loss.reconstruction_loss
             
-            density = density/dataset.length
+                if self.name in ['LSA_MAF','LSA_SOS','LSA_EN','EN','SOS','MAF']:    
+                    sample_llk[i] = - self.loss.nllk
+                # print (sample_llk[i])
 
 
             if self.score_normed == True:
                 print(f'min_llk:{min_llk},max_llk:{max_llk}'
                     )
-                print(f'min_rec:{min_rec},max_llk:{max_rec}')
+                print(f'min_rec:{min_rec},max_rec:{max_rec}')
 
                 # Normalize scores
                 sample_llk = normalize(sample_llk, min_llk, max_llk)
@@ -123,40 +143,24 @@ class OneClassTestHelper(object):
             sample_ns = novelty_score(sample_llk, sample_rec)
 
             # Compute precision, recall, f1_score based on threshold
-            threshold = self.compute_threshold(cl)
-            y_hat = np.less(sample_ns, threshold)
-
-            precision = precision_score(sample_y,y_hat)
-            f1 = f1_score(sample_y, y_hat)
-            recall = recall_score(sample_y, y_hat)
-
-            print (sample_llk)
-            sample_ns = novelty_score(sample_llk, sample_rec)
-
-            # # Compute precision, recall, f1_score based on threshold
             # threshold = self.compute_threshold(cl)
-            
-            # #1 normal 0 novel 
-            # y_hat = np.greater(sample_ns, threshold)
+            # y_hat = np.less(sample_ns, threshold)
 
             # precision = precision_score(sample_y,y_hat)
             # f1 = f1_score(sample_y, y_hat)
             # recall = recall_score(sample_y, y_hat)
 
-
             # Compute AUROC for this class
             this_class_metrics = [
-                roc_auc_score(sample_y, sample_llk),  # likelihood metric
-                roc_auc_score(sample_y, sample_rec),  # 
-
-                roc_auc_score(sample_y, sample_ns)    # novelty score
-                # precision,
-                # f1,
-                # recall,
-                # threshold,
-                # density
-
+                roc_auc_score(sample_y, sample_ns)    #
             ]
+            if self.name in ['LSA_EN','LSA_SOS','LSA_MAF']:
+                this_class_metrics.append(
+                roc_auc_score(sample_y, sample_llk))
+                this_class_metrics.append(
+                roc_auc_score(sample_y, sample_rec))
+
+            # write on table
             oc_table.add_row([cl_idx] + this_class_metrics)
 
             all_metrics.append(this_class_metrics)
@@ -188,19 +192,41 @@ class OneClassTestHelper(object):
 
         sample_llk = np.zeros(shape=(len(loader),))
         sample_rec = np.zeros(shape=(len(loader),))
+        
         for i, (x, y) in enumerate(loader):
-            x = x.to('cuda')
-            x_r, z, z_dist, s, log_jacob_s = self.model(x)
+            
+            x = x.to(self.device)
 
-            self.loss(x, x_r, z, z_dist,s, log_jacob_s)
+            if self.name == 'LSA':
+                x_r = self.model(x)
+                self.loss.lsa(x, x_r)
 
-            sample_llk[i] = - self.loss.autoregression_loss
-            sample_rec[i] = - self.loss.reconstruction_loss
+            elif self.name == 'LSA_EN':
+                
+                x_r, z, z_dist = self.model(x)
+                self.loss.lsa_en(x, x_r, z, z_dist)
+            
+            elif self.name in ['LSA_SOS', 'LSA_MAF']:
+                x_r, z, s, log_jacob_T_inverse = self.model(x)
+                self.loss.lsa_flow(x,x_r,s,log_jacob_T_inverse)
+            
+            elif self.name in ['SOS', 'MAF']:
+                s, log_jacob_T_inverse = self.model(x)
+                self.loss.flow(s,log_jacob_T_inverse)
+            
+            elif self.name == 'EN':
+                z_dist = model(x)
+                self.loss.en(z_dist)
 
+            # score larger-->normal data
+            if self.name in ['LSA','LSA_MAF','LSA_SOS','LSA_EN']:
+                sample_rec[i] = - self.loss.reconstruction_loss
+            
+            if self.name in ['LSA_MAF','LSA_SOS','LSA_EN','EN','SOS','MAF']:    
+                sample_llk[i] = - self.loss.nllk
+
+            
         return sample_llk.min(), sample_llk.max(), sample_rec.min(), sample_rec.max()
-
-
-
 
     @property
     def empty_table(self):
@@ -211,13 +237,14 @@ class OneClassTestHelper(object):
         :return: table to be filled with auroc metrics.
         """
         table = PrettyTable()
+        if self.name in ['LSA_MAF','LSA_SOS','LSA_EN']:
 
-        table.field_names = ['Class', 'AUROC-LLK', 'AUROC-REC', 'AUROC-NS'
-                # , 'Precision',
-                # 'F1',
-                # 'Recall', 'Threshold','Density'
+            table.field_names = ['Class', 'AUROC-LLK', 'AUROC-REC', 'AUROC-NS'
                 ]
-
+        elif self.name in ['MAF','SOS','EN','LSA']:
+            table.field_names = ['Class', 'AUROC-NS'
+                ]
+        
         table.float_format = '0.3'
         return table
 
@@ -234,9 +261,29 @@ class OneClassTestHelper(object):
         sample_score = np.zeros(shape=(len(loader),))
         ytrue = np.zeros(shape=(len(loader),))
         for i, (x, y) in enumerate(loader):
-            x = x.to('cuda')
-            x_r, z, z_dist, s, log_jacob_s = self.model(x)
-            self.loss(x, x_r, z, z_dist,s, log_jacob_s)
+            x = x.to(self.device)
+
+            if self.name == 'LSA':
+                x_r = self.model(x)
+                self.loss.lsa(x, x_r)
+
+            elif self.name == 'LSA_EN':
+                
+                x_r, z, z_dist = self.model(x)
+                self.loss.lsa_en(x, x_r, z, z_dist)
+            
+            elif self.name in ['LSA_SOS', 'LSA_MAF']:
+                x_r, z, s, log_jacob_T_inverse = self.model(x)
+                self.loss.lsa_flow(x,x_r,s,log_jacob_T_inverse)
+            
+            elif self.name in ['SOS', 'MAF']:
+                s, log_jacob_T_inverse = self.model(x)
+                self.loss.flow(s,log_jacob_T_inverse)
+            
+            elif self.name == 'EN':
+                z_dist = model(x)
+                self.loss.en(z_dist)
+
             sample_score[i] = - self.loss.total_loss # large score -- normal
             ytrue[i] =y.numpy()
 

@@ -3,7 +3,8 @@ import torch
 import torch.nn.functional as F
 
 from models.base import BaseModule
-#JJ: rewrite Autoregression Loss
+
+
 class AutoregressionLoss(BaseModule):
     """
     Implements the autoregression loss.

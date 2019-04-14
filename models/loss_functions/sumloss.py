@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 
-from models.loss_functions.lsa_autoregression_loss import AutoregressionLoss
+from models.loss_functions.autoregression_loss import AutoregressionLoss
 from models.loss_functions.reconstruction_loss import ReconstructionLoss
 
 from models.loss_functions.flow_loss import FlowLoss
@@ -27,8 +27,6 @@ class SumLoss(nn.Module):
         self.cpd_channels = cpd_channels
         self.lam = lam
 
-        self.lossname =lossname
-
         self.name = model_name
 
         # Set up loss modules
@@ -42,30 +40,33 @@ class SumLoss(nn.Module):
         # Reconstruction Loss
         self.reconstruction_loss = None
         # Negative Log-likelihood of latent vector z 
-        self.nnlk = None
+        self.nllk = None
 
         # Add all needed loss
         self.total_loss = None
 
 
-    def lsa(x,x_r):
+    def lsa(self, x,x_r):
         self.reconstruction_loss = self.reconstruction_loss_fn( x, x_r)
         self.total_loss = self.reconstruction_loss
 
-    def lsa_en(x,x_r,z,z_dist):
+    def lsa_en(self, x, x_r,z,z_dist):
+        
         self.reconstruction_loss = self.reconstruction_loss_fn(x, x_r)
-        self.nnlk = self.autoregression_loss_fn(z,z_dist)
-        self.total_loss = self.reconstruction_loss + self.nnlk
 
-    def lsa_flow(x,x_r,s,nagtive_log_jacob):
+        self.nllk = self.autoregression_loss_fn(z,z_dist)
+        
+        self.total_loss = self.reconstruction_loss + self.lam *self.nllk
+
+    def lsa_flow(self, x,x_r,s,nagtive_log_jacob):
         self.reconstruction_loss = self.reconstruction_loss_fn(x, x_r)
-        self.nnlk= self.flow_loss_fn(s,nagtive_log_jacob)
-        self.total_loss = self.nnlk + self.reconstruction_loss
+        self.nllk= self.flow_loss_fn(s,nagtive_log_jacob)
+        self.total_loss = self.lam * self.nllk + self.reconstruction_loss
 
-    def flow(s,nagtive_log_jacob):
-        self.nnlk = self.flow_loss_fn(s,nagtive_log_jacob)
-        self.total_loss = self.nnlk
+    def flow(self, s,nagtive_log_jacob):
+        self.nllk = self.flow_loss_fn(s,nagtive_log_jacob)
+        self.total_loss = self.nllk
     
-    def en(z_dist):
+    def en(self, z_dist):
         self.nllk = self.autoregression_loss_fn(z_dist)
-        self.total_loss = self.nnlk
+        self.total_loss = self.nllk

@@ -101,9 +101,9 @@ class MNIST(OneClassDataset):
         # valid examples (10 % of training examples)
         self.val_idxs = [idx for idx in self.val_idxs if self.train_split[idx][1] == self.normal_class]
 
-        minsize = self.min_size()
+        # minsize = self.min_size()
 
-        self.val_idxs = self.val_idxs[0:minsize]
+        # self.val_idxs = self.val_idxs[0:minsize]
         
 
         self.length = len(self.val_idxs)
@@ -172,8 +172,8 @@ class MNIST(OneClassDataset):
 
             
             # contral all test sets have same size 
-            minsize = self.min_size()
-            self.test_idxs = self.test_idxs[0:minsize]
+            # minsize = self.min_size()
+            # self.test_idxs = self.test_idxs[0:minsize]
 
             normal_num = len(self.test_idxs)
 
