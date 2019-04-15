@@ -38,7 +38,7 @@ class Encoder(BaseModule):
         self.code_length = code_length
 
         c, h, w = input_shape
-
+        
         activation_fn = nn.LeakyReLU()
 
         # Convolutional network
@@ -238,6 +238,7 @@ class LSA_CIFAR10(BaseModule):
         """
 
         # Produce representations
+
         z = self.encoder(x)
         
         # Reconstruct x
@@ -252,8 +253,11 @@ class LSA_CIFAR10(BaseModule):
 
         if self.combine_density:
 
-            # whether need normalize?
-            L = torch.pow((x - x_r), 2)
+            # whether need normalize? 
+            # L = torch.pow((x-x_r),2)
+            # normalized version is a little better
+
+            L = torch.pow((x/x_r - 1), 2)
             while L.dim() > 1:
                  L = torch.sum(L, dim=-1)
             # L = L.view(-1,len(z))

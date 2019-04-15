@@ -25,7 +25,7 @@ class OneClassTrainHelper(object):
     """
 
 
-    def __init__(self, dataset, model, lr, lam, checkpoints_dir, device,train_epoch=1000, batch_size = 100):
+    def __init__(self, dataset, model, lr, lam, checkpoints_dir, device,train_epoch=1000, batch_size = 100, before_log_epochs = 100):
 
         # type: (OneClassDataset, BaseModule, str, str) -> None
         """
@@ -42,17 +42,21 @@ class OneClassTrainHelper(object):
         self.name = model.name
 
         self.checkpoints_dir = checkpoints_dir
+        self.device = device
         self.train_epoch = train_epoch
+        self.batch_size = batch_size
+        self.before_log_epochs = before_log_epochs
+
+
         self.lr = lr 
         self.lam = lam
         self.optimizer = optim.Adam(self.model.parameters(), weight_decay=1e-6)
 
-        self.batch_size = batch_size
         self.cl = self.dataset.normal_class
 
         # class for computing loss
         self.loss = SumLoss(self.model.name,lam = self.lam)
-        self.device = device
+
 
 
     def train_every_epoch(self, epoch):
@@ -203,17 +207,19 @@ class OneClassTrainHelper(object):
             # validate
             validation_loss = self.validate(epoch, self.model,valid_dataset)
 
-            if (epoch- best_validation_epoch >= 30): # converge? 
-                break 
-            
-            if (validation_loss < best_validation_loss):
-                best_validation_loss = validation_loss
-                best_validation_epoch = epoch
-                best_model = self.model 
+            if epoch > self.before_log_epochs: # wait at least some epochs to log
+
+                if (epoch- best_validation_epoch >= 30) and (best_validation_epoch >0): # converge? 
+                    break 
                 
-            # if epoch % 10 == 0:
-            print(f'valid_loss:{validation_loss},Best_epoch at :{best_validation_epoch} with valid_loss:{best_validation_loss}' )
-            print(f'lam:{lam}')
+                if (validation_loss < best_validation_loss):
+                    best_validation_loss = validation_loss
+                    best_validation_epoch = epoch
+                    best_model = self.model 
+                    
+                # if epoch % 10 == 0:
+                print(f'valid_loss:{validation_loss},Best_epoch at :{best_validation_epoch} with valid_loss:{best_validation_loss}' )
+                print(f'lam:{lam}')
 
         print("Training finish! Normal_class:>>>>>",self.cl)
         print(join(self.checkpoints_dir,f'{self.cl}{best_model.name}.pkl'))

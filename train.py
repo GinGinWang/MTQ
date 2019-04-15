@@ -108,7 +108,7 @@ def main():
                
         # Initialize training process
 
-        helper = OneClassTrainHelper(dataset, model, lr = args.lr, lam = args.lam,  checkpoints_dir=dirName, train_epoch=args.epochs, batch_size= args.batch_size, device= device)
+        helper = OneClassTrainHelper(dataset, model, lr = args.lr, lam = args.lam,  checkpoints_dir=dirName, train_epoch=args.epochs, batch_size= args.batch_size, device= device,before_log_epochs = args.before_log_epochs)
 
         # Start training 
         helper.train_one_class_classification()
@@ -230,6 +230,13 @@ def parse_arguments():
     type = int,
     default = 10,
     help = 'Number of classes used in experiments')
+
+
+    parser.add_argument(
+    '--before_log_epochs',
+    type = int,
+    default = 100,
+    help = 'Number of epochs before saving trained model')
 
     #K  (only for SOS flow) 
     #M (only for SOS flow)
