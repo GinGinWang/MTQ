@@ -192,12 +192,12 @@ class LSA_CIFAR10(BaseModule):
             # sos- flow : T-inverse(z) = s,
             # output: s, -log_jacobian 
             if est_name == 'SOS':
-                self.estimator = TinvSOS(num_blocks, code_length+1)  
+                self.estimator = TinvSOS(num_blocks, code_length+1,hidden_size)  
             
             # maf- flow : T-inverse(z) = s,
             # output: s, -log_jacobian 
             elif est_name == 'MAF':
-                self.estimator = TinvMAF(num_blocks, code_length+1)
+                self.estimator = TinvMAF(num_blocks, code_length+1,hidden_size)
             
             # estimation network: T(z)= p(z)
             # output p(z)
@@ -213,9 +213,9 @@ class LSA_CIFAR10(BaseModule):
 
         else:
             if est_name == "SOS":
-                self.estimator = TinvSOS(num_blocks, code_length)      
+                self.estimator = TinvSOS(num_blocks, code_length,hidden_size)      
             elif est_name == "MAF":
-                self.estimator = TinvMAF(num_blocks, code_length)
+                self.estimator = TinvMAF(num_blocks, code_length,hidden_size)
             elif est_name == 'EN':
                 self.estimator = Estimator1D(
                 code_length=code_length,

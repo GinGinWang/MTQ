@@ -159,7 +159,7 @@ class OneClassTrainHelper(object):
 
 
                 val_loss += self.loss.reconstruction_loss.item()
-                val_loss += self.loss.nllk.item()
+                # val_loss += self.loss.nllk.item()
                 
                 val_loss = val_loss/len(x)
             
@@ -188,25 +188,25 @@ class OneClassTrainHelper(object):
         valid_dataset = self.dataset
 
         valid_dataset.val(self.cl)
-        lam =0.001
+        lam =0.0001
 
         for epoch in range(self.train_epoch):
 
             # adjust learning rate
             adjust_learning_rate(self.optimizer, epoch, self.lr)
             # adjust lam
-            if epoch >= 30 and (epoch % 30 ==0):
+            # if epoch >= 30 and (epoch % 20 ==0):
 
-                lam= min(lam*10, self.lam)  
-                self.loss = SumLoss(self.model.name,self.lam)
+            #     lam= min(lam*10, self.lam)  
+            #     self.loss = SumLoss(self.model.name,self.lam)
             self.train_every_epoch(epoch)
             # validate
             validation_loss = self.validate(epoch, self.model,valid_dataset)
 
-            if (epoch- best_validation_epoch >= 30) and epoch>150: # converge? 
+            if (epoch- best_validation_epoch >= 30): # converge? 
                 break 
             
-            if (validation_loss < best_validation_loss) and epoch>=100:
+            if (validation_loss < best_validation_loss):
                 best_validation_loss = validation_loss
                 best_validation_epoch = epoch
                 best_model = self.model 
