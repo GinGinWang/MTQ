@@ -142,7 +142,7 @@ class LSA_MNIST(BaseModule):
     """
  
 
-    def __init__(self,  input_shape, code_length, num_blocks, est_name = None, combine_density= False):
+    def __init__(self,  input_shape, code_length, num_blocks, hidden_size, est_name = None, combine_density= False):
         # type: (Tuple[int, int, int], int, int) -> None
         """
         Class constructor.
@@ -194,12 +194,12 @@ class LSA_MNIST(BaseModule):
             # sos- flow : T-inverse(z) = s,
             # output: s, -log_jacobian 
             if est_name == 'SOS':
-                self.estimator = TinvSOS(num_blocks, code_length+1)  
+                self.estimator = TinvSOS(num_blocks, code_length+1,hidden_size)  
             
             # maf- flow : T-inverse(z) = s,
             # output: s, -log_jacobian 
             elif est_name == 'MAF':
-                self.estimator = TinvMAF(num_blocks, code_length+1)
+                self.estimator = TinvMAF(num_blocks, code_length+1,hidden_size)
             
             # estimation network: T(z)= p(z)
             # output p(z)
@@ -215,9 +215,9 @@ class LSA_MNIST(BaseModule):
 
         else:
             if est_name == "SOS":
-                self.estimator = TinvSOS(num_blocks, code_length)      
+                self.estimator = TinvSOS(num_blocks, code_length,hidden_size)      
             elif est_name == "MAF":
-                self.estimator = TinvMAF(num_blocks, code_length)
+                self.estimator = TinvMAF(num_blocks, code_length,hidden_size)
             elif est_name == 'EN':
                 self.estimator = Estimator1D(
                 code_length=code_length,

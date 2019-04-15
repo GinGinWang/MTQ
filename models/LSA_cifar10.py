@@ -140,7 +140,7 @@ class LSA_CIFAR10(BaseModule):
     """
  
 
-    def __init__(self,  input_shape, code_length, num_blocks, est_name = None, combine_density= False):
+    def __init__(self,  input_shape, code_length, num_blocks, hidden_size, est_name = None, combine_density= False):
         # type: (Tuple[int, int, int], int, int) -> None
         """
         Class constructor.

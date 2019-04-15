@@ -50,6 +50,8 @@ def main():
     dirName = f'checkpoints/{args.dataset}/combined{args.cd}/'
 
     c, h , w = dataset.shape
+    input_size = c*h*w
+    print ("input_size:",input_size)
 
     if not os.path.exists(dirName):
         os.makedirs(dirName)
@@ -66,17 +68,20 @@ def main():
 
             # build Density Estimator
             if args.estimator == 'MAF':
-                model = TinvMAF(args.num_blocks, c*h*w).cuda()
+                model = TinvMAF(args.num_blocks, input_size, args.hidden_size).cuda()
 
             elif args.estimator == 'SOS':
-                model = TinvSOS(args.num_blocks, c*h*w).cuda()
+                model = TinvSOS(args.num_blocks, input_size, args.hidden_size).cuda()
+
 
         # 1-D estimator from LSA
             elif args.estimator == 'EN':
+
                 self.model = Estimator1D(
                 code_length=c*h*w,
                 fm_list=[32, 32, 32, 32],
                 cpd_channels=100).cuda()
+
             else:
                 raise ValueError('Unknown Estimator')
             
@@ -90,11 +95,12 @@ def main():
                 
                 if args.dataset == 'mnist': 
 
-                    model =LSA_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator, combine_density = args.cd)
+                    model =LSA_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator, combine_density = args.cd, hidden_size= args.hidden_size)
                 
+
                 elif args.dataset == 'cifar10':
                 
-                    model =LSA_CIFAR10(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.cd)
+                    model =LSA_CIFAR10(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.cd, hidden_size =args.hidden_size)
             else:
                 raise ValueError('Unknown MODEL')
         
@@ -203,6 +209,14 @@ def parse_arguments():
     type=int,
     default=64,
     help='length of hidden vector (default: 32)')
+
+     # number of blocks
+    parser.add_argument(
+    '--hidden_size',
+    type=int,
+    default=1024,
+    help='length of hidden vector (default: 32)')
+
 
     # number of blocks
     parser.add_argument(

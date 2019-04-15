@@ -118,7 +118,7 @@ class SOSFlow(nn.Module):
         Initialize: build conditional nets (cn)/ prepare denominators for polymomials
         Args:
             input_size:
-            hidden_size: number of hidden neurons in every hiden    layer of cn
+            hidden_size: number of hidden neurons in every hiden  layer of cn
             k: number of squares (of polynomials)  
             r: degree of polynomials
             n_layers: number of hidden layers

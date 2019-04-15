@@ -21,7 +21,7 @@ class TinvMAF(BaseModule):
         Output: s, -log_jacob of T (i.e., logjab of T-inverse)
     """
 
-    def __init__(self, num_blocks, input_size, hidden_size=1024, use_bn=True):
+    def __init__(self, num_blocks, input_size, hidden_size, use_bn=True):
         # type: (int, List[int], int) -> None
         """
         Implements an estimator for 1-dimensional vectors.
@@ -42,7 +42,7 @@ class TinvMAF(BaseModule):
         modules = []
         for _ in range(num_blocks):
             modules += [
-                fnn.MADE(input_size, hidden_size, num_cond_inputs, act=act),
+                fnn.MADE(input_size, hidden_size, act=act),
                 fnn.BatchNormFlow(input_size),
                 fnn.Reverse(input_size)
             ]
@@ -69,6 +69,7 @@ class TinvMAF(BaseModule):
         :return: the batch of tuples (s, q(s)) CPD estimates q(s).
         """
         h = z.view(-1, self.input_size)
-        z, z_dist = self.T_inverse(z)
+
+        z, z_dist = self.T_inverse(h)
 
         return z, z_dist

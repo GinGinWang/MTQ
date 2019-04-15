@@ -65,13 +65,15 @@ class OneClassTrainHelper(object):
 
             loader = DataLoader(self.dataset, batch_size=self.batch_size)
 
+            if epoch % 10 ==0:
+                print(f'Train-{self.cl}:')
             pbar = tqdm(total=len(loader.dataset))
-            pbar.set_description(f'Train-{self.cl}:')
-
-
+            pbar.set_description('Train:')
+            
             for batch_idx, (x , y) in enumerate(loader):
                 # Clear grad for every batch
-
+                pbar.update(x.size(0))
+                
                 self.model.zero_grad()
                
                 x = x.to(self.device)
@@ -105,28 +107,27 @@ class OneClassTrainHelper(object):
                 self.optimizer.step()
 
                 epoch_loss = + self.loss.total_loss.item()
-                if epoch % 30 ==0:
-                    if self.name in ['LSA_EN','LSA_SOS','LSA_MAF']:
-                        epoch_recloss =+ self.loss.reconstruction_loss.item()
-                        epoch_nllk = + self.loss.nllk.item()
 
-                        # print epoch result
-                        pbar.update(x.size(0))
-                        pbar.set_description('Train Epoch: {}\tLoss: {:.6f}\tRec: {:.6f}\tNllk: {:.6f}'.format(
-                                    epoch, epoch_loss/pbar.n, epoch_recloss/pbar.n, epoch_nllk/pbar.n))
-                
-                    else:
-                        pbar.update(x.size(0))
+            # if epoch %10 ==0:
+        
+            if self.name in ['LSA_EN','LSA_SOS','LSA_MAF']:
+                epoch_recloss =+ self.loss.reconstruction_loss.item()
+                epoch_nllk = + self.loss.nllk.item()
 
-                        pbar.set_description('Train Epoch: {}\tLoss: {:.6f}'.format(
-                                    epoch, epoch_loss/pbar.n))
+                # print epoch result
+                print('Train Epoch: {}\tLoss: {:.6f}\tRec: {:.6f}\tNllk: {:.6f}'.format(
+                            epoch, epoch_loss/len(x), epoch_recloss/len(x), epoch_nllk/len(x)))
+        
+            else:
+                print('Train Epoch: {}\tLoss: {:.6f}'.format(
+                            epoch, epoch_loss/len(x)))
 
     def validate(self, epoch, model, valid_dataset, prefix = 'Validation'):
 
         model.eval()
         val_loss = 0
 
-        loader = DataLoader(valid_dataset,batch_size=100)
+        loader = DataLoader(valid_dataset,batch_size=128)
 
 
         # pbar = tqdm(total=len(loader.dataset))
@@ -159,11 +160,11 @@ class OneClassTrainHelper(object):
 
 
                 val_loss += self.loss.total_loss.item()
+                val_loss = val_loss/len(x)
             
             # pbar.update(x.size(0))
             # pbar.set_description('Val_loss: {:.6f}'.format(
-            #     val_loss / pbar.n))
-
+            #     val_loss / pbar.n))           
         return val_loss
 
 
@@ -189,13 +190,13 @@ class OneClassTrainHelper(object):
 
         for epoch in range(self.train_epoch):
 
-            adjust_learning_rate(self.optimizer, epoch,self.lr)
+            adjust_learning_rate(self.optimizer, epoch, self.lr)
             
             self.train_every_epoch(epoch)
             # validate
             validation_loss = self.validate(epoch, self.model,valid_dataset)
 
-            if epoch- best_validation_epoch >= 30 and epoch >100: # converge?
+            if (epoch- best_validation_epoch >= 30) and (epoch >100): # converge? # at least train 100 epochs
 
                 break 
             
@@ -203,12 +204,9 @@ class OneClassTrainHelper(object):
                 best_validation_loss = validation_loss
                 best_validation_epoch = epoch
                 best_model = self.model 
-
-            
-
                 
-            if epoch % 30 == 0:
-                print(f'Best_epoch at :{best_validation_epoch} with valid_loss:{best_validation_loss}' ) 
+            # if epoch % 10 == 0:
+            print(f'valid_loss:{validation_loss},Best_epoch at :{best_validation_epoch} with valid_loss:{best_validation_loss}' ) 
 
         print("Training finish! Normal_class:>>>>>",self.cl)
         print(join(self.checkpoints_dir,f'{self.cl}{best_model.name}.pkl'))

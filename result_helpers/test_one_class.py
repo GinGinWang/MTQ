@@ -85,6 +85,7 @@ class OneClassTestHelper(object):
             dataset = self.dataset
             
             dataset.test(cl,self.novel_ratio)
+
             loader = DataLoader(self.dataset)
 
             sample_llk = np.zeros(shape=(len(loader),))
@@ -124,6 +125,12 @@ class OneClassTestHelper(object):
             
                 if self.name in ['LSA_MAF','LSA_SOS','LSA_EN','EN','SOS','MAF']:    
                     sample_llk[i] = - self.loss.nllk
+                    if sample_llk[i] == float("+inf"):
+                        sample_llk[i] = 10**38
+                    if sample_llk[i] == float("-inf"):
+                        sample_llk[i] = -10**38
+                    if sample_llk[i] == float('NaN'):
+                        sample_llk[i]=0
                 # print (sample_llk[i])
 
 

@@ -1,7 +1,7 @@
 
-# python train.py  --NoAutoencoder --estimator EN --epochs 5 --dataset mnist --n_class 2
+python train.py  --NoAutoencoder --estimator EN --epochs 5 --dataset mnist --n_class 2
 
-# python test.py  --NoAutoencoder --estimator EN --epochs 5 --dataset mnist --score_normed --n_class 2
+python test.py  --NoAutoencoder --estimator EN --epochs 5 --dataset mnist --score_normed --n_class 2
 
 # python test.py  --NoAutoencoder --estimator EN --epochs 5 --dataset mnist --n_class 2
 

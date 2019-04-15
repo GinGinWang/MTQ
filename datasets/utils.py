@@ -35,7 +35,7 @@ def normalize(samples, min, max):
     """
 
     if (max - min) == 0:
-        ValueError('Wrong Data')
+        result = samples 
     else: 
         result =  (samples - min) / (max - min)
         

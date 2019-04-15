@@ -20,7 +20,7 @@ class TinvSOS(BaseModule):
         Output: s, -log_jacob of T (i.e., logjab of T-inverse)
     """
 
-    def __init__(self, n_blocks, input_size, hidden_size=1024, k=5, r=3, device = None,**kwargs):
+    def __init__(self, n_blocks, input_size, hidden_size, k=5, r=3, device = None,**kwargs):
 
         # type: (int, List[int], int) -> None
         """

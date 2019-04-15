@@ -57,10 +57,10 @@ def main():
 
         # build Density Estimator
         if args.estimator == 'MAF':
-            model = TinvMAF(args.num_blocks, c*h*w).cuda()
+            model = TinvMAF(args.num_blocks, c*h*w,128,args.hidden_size).cuda()
 
         elif args.estimator == 'SOS':
-            model = TinvSOS(args.num_blocks, c*h*w).cuda()
+            model = TinvSOS(args.num_blocks, c*h*w,args.hidden_size).cuda()
 
     # 1-D estimator from LSA
         elif args.estimator == 'EN':
@@ -81,11 +81,11 @@ def main():
             
             if args.dataset == 'mnist': 
 
-                model =LSA_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator, combine_density = args.cd)
+                model =LSA_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator, combine_density = args.cd,hidden_size= args.hidden_size)
             
             elif args.dataset == 'cifar10':
             
-                model =LSA_CIFAR10(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.cd)
+                model =LSA_CIFAR10(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.cd,hidden_size= args.hidden_size)
         else:
             raise ValueError('Unknown MODEL')
     
@@ -93,7 +93,7 @@ def main():
     model.to(device).eval()
     
     # Initialize training process
-    helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, lam = args.lam, checkpoints_dir= dirName, output_file= f"{model.name}_{args.dataset}_cd{args.combine_density}_nml{args.score_normed}_nlration{args.novel_ratio}",device = device)
+    helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, lam = args.lam, checkpoints_dir= dirName, output_file= f"results/{model.name}_{args.dataset}_cd{args.cd}_nml{args.score_normed}_nlration{args.novel_ratio}",device = device)
 
     # Start training 
     helper.test_one_class_classification()
@@ -178,6 +178,14 @@ def parse_arguments():
     default=64,
     help='length of hidden vector (default: 32)')
 
+    # number of blocks
+    parser.add_argument(
+    '--hidden_size',
+    type=int,
+    default=1024,
+    help='length of hidden vector (default: 32)')
+
+
     # Normalize the novelty score
     parser.add_argument(
         '--score_normed',
@@ -193,13 +201,7 @@ def parse_arguments():
         default= 1,
         help ='For Test: Ratio, novel examples in test sets: [0.1,1]' )
     
-    # join density
-    parser.add_argument(
-        '--combine_density',
-        default= False,
-        help = 'Combine reconstruction loss in the input of density estimator'
-        )
-
+   
     parser.add_argument(
     '--n_class',
     type = int,
