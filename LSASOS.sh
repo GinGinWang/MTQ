@@ -1,9 +1,9 @@
 
-# python train.py  --autoencoder LSA --estimator SOS --epochs 1000 --dataset mnist --n_class 2 --lr 0.01 --hidden_size 1024 --batch_size 128 
+python train.py  --autoencoder LSA --estimator SOS --epochs 1000 --dataset mnist --n_class 2 --lr 0.0001 --hidden_size 128 --code_length 64 --batch_size 64 --num_blocks 5 --lam 0.1
 
-python test.py  --autoencoder LSA --estimator SOS --epochs 1000 --dataset mnist --score_normed --n_class 2 --hidden_size 1024 
+python test.py  --autoencoder LSA --estimator SOS --epochs 1000 --dataset mnist --score_normed --n_class 2 --hidden_size 128 --num_blocks 5 
 
-# python test.py  --autoencoder LSA --estimator SOS --epochs 1000 --dataset mnist --n_class 10
+# python test.py  --autoencoder LSA --estimator SOS --epochs 1000 --dataset mnist  --n_class 2 --hidden_size 128  
 
 # python train.py  --autoencoder LSA --estimator SOS --epochs 1000 --dataset mnist --Combine_density --n_class 10
 

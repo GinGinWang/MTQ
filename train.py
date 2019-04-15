@@ -222,7 +222,7 @@ def parse_arguments():
     parser.add_argument(
     '--lam',
     type=float,
-    default=1,
+    default=0.001,
     help='tradeoff between reconstruction loss and autoregression loss')
     
     parser.add_argument(
