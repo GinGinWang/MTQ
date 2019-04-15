@@ -254,8 +254,11 @@ class LSA_MNIST(BaseModule):
 
         if self.combine_density:
 
-            # whether need normalize?
-            L = torch.pow((x - x_r), 2)
+            # whether need normalize? 
+            # L = torch.pow((x-x_r),2)
+            # normalized version is a little better
+
+            L = torch.pow((x/x_r - 1), 2)
             while L.dim() > 1:
                  L = torch.sum(L, dim=-1)
             # L = L.view(-1,len(z))

@@ -17,7 +17,7 @@ from datasets.utils import set_random_seed
 from train_one_class import OneClassTrainHelper
 
 
-import torch.optim as optim
+
 import os
 
 import torch
@@ -99,14 +99,10 @@ def main():
                 raise ValueError('Unknown MODEL')
         
         model.to(device)
-        optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-6)
-
-        
-
-        
+               
         # Initialize training process
 
-        helper = OneClassTrainHelper(dataset, model, optimizer, lam = args.lam,  checkpoints_dir=dirName, train_epoch=args.epochs, batch_size= args.batch_size, device= device)
+        helper = OneClassTrainHelper(dataset, model, lr = args.lr, lam = args.lam,  checkpoints_dir=dirName, train_epoch=args.epochs, batch_size= args.batch_size, device= device)
 
         # Start training 
         helper.train_one_class_classification()
@@ -184,7 +180,7 @@ def parse_arguments():
     
     # learning rate 
     parser.add_argument(
-    '--lr', type=float, default=0.0001, help='learning rate (default: 0.0001)')
+    '--lr', type=float, default=0.001, help='learning rate (default: 0.001)')
 
     # disable cuda
     parser.add_argument(

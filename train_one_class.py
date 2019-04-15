@@ -15,6 +15,8 @@ from models.loss_functions import SumLoss
 
 import math
 
+from utils import *
+import torch.optim as optim
 
 
 class OneClassTrainHelper(object):
@@ -23,7 +25,7 @@ class OneClassTrainHelper(object):
     """
 
 
-    def __init__(self, dataset, model, optimizer, lam, checkpoints_dir, device,train_epoch=1000, batch_size = 100):
+    def __init__(self, dataset, model, lr, lam, checkpoints_dir, device,train_epoch=1000, batch_size = 100):
 
         # type: (OneClassDataset, BaseModule, str, str) -> None
         """
@@ -41,7 +43,9 @@ class OneClassTrainHelper(object):
 
         self.checkpoints_dir = checkpoints_dir
         self.train_epoch = train_epoch
-        self.optimizer = optimizer
+        self.lr = lr 
+        self.optimizer = optim.Adam(self.model.parameters(), weight_decay=1e-6)
+
         self.batch_size = batch_size
 
 
@@ -120,8 +124,8 @@ class OneClassTrainHelper(object):
         loader = DataLoader(valid_dataset,batch_size=100)
 
 
-        pbar = tqdm(total=len(loader.dataset))
-        pbar.set_description('Eval')
+        # pbar = tqdm(total=len(loader.dataset))
+        # pbar.set_description('Eval')
 
         for batch_idx, (x,y) in enumerate(loader):
         
@@ -151,9 +155,9 @@ class OneClassTrainHelper(object):
 
                 val_loss += self.loss.total_loss.item()
             
-            pbar.update(x.size(0))
-            pbar.set_description('Val_loss: {:.6f}'.format(
-                val_loss / pbar.n))
+            # pbar.update(x.size(0))
+            # pbar.set_description('Val_loss: {:.6f}'.format(
+            #     val_loss / pbar.n))
 
         return val_loss
 
@@ -179,16 +183,14 @@ class OneClassTrainHelper(object):
         valid_dataset.val(self.cl)
 
         for epoch in range(self.train_epoch):
-            # train every epoch
+
+            adjust_learning_rate(self.optimizer, epoch,self.lr)
             
             self.train_every_epoch(epoch)
-            
             # validate
             validation_loss = self.validate(epoch, self.model,valid_dataset)
 
-
-
-            if epoch- best_validation_epoch >= 100: # converge?
+            if epoch- best_validation_epoch >= 50: # converge?
 
                 break 
             
@@ -207,5 +209,4 @@ class OneClassTrainHelper(object):
 
         torch.save(best_model.state_dict(), join(self.checkpoints_dir,f'{self.dataset.normal_class}{self.name}.pkl'))
         
-    
 

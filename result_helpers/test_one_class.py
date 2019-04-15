@@ -76,7 +76,7 @@ class OneClassTestHelper(object):
             # Load the checkpoint
             self.model.load_w(join(self.checkpoints_dir, f'{cl}{self.model.name}.pkl'))
 
-            if self.score_normed == True:
+            if self.score_normed:
                 # we need a run on validation, to compute
                 # normalizing coefficient of the Novelty Score (Eq.9 in LSA)
                 min_llk, max_llk, min_rec, max_rec = self.compute_normalizing_coefficients(cl)
@@ -127,7 +127,7 @@ class OneClassTestHelper(object):
                 # print (sample_llk[i])
 
 
-            if self.score_normed == True:
+            if self.score_normed:
                 print(f'min_llk:{min_llk},max_llk:{max_llk}'
                     )
                 print(f'min_rec:{min_rec},max_rec:{max_rec}')
