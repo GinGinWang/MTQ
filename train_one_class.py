@@ -65,7 +65,11 @@ class OneClassTrainHelper(object):
 
             loader = DataLoader(self.dataset, batch_size=self.batch_size)
 
-            for batch_idx, (x , y) in tqdm(enumerate(loader), desc=f'Training models for {self.dataset}'):
+            pbar = tqdm(total=len(loader.dataset))
+            pbar.set_description(f'Train-{self.cl}:')
+
+
+            for batch_idx, (x , y) in enumerate(loader):
                 # Clear grad for every batch
 
                 self.model.zero_grad()
@@ -101,20 +105,21 @@ class OneClassTrainHelper(object):
                 self.optimizer.step()
 
                 epoch_loss = + self.loss.total_loss.item()
-                if self.name in ['LSA_EN','LSA_SOS','LSA_MAF']:
-                    epoch_recloss =+ self.loss.reconstruction_loss.item()
-                    epoch_nllk = + self.loss.nllk.item()
+                if epoch % 30 ==0:
+                    if self.name in ['LSA_EN','LSA_SOS','LSA_MAF']:
+                        epoch_recloss =+ self.loss.reconstruction_loss.item()
+                        epoch_nllk = + self.loss.nllk.item()
 
-                    
-                    
-                    # print epoch result
-                    print('Train Epoch: {} \tLoss: {:.6f}\tRec: {:.6f},Nllk: {:.6f}'.format(
-                                epoch, epoch_loss, epoch_recloss,epoch_nllk))
+                        # print epoch result
+                        pbar.update(x.size(0))
+                        pbar.set_description('Train Epoch: {}\tLoss: {:.6f}\tRec: {:.6f}\tNllk: {:.6f}'.format(
+                                    epoch, epoch_loss/pbar.n, epoch_recloss/pbar.n, epoch_nllk/pbar.n))
+                
+                    else:
+                        pbar.update(x.size(0))
 
-                else:
-                    print('Train Epoch: {} \tLoss: {:.6f}\t'.format(
-                                epoch, epoch_loss))
-
+                        pbar.set_description('Train Epoch: {}\tLoss: {:.6f}'.format(
+                                    epoch, epoch_loss/pbar.n))
 
     def validate(self, epoch, model, valid_dataset, prefix = 'Validation'):
 
@@ -190,7 +195,7 @@ class OneClassTrainHelper(object):
             # validate
             validation_loss = self.validate(epoch, self.model,valid_dataset)
 
-            if epoch- best_validation_epoch >= 50: # converge?
+            if epoch- best_validation_epoch >= 30 and epoch >100: # converge?
 
                 break 
             
@@ -202,7 +207,8 @@ class OneClassTrainHelper(object):
             
 
                 
-            print(f'Best_epoch at :{best_validation_epoch} with valid_loss:{best_validation_loss}' ) 
+            if epoch % 30 == 0:
+                print(f'Best_epoch at :{best_validation_epoch} with valid_loss:{best_validation_loss}' ) 
 
         print("Training finish! Normal_class:>>>>>",self.cl)
         print(join(self.checkpoints_dir,f'{self.cl}{best_model.name}.pkl'))
