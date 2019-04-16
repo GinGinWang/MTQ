@@ -30,7 +30,7 @@ class OneClassTestHelper(object):
     Performs tests for one-class datasets (MNIST or CIFAR-10).
     """
 
-    def __init__(self, dataset, model, score_normed, novel_ratio, lam, checkpoints_dir, output_file, device):
+    def __init__(self, dataset, model, score_normed, novel_ratio, lam, checkpoints_dir, output_file, device,batch_size):
         # type: (OneClassDataset, BaseModule, str, str) -> None
         """
         Class constructor.
@@ -49,7 +49,7 @@ class OneClassTestHelper(object):
         self.output_file = output_file
         self.device = device
         self.name = model.name
-        
+        self.bs = batch_size
         # control novel ratio in test sets.
         self.novel_ratio = novel_ratio
 
@@ -71,6 +71,7 @@ class OneClassTestHelper(object):
 
         # Set up container for metrics from all classes
         all_metrics = []
+        bs =self.bs
 
         # Start iteration over classes
         for cl_idx, cl in enumerate(self.dataset.test_classes):
@@ -87,8 +88,9 @@ class OneClassTestHelper(object):
             dataset = self.dataset
             
             dataset.test(cl,self.novel_ratio)
+            data_num = len(dataset)
 
-            loader = DataLoader(self.dataset, batch_size = 100)
+            loader = DataLoader(self.dataset, batch_size =bs)
 
             sample_llk = np.zeros(shape=(len(dataset),))
             sample_rec = np.zeros(shape=(len(dataset),))
@@ -120,13 +122,13 @@ class OneClassTestHelper(object):
 
                 
                 
-                sample_y[i*100:i*100+100] = y
+                sample_y[i*bs:i*bs+bs] = y
                 # score larger-->normal data
                 if self.name in ['LSA','LSA_MAF','LSA_SOS','LSA_EN']:
-                    sample_rec[i*100:i*100+100] = - self.loss.reconstruction_loss.cpu().numpy()
+                    sample_rec[i*bs:i*bs+bs] = - self.loss.reconstruction_loss.cpu().numpy()
                     
                 if self.name in ['LSA_MAF','LSA_SOS','LSA_EN','EN','SOS','MAF']:    
-                    sample_llk[i*100:i*100+100] = - self.loss.nllk.cpu().numpy()
+                    sample_llk[i*bs:i*bs+bs] = - self.loss.nllk.cpu().numpy()
                     # print (sample_llk[i])
 
             if self.score_normed:
@@ -144,9 +146,11 @@ class OneClassTestHelper(object):
 
             # llk maybe too large or too small
             # why llk can be Nan?
-            # sample_llk[sample_llk==float('+inf')]= 10**35
-            # sample_llk[sample_llk==float('-inf')]= -10**35
+            sample_llk[sample_llk==float('+inf')]= 10**35
+            sample_llk[sample_llk==float('-inf')]= -10**35
+            print(f"NAN_num:{sum(sample_llk!=sample_llk)}")
             sample_llk[sample_llk!=sample_llk] = 0
+
             
             sample_ns = novelty_score(sample_llk, sample_rec)
             
@@ -159,17 +163,34 @@ class OneClassTestHelper(object):
             # recall = recall_score(sample_y, y_hat)
 
             # Compute AUROC for this class
-            print(sample_y)
-            print(sample_ns)
+            
+            print(sample_llk)
+            print (sample_rec)
+            llk1= np.dot(np.mean(sample_llk),y).sum()
+            llk2 = (sample_llk.sum()-llk1)
+            
+            print(torch.nonzero(y).size(0))
+            print(torch.zero(y).size(0))
+            print(data_num)
+
+            llk1 =llk1/torch.nonzero(y).size(0)
+            llk2 =llk2/(data_num-torch.nonzero(y).size(0))
+            print(llk1)
+            print(llk2)
+
+            ## metrics 
             this_class_metrics = [
                 roc_auc_score(sample_y, sample_ns)    #
             ]
             if self.name in ['LSA_EN','LSA_SOS','LSA_MAF']:
                 this_class_metrics.append(
                 roc_auc_score(sample_y, sample_llk))
+                
                 this_class_metrics.append(
                 roc_auc_score(sample_y, sample_rec))
 
+                this_class_metrics.append(llk1)
+                this_class_metrics.append(llk2)
             # write on table
             oc_table.add_row([cl_idx] + this_class_metrics)
 
@@ -196,12 +217,14 @@ class OneClassTestHelper(object):
         :param cl: the class to be considered normal.
         :return: a tuple of normalizing coefficients in the form (llk_min, llk_max, rec_min, rec_max).
         """
+        bs = self.bs
         dataset = self.dataset
         dataset.val(cl)
+
         loader = DataLoader(dataset, batch_size= 100)
 
-        sample_llk = np.zeros(shape=(len(loader),))
-        sample_rec = np.zeros(shape=(len(loader),))
+        sample_llk = np.zeros(shape=(len(dataset),))
+        sample_rec = np.zeros(shape=(len(dataset),))
         
         for i, (x, y) in enumerate(loader):
             
@@ -230,11 +253,14 @@ class OneClassTestHelper(object):
 
             # score larger-->normal data
             if self.name in ['LSA','LSA_MAF','LSA_SOS','LSA_EN']:
-                sample_rec[i*100:i*100+100] = - self.loss.reconstruction_loss.cpu().numpy()
+                sample_rec[i*bs:i*bs+bs] = - self.loss.reconstruction_loss.cpu().numpy()
             
             if self.name in ['LSA_MAF','LSA_SOS','LSA_EN','EN','SOS','MAF']:    
-                sample_llk[i*100:i*100+100] = - self.loss.nllk.cpu().numpy()
+                sample_llk[i*bs:i*bs+bs] = - self.loss.nllk.cpu().numpy()
 
+            sample_llk[sample_llk!=sample_llk] = 0
+            sample_llk[sample_llk==float('+inf')]= 10**35
+            sample_llk[sample_llk==float('-inf')]= -10**35
             
         return sample_llk.min(), sample_llk.max(), sample_rec.min(), sample_rec.max()
 
@@ -249,10 +275,10 @@ class OneClassTestHelper(object):
         table = PrettyTable()
         if self.name in ['LSA_MAF','LSA_SOS','LSA_EN']:
 
-            table.field_names = ['Class', 'AUROC-LLK', 'AUROC-REC', 'AUROC-NS'
+            table.field_names = ['Class', 'AUROC-NS', 'AUROC-LLK', 'AUROC-REC','llk1','llk2'
                 ]
         elif self.name in ['MAF','SOS','EN','LSA']:
-            table.field_names = ['Class', 'AUROC-NS'
+            table.field_names = ['Class', 'AUROC-NS','llk1','llk2'
                 ]
         
         table.float_format = '0.3'
