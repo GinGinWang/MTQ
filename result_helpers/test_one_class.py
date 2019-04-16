@@ -88,48 +88,45 @@ class OneClassTestHelper(object):
             
             dataset.test(cl,self.novel_ratio)
 
-            loader = DataLoader(self.dataset)
+            loader = DataLoader(self.dataset, batch_size = 100)
 
-            sample_llk = np.zeros(shape=(len(loader),))
-            sample_rec = np.zeros(shape=(len(loader),))
-            sample_y = np.zeros(shape=(len(loader),))
-
+            sample_llk = np.zeros(shape=(len(dataset),))
+            sample_rec = np.zeros(shape=(len(dataset),))
+            sample_y = np.zeros(shape=(len(dataset),))
 
             for i, (x, y) in tqdm(enumerate(loader), desc=f'Computing scores for {dataset}'):
                 x = x.to(self.device)
-
+                
                 if self.name == 'LSA':
                     x_r = self.model(x)
-                    self.loss.lsa(x, x_r)
+                    self.loss.lsa(x, x_r,False)
 
                 elif self.name == 'LSA_EN':
                     
                     x_r, z, z_dist = self.model(x)
-                    self.loss.lsa_en(x, x_r, z, z_dist)
+                    self.loss.lsa_en(x, x_r, z, z_dist,False)
                 
                 elif self.name in ['LSA_SOS', 'LSA_MAF']:
                     x_r, z, s, log_jacob_T_inverse = self.model(x)
-                    self.loss.lsa_flow(x,x_r,s,log_jacob_T_inverse)
+                    self.loss.lsa_flow(x,x_r,s,log_jacob_T_inverse,False)
                 
                 elif self.name in ['SOS', 'MAF']:
                     s, log_jacob_T_inverse = self.model(x)
-                    self.loss.flow(s,log_jacob_T_inverse)
+                    self.loss.flow(s,log_jacob_T_inverse,False)
                 
                 elif self.name == 'EN':
                     z_dist = model(x)
-                    self.loss.en(z_dist)
+                    self.loss.en(z_dist,False)
 
                 
-                sample_y[i] = y.item()
-                if math.isnan(sample_y[i]):
-                    ValueError("NAN Y")
-
+                
+                sample_y[i*100:i*100+100] = y
                 # score larger-->normal data
                 if self.name in ['LSA','LSA_MAF','LSA_SOS','LSA_EN']:
-                    sample_rec[i] = - self.loss.reconstruction_loss
+                    sample_rec[i*100:i*100+100] = - self.loss.reconstruction_loss.cpu().numpy()
                     
                 if self.name in ['LSA_MAF','LSA_SOS','LSA_EN','EN','SOS','MAF']:    
-                    sample_llk[i] = - self.loss.nllk
+                    sample_llk[i*100:i*100+100] = - self.loss.nllk.cpu().numpy()
                     # print (sample_llk[i])
 
             if self.score_normed:
@@ -147,12 +144,9 @@ class OneClassTestHelper(object):
 
             # llk maybe too large or too small
             # why llk can be Nan?
-            sample_llk[sample_llk==float('+inf')]= 10**35
-            sample_llk[sample_llk==float('-inf')]= -10**35
-            sample_llk[sample_llk!=sample_llk] =0
-            
-            # sample_llk[sample_llk>10**3]=10**3
-            # sample_llk[sample_llk<-10**3]=-10**3
+            # sample_llk[sample_llk==float('+inf')]= 10**35
+            # sample_llk[sample_llk==float('-inf')]= -10**35
+            sample_llk[sample_llk!=sample_llk] = 0
             
             sample_ns = novelty_score(sample_llk, sample_rec)
             
@@ -204,7 +198,7 @@ class OneClassTestHelper(object):
         """
         dataset = self.dataset
         dataset.val(cl)
-        loader = DataLoader(dataset)
+        loader = DataLoader(dataset, batch_size= 100)
 
         sample_llk = np.zeros(shape=(len(loader),))
         sample_rec = np.zeros(shape=(len(loader),))
@@ -236,10 +230,10 @@ class OneClassTestHelper(object):
 
             # score larger-->normal data
             if self.name in ['LSA','LSA_MAF','LSA_SOS','LSA_EN']:
-                sample_rec[i] = - self.loss.reconstruction_loss
+                sample_rec[i*100:i*100+100] = - self.loss.reconstruction_loss.cpu().numpy()
             
             if self.name in ['LSA_MAF','LSA_SOS','LSA_EN','EN','SOS','MAF']:    
-                sample_llk[i] = - self.loss.nllk
+                sample_llk[i*100:i*100+100] = - self.loss.nllk.cpu().numpy()
 
             
         return sample_llk.min(), sample_llk.max(), sample_rec.min(), sample_rec.max()
