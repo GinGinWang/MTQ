@@ -169,7 +169,8 @@ class OneClassTrainHelper(object):
             
             # pbar.update(x.size(0))
             # pbar.set_description('Val_loss: {:.6f}'.format(
-            #     val_loss / pbar.n))           
+            #     val_loss / pbar.n))   
+            print(f"val_loss:{val_loss}")        
         return val_loss
 
 
