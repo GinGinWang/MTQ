@@ -16,7 +16,7 @@ class MNIST(OneClassDataset):
     """
     Models MNIST dataset for one class classification.
     """
-    def __init__(self, path, n_class = 10, select= None):
+    def __init__(self, path, n_class = 10, select = None):
 
         # type: (str) -> None
         """
@@ -241,11 +241,11 @@ class MNIST(OneClassDataset):
         """
         Returns all test possible test sets (the 10 classes).
         """
-        if select ==None:
+        if self.select ==None:
             classes = np.arange(0,self.n_class)
         else:
-            classes = select # select one class to train
-        return classses
+            classes = [self.select] # select one class to train
+        return classes
 
     @property
     def train_classes(self):
@@ -253,10 +253,10 @@ class MNIST(OneClassDataset):
         """
         Returns all test possible test sets (the 10 classes).
         """
-        if select == None:
+        if self.select == None:
             classes = np.arange(0,self.n_class)
         else:
-            classese = select
+            classes = [self.select]
         return classes
 
 

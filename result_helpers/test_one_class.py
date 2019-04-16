@@ -19,6 +19,8 @@ from sklearn.metrics import f1_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import precision_score
 
+import math
+
 # from result_helpers import metric_method as mm
 
 
@@ -119,20 +121,16 @@ class OneClassTestHelper(object):
 
                 
                 sample_y[i] = y.item()
+                if math.isnan(sample_y[i]):
+                    ValueError("NAN Y")
+
                 # score larger-->normal data
                 if self.name in ['LSA','LSA_MAF','LSA_SOS','LSA_EN']:
                     sample_rec[i] = - self.loss.reconstruction_loss
-            
+                    
                 if self.name in ['LSA_MAF','LSA_SOS','LSA_EN','EN','SOS','MAF']:    
                     sample_llk[i] = - self.loss.nllk
-                    if sample_llk[i] == float("+inf"):
-                        sample_llk[i] = 10**38
-                    if sample_llk[i] == float("-inf"):
-                        sample_llk[i] = -10**38
-                    if sample_llk[i] == float('NaN'):
-                        sample_llk[i]=0
-                # print (sample_llk[i])
-
+                    # print (sample_llk[i])
 
             if self.score_normed:
                 print(f'min_llk:{min_llk},max_llk:{max_llk}'
@@ -147,8 +145,17 @@ class OneClassTestHelper(object):
             #print(sample_llk)
             # Compute the normalized novelty score
 
+            # llk maybe too large or too small
+            # why llk can be Nan?
+            sample_llk[sample_llk==float('+inf')]= 10**35
+            sample_llk[sample_llk==float('-inf')]= -10**35
+            sample_llk[sample_llk!=sample_llk] =0
+            
+            # sample_llk[sample_llk>10**3]=10**3
+            # sample_llk[sample_llk<-10**3]=-10**3
+            
             sample_ns = novelty_score(sample_llk, sample_rec)
-
+            
             # Compute precision, recall, f1_score based on threshold
             # threshold = self.compute_threshold(cl)
             # y_hat = np.less(sample_ns, threshold)
@@ -158,6 +165,8 @@ class OneClassTestHelper(object):
             # recall = recall_score(sample_y, y_hat)
 
             # Compute AUROC for this class
+            print(sample_y)
+            print(sample_ns)
             this_class_metrics = [
                 roc_auc_score(sample_y, sample_ns)    #
             ]

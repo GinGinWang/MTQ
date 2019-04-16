@@ -18,7 +18,7 @@ class CIFAR10(OneClassDataset):
     Models CIFAR10 dataset for one class classification.
     """
 
-    def __init__(self, path, n_class = 10):
+    def __init__(self, path, n_class = 10, select= None):
 
         # type: (str) -> None
         """
@@ -32,8 +32,10 @@ class CIFAR10(OneClassDataset):
         self.n_class = n_class
 
         self.n_class = n_class
+        self.select = select
 
         self.normal_class = None
+
 
         # Get train and test split
         self.train_split = datasets.CIFAR10(self.path, train=True, download=True, transform=None)
@@ -209,9 +211,11 @@ class CIFAR10(OneClassDataset):
         """
         Returns all test possible test sets (the 10 classes).
         """
-
-        return np.arange(0, self.n_class)
-
+        if self.select ==None:
+            classes = np.arange(0,self.n_class)
+        else:
+            classes = [self.select] # select one class to train
+        return classes
 
     @property
     def train_classes(self):
@@ -219,8 +223,11 @@ class CIFAR10(OneClassDataset):
         """
         Returns all test possible test sets (the 10 classes).
         """
-
-        return np.arange(0, self.n_class)
+        if self.select == None:
+            classes = np.arange(0,self.n_class)
+        else:
+            classes = [self.select]
+        return classes
 
     @property
     def shape(self):

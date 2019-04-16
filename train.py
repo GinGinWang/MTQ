@@ -39,9 +39,9 @@ def main():
 
     # prepare dataset in train mode
     if args.dataset == 'mnist':
-        dataset = MNIST(path='data/MNIST', n_class = args.n_class)
+        dataset = MNIST(path='data/MNIST', n_class = args.n_class,select = args.select)
     elif args.dataset == 'cifar10':
-        dataset = CIFAR10(path='data/CIFAR10', n_class = args.n_class)
+        dataset = CIFAR10(path='data/CIFAR10', n_class = args.n_class, select = args.select)
     else:
         raise ValueError('Unknown dataset')
     
@@ -231,6 +231,11 @@ def parse_arguments():
     default = 10,
     help = 'Number of classes used in experiments')
 
+    parser.add_argument(
+    '--select',
+    type = int,
+    default = None,
+    help = 'Select one specific class for training')
 
     parser.add_argument(
     '--before_log_epochs',
