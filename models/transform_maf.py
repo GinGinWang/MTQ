@@ -40,12 +40,19 @@ class TinvMAF(BaseModule):
         super(TinvMAF, self).__init__()
 
         modules = []
-        for _ in range(num_blocks):
-            modules += [
+        if use_bn:
+            for _ in range(num_blocks):
+                modules += [
                 fnn.MADE(input_size, hidden_size, act=act),
                 fnn.BatchNormFlow(input_size),
                 fnn.Reverse(input_size)
-            ]
+                ]
+        else:
+            for _ in range(num_blocks):
+                modules+= [
+                fnn.MADE(input_size, hidden_size, act=act),
+                fnn.Reverse(input_size)
+                ]
 
         model = fnn.FlowSequential(*modules)
 

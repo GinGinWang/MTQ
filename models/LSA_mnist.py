@@ -142,7 +142,7 @@ class LSA_MNIST(BaseModule):
     """
  
 
-    def __init__(self,  input_shape, code_length, num_blocks, hidden_size, est_name = None, combine_density= False):
+    def __init__(self,  input_shape, code_length, num_blocks, hidden_size, est_name = None, combine_density= False, decoder_flag =True):
         # type: (Tuple[int, int, int], int, int) -> None
         """
         Class constructor.
@@ -163,14 +163,19 @@ class LSA_MNIST(BaseModule):
         self.code_length = code_length
         self.est_name = est_name
 
+        self.decoder_flag = True
+
         self.coder_name = 'LSA'
 
         if est_name == None:  
             self.name = 'LSA'
-            print(f'{self.name}_cd_{combine_density}')
+            
+        elif decoder_flag ==False:
+            self.name = f'E_{est_name}'
+        
         else:
             self.name = f'LSA_{est_name}'
-            print(f'{self.name}_cd_{combine_density}')
+        print(f'{self.name}_cd_{combine_density}')
         
         # the input of estimator is latent vector z / combine_latentvector (z,|x-x_r|^2)
 
@@ -183,7 +188,8 @@ class LSA_MNIST(BaseModule):
         )
 
         # Build decoder
-        self.decoder = Decoder(
+        if self.decoder_flag:
+            self.decoder = Decoder(
             code_length=code_length,
             deepest_shape=self.encoder.deepest_shape,
             output_shape=input_shape
@@ -243,11 +249,9 @@ class LSA_MNIST(BaseModule):
         z = self.encoder(x)
         
         # Reconstruct x
-        x_r = self.decoder(z)
-        x_r = x_r.view(-1, *self.input_shape)
-        
-
-
+        if self.decoder_flag:
+            x_r = self.decoder(z)
+            x_r = x_r.view(-1, *self.input_shape)
 
         # Estimate CPDs with autoregression
         # density estimator
@@ -279,10 +283,13 @@ class LSA_MNIST(BaseModule):
         elif self.est_name in ['SOS','MAF']:
             s, log_jacob_T_inverse = self.estimator(z)
 
+        if self.name in ['E_MAF','E_SOS']:
+            return s, log_jacob_T_inverse
+        
         # Without Estimator
         if self.est_name == 'EN':
             return x_r, z, z_dist
         elif self.est_name in ['MAF','SOS']:
-            return x_r, z, s, log_jacob_T_inverse
+                return  x_r, z, s, log_jacob_T_inverse
         else:
             return x_r

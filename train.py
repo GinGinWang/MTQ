@@ -48,6 +48,8 @@ def main():
     print ("dataset shape: ",dataset.shape)
 
     dirName = f'checkpoints/{args.dataset}/combined{args.cd}/'
+    # if args.pretrained:
+        # dirName = f'checkpoints/{args.dataset}/combined{args.cd}/ptr{args.pretrained}/'
 
     c, h , w = dataset.shape
     input_size = c*h*w
@@ -95,7 +97,7 @@ def main():
                 
                 if args.dataset == 'mnist': 
 
-                    model =LSA_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator, combine_density = args.cd, hidden_size= args.hidden_size)
+                    model =LSA_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator, combine_density = args.cd, hidden_size= args.hidden_size,decoder_flag= args.decoder_flag)
                 
 
                 elif args.dataset == 'cifar10':
@@ -170,13 +172,14 @@ def parse_arguments():
     parser.add_argument('--PreTrained', dest='pretrained',action = 'store_true',default = False)
 
     parser.add_argument('--NoAutoencoder', dest='coder',action='store_false', default = True)
+    parser.add_argument('--NoDecoder', dest='decoder_flag',action='store_false', default = True)
 
 
     # batch size for training
     parser.add_argument(
     '--batch_size',
     type=int,
-    default=1000,
+    default=100,
     help='input batch size for training (default: 100)')
     
     # epochs 
@@ -224,7 +227,7 @@ def parse_arguments():
     parser.add_argument(
     '--lam',
     type=float,
-    default=0.001,
+    default=1,
     help='tradeoff between reconstruction loss and autoregression loss')
     
     parser.add_argument(

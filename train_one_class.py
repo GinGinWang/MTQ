@@ -51,7 +51,7 @@ class OneClassTrainHelper(object):
 
         self.lr = lr 
         self.lam = lam
-        self.optimizer = optim.Adam(self.model.parameters(), weight_decay=1e-6)
+        self.optimizer = optim.Adam(self.model.parameters(), lr= lr, weight_decay=1e-6)
 
         self.cl = self.dataset.normal_class
 
@@ -102,13 +102,13 @@ class OneClassTrainHelper(object):
                     x_r, z, s, log_jacob_T_inverse = self.model(x)
                     self.loss.lsa_flow(x,x_r,s,log_jacob_T_inverse)
                 
-                elif self.name in ['SOS', 'MAF']:
+                elif self.name in ['SOS', 'MAF','E_MAF','E_SOS']:
                     s, log_jacob_T_inverse = self.model(x)
-                    self.loss.flow(s,log_jacob_T_inverse)
+                    self.loss.flow(s, log_jacob_T_inverse)
                 
                 elif self.name == 'EN':
                     z_dist = model(x)
-                    self.loss.en(z_dist)
+                    self.loss.en(z_dist)    
 
 
 
@@ -141,7 +141,7 @@ class OneClassTrainHelper(object):
 
         loader = DataLoader(valid_dataset, batch_size = 100)
         
-        epoch_size = len(valid_dataset)
+        epoch_size = len(loader.dataset)
         batch_size = len(loader)
 
         # pbar = tqdm(total=len(loader.dataset))
@@ -162,9 +162,9 @@ class OneClassTrainHelper(object):
                 
                 elif self.name in ['LSA_SOS', 'LSA_MAF']:
                     x_r, z, s, log_jacob_T_inverse = self.model(x)
-                    self.loss.lsa_flow(x,x_r,s,log_jacob_T_inverse)
+                    self.loss.lsa_flow(x, x_r, s, log_jacob_T_inverse)
                 
-                elif self.name in ['SOS', 'MAF']:
+                elif self.name in ['SOS', 'MAF','E_SOS','E_MAF']:
                     s, log_jacob_T_inverse = self.model(x)
                     self.loss.flow(s,log_jacob_T_inverse)
                 
@@ -172,14 +172,17 @@ class OneClassTrainHelper(object):
                     z_dist = model(x)
                     self.loss.en(z_dist)
 
-                val_loss += self.loss.reconstruction_loss.item()*batch_size
-
-                val_loss += self.loss.nllk.item()*batch_size
+                val_loss += self.loss.total_loss.item()*batch_size
                 
             val_loss = val_loss/epoch_size
             # pbar.update(x.size(0))
             # pbar.set_description('Val_loss: {:.6f}'.format(
-            #     val_loss / pbar.n))           
+            #     val_loss / pbar.n))
+            if val_loss ==float('-inf'):
+                val_loss = -10**10
+            if val_loss ==float('+inf'):
+                val_loss = 10**10
+
         return val_loss
 
 

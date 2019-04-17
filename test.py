@@ -47,6 +47,8 @@ def main():
     print ("dataset shape: ",dataset.shape)
 
     dirName = f'checkpoints/{args.dataset}/combined{args.cd}/'
+    # if args.pretrained:
+        # dirName = f'checkpoints/{args.dataset}/combined{args.cd}/ptr{args.pretrained}/'
 
     c, h , w = dataset.shape
 
@@ -57,7 +59,7 @@ def main():
 
         # build Density Estimator
         if args.estimator == 'MAF':
-            model = TinvMAF(args.num_blocks, c*h*w,128,args.hidden_size).cuda()
+            model = TinvMAF(args.num_blocks, c*h*w,args.hidden_size).cuda()
 
         elif args.estimator == 'SOS':
             model = TinvSOS(args.num_blocks, c*h*w,args.hidden_size).cuda()
@@ -81,7 +83,7 @@ def main():
             
             if args.dataset == 'mnist': 
 
-                model =LSA_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator, combine_density = args.cd,hidden_size= args.hidden_size)
+                model =LSA_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator, combine_density = args.cd,hidden_size= args.hidden_size,decoder_flag=args.decoder_flag)
             
             elif args.dataset == 'cifar10':
             
@@ -93,7 +95,7 @@ def main():
     model.to(device).eval()
     
     # Initialize training process
-    helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, lam = args.lam, checkpoints_dir= dirName, output_file= f"results/{model.name}_{args.dataset}_cd{args.cd}_nml{args.score_normed}_nlration{args.novel_ratio}",device = device, batch_size = args.batch_size)
+    helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, lam = args.lam, checkpoints_dir= dirName, output_file= f"results/{model.name}_{args.dataset}_cd{args.cd}_ptr{args.pretrained}_nml{args.score_normed}_nlration{args.novel_ratio}",device = device, batch_size = args.batch_size)
 
     # Start training 
     helper.test_one_class_classification()
@@ -137,7 +139,8 @@ def parse_arguments():
                         'Choose among `mnist`, `cifar10`', metavar='')
     
     parser.add_argument('--Combine_density', dest='cd',action = 'store_true',default = False)
-
+    parser.add_argument('--PreTrained', dest='pretrained',action = 'store_true',default = False)
+    parser.add_argument('--NoDecoder', dest='decoder_flag',action='store_false', default = True)
     parser.add_argument('--NoAutoencoder', dest='coder',action='store_false', default = True)
     
     # batch size for test

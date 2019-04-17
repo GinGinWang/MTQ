@@ -29,5 +29,4 @@ class FlowLoss(BaseModule):
         
         if size_average:
             loss /= s.size(0)
-
         return loss
