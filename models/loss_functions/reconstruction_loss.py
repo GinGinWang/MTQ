@@ -14,7 +14,7 @@ class ReconstructionLoss(BaseModule):
         """
         super(ReconstructionLoss, self).__init__()
 
-    def forward(self, x, x_r):
+    def forward(self, x, x_r, size_average = True):
         # type: (torch.Tensor, torch.Tensor) -> torch.Tensor
         """
         Forward propagation.
@@ -27,5 +27,6 @@ class ReconstructionLoss(BaseModule):
 
         while L.dim() > 1:
             L = torch.sum(L, dim=-1)
-        
-        return torch.mean(L)
+        if size_average:
+            L = torch.mean(L)
+        return L

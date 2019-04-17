@@ -93,7 +93,7 @@ def main():
     model.to(device).eval()
     
     # Initialize training process
-    helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, lam = args.lam, checkpoints_dir= dirName, output_file= f"results/{model.name}_{args.dataset}_cd{args.cd}_nml{args.score_normed}_nlration{args.novel_ratio}",device = device)
+    helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, lam = args.lam, checkpoints_dir= dirName, output_file= f"results/{model.name}_{args.dataset}_cd{args.cd}_nml{args.score_normed}_nlration{args.novel_ratio}",device = device, batch_size = args.batch_size)
 
     # Start training 
     helper.test_one_class_classification()
@@ -139,7 +139,8 @@ def parse_arguments():
     parser.add_argument('--Combine_density', dest='cd',action = 'store_true',default = False)
 
     parser.add_argument('--NoAutoencoder', dest='coder',action='store_false', default = True)
-    # batch size for training
+    
+    # batch size for test
     parser.add_argument(
     '--batch_size',
     type=int,

@@ -25,7 +25,7 @@ class AutoregressionLoss(BaseModule):
         # Avoid nans
         self.eps = np.finfo(float).eps
 
-    def forward(self, z, z_dist):
+    def forward(self, z, z_dist,size_average = True):
         # type: (torch.Tensor, torch.Tensor) -> torch.Tensor
         """
         Forward propagation.
@@ -53,6 +53,7 @@ class AutoregressionLoss(BaseModule):
 
         # Sum and mean
         S = torch.sum(selected, dim=-1)
-        nll = - torch.mean(S)
-
+        nll = - S
+        if size_average:
+            nll = torch.mean(nll)
         return nll

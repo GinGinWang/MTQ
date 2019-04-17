@@ -131,6 +131,13 @@ class OneClassTestHelper(object):
                     sample_llk[i*bs:i*bs+bs] = - self.loss.nllk.cpu().numpy()
                     # print (sample_llk[i])
 
+            llk1= np.dot(sample_llk,sample_y).sum()
+            llk2 =np.dot(sample_llk,np.logical_not(sample_y)).sum()
+            
+            # llk1 should be larger than llk2
+            llk1 =llk1/np.sum(sample_y)
+            llk2 =llk2/(data_num-np.sum(sample_y))
+            
             if self.score_normed:
                 print(f'min_llk:{min_llk},max_llk:{max_llk}'
                     )
@@ -161,22 +168,6 @@ class OneClassTestHelper(object):
             # precision = precision_score(sample_y,y_hat)
             # f1 = f1_score(sample_y, y_hat)
             # recall = recall_score(sample_y, y_hat)
-
-            # Compute AUROC for this class
-            
-            print(sample_llk)
-            print (sample_rec)
-            llk1= np.dot(np.mean(sample_llk),y).sum()
-            llk2 = (sample_llk.sum()-llk1)
-            
-            print(torch.nonzero(y).size(0))
-            print(torch.zero(y).size(0))
-            print(data_num)
-
-            llk1 =llk1/torch.nonzero(y).size(0)
-            llk2 =llk2/(data_num-torch.nonzero(y).size(0))
-            print(llk1)
-            print(llk2)
 
             ## metrics 
             this_class_metrics = [
