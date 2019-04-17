@@ -114,7 +114,7 @@ class OneClassTestHelper(object):
                 
                 elif self.name in ['SOS', 'MAF','E_SOS','E_MAF']:
                     s, log_jacob_T_inverse = self.model(x)
-                    self.loss.flow(s,log_jacob_T_inverse,False)
+                    self.loss.flow(s,log_jacob_T_inverse, False)
                 
                 elif self.name == 'EN':
                     z_dist = model(x)
@@ -127,10 +127,11 @@ class OneClassTestHelper(object):
                 if self.name in ['LSA','LSA_MAF','LSA_SOS','LSA_EN']:
                     sample_rec[i*bs:i*bs+bs] = - self.loss.reconstruction_loss.cpu().numpy()
                     
-                if self.name in ['LSA_MAF','LSA_SOS','LSA_EN','EN','SOS','MAF']:    
+                if self.name in ['LSA_MAF','LSA_SOS','LSA_EN','EN','SOS','MAF','E_SOS','E_MAF']:    
                     sample_llk[i*bs:i*bs+bs] = - self.loss.nllk.cpu().numpy()
                     # print (sample_llk[i])
 
+            print(sample_llk)
             llk1= np.dot(sample_llk,sample_y).sum()
             llk2 =np.dot(sample_llk,np.logical_not(sample_y)).sum()
             

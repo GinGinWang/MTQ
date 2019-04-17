@@ -33,17 +33,19 @@ def main():
     ## Parse command line arguments
     args = parse_arguments()
 
-    device = torch.device("cuda:0")
+    device = torch.device("cuda:0" if args.cuda else "cpu")
+
     # Lock seeds
     set_random_seed(30101990)
+    kwargs = {'num_workers': 4, 'pin_memory': True} if args.cuda else {}
+
+    assert args.dataset in ['mnist', 'cifar10']
 
     # prepare dataset in train mode
     if args.dataset == 'mnist':
         dataset = MNIST(path='data/MNIST', n_class = args.n_class,select = args.select)
     elif args.dataset == 'cifar10':
         dataset = CIFAR10(path='data/CIFAR10', n_class = args.n_class, select = args.select)
-    else:
-        raise ValueError('Unknown dataset')
     
     print ("dataset shape: ",dataset.shape)
 
@@ -110,7 +112,7 @@ def main():
                
         # Initialize training process
 
-        helper = OneClassTrainHelper(dataset, model, lr = args.lr, lam = args.lam,  checkpoints_dir=dirName, train_epoch=args.epochs, batch_size= args.batch_size, device= device,before_log_epochs = args.before_log_epochs, pretrained= args.pretrained)
+        helper = OneClassTrainHelper(dataset, model, lr = args.lr, lam = args.lam,  checkpoints_dir=dirName, train_epoch=args.epochs, batch_size= args.batch_size, device= device, kwargs = kwargs, before_log_epochs = args.before_log_epochs, pretrained= args.pretrained)
 
         # Start training 
         helper.train_one_class_classification()

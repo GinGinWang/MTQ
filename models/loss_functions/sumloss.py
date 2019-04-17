@@ -50,7 +50,7 @@ class SumLoss(nn.Module):
         self.reconstruction_loss = self.reconstruction_loss_fn( x,  x_r, batch_average )
         self.total_loss = self.reconstruction_loss
 
-    def lsa_en(self, x, x_r,z,z_dist, batch_average= True):
+    def lsa_en(self, x, x_r, z, z_dist, batch_average= True):
         
         self.reconstruction_loss = self.reconstruction_loss_fn(x, x_r,batch_average)
 
@@ -58,7 +58,7 @@ class SumLoss(nn.Module):
         
         self.total_loss = self.reconstruction_loss + self.lam *self.nllk
 
-    def lsa_flow(self, x,x_r,s,nagtive_log_jacob, batch_average= True):
+    def lsa_flow(self, x, x_r, s,nagtive_log_jacob, batch_average= True):
         self.reconstruction_loss = self.reconstruction_loss_fn(x, x_r,batch_average)
         self.nllk= self.flow_loss_fn(s,nagtive_log_jacob,batch_average)
         self.total_loss = self.lam * self.nllk + self.reconstruction_loss

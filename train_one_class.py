@@ -18,6 +18,8 @@ import math
 from utils import *
 import torch.optim as optim
 
+from tensorboardX import SummaryWriter
+
 
 class OneClassTrainHelper(object):
     """
@@ -25,7 +27,7 @@ class OneClassTrainHelper(object):
     """
 
 
-    def __init__(self, dataset, model, lr, lam, checkpoints_dir, device,train_epoch=1000, batch_size = 100, before_log_epochs = 1000, pretrained= False):
+    def __init__(self, dataset, model, lr, lam, checkpoints_dir, device, kwargs, train_epoch=1000, batch_size = 100, before_log_epochs = 1000, pretrained= False):
 
         # type: (OneClassDataset, BaseModule, str, str) -> None
         """
@@ -43,6 +45,7 @@ class OneClassTrainHelper(object):
 
         self.checkpoints_dir = checkpoints_dir
         self.device = device
+        self.kwargs = kwargs
         self.train_epoch = train_epoch
         self.batch_size = batch_size
         self.before_log_epochs = before_log_epochs
@@ -72,7 +75,7 @@ class OneClassTrainHelper(object):
             epoch_recloss = 0
             epoch_nllk = 0
 
-            loader = DataLoader(self.dataset, batch_size=self.batch_size)
+            loader = DataLoader(self.dataset, batch_size=self.batch_size,shuffule = True,**self.kwargs)
 
             epoch_size = len(self.dataset)
             batch_size = len(loader)
@@ -139,8 +142,8 @@ class OneClassTrainHelper(object):
         model.eval()
         val_loss = 0
 
-        loader = DataLoader(valid_dataset, batch_size = 100)
-        
+        loader = DataLoader(valid_dataset, batch_size = 100, shuffule = False, drop_last = False,**kwargs)
+
         epoch_size = len(loader.dataset)
         batch_size = len(loader)
 
@@ -198,6 +201,10 @@ class OneClassTrainHelper(object):
         """
         Actually performs trains.
         """     
+        writer = SummaryWriter(comment=args.flow + "_" + args.dataset)
+        global_step = 0
+
+        
         best_validation_epoch = 0
         best_validation_loss = float('inf')
         best_model = None  
