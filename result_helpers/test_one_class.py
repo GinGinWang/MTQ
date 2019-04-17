@@ -112,7 +112,7 @@ class OneClassTestHelper(object):
                     x_r, z, s, log_jacob_T_inverse = self.model(x)
                     self.loss.lsa_flow(x,x_r,s,log_jacob_T_inverse,False)
                 
-                elif self.name in ['SOS', 'MAF']:
+                elif self.name in ['SOS', 'MAF','E_SOS','E_MAF']:
                     s, log_jacob_T_inverse = self.model(x)
                     self.loss.flow(s,log_jacob_T_inverse,False)
                 
@@ -173,6 +173,7 @@ class OneClassTestHelper(object):
             this_class_metrics = [
                 roc_auc_score(sample_y, sample_ns)    #
             ]
+
             if self.name in ['LSA_EN','LSA_SOS','LSA_MAF']:
                 this_class_metrics.append(
                 roc_auc_score(sample_y, sample_llk))
@@ -269,7 +270,7 @@ class OneClassTestHelper(object):
             table.field_names = ['Class', 'AUROC-NS', 'AUROC-LLK', 'AUROC-REC','llk1','llk2'
                 ]
         elif self.name in ['MAF','SOS','EN','LSA']:
-            table.field_names = ['Class', 'AUROC-NS','llk1','llk2'
+            table.field_names = ['Class', 'AUROC-NS'
                 ]
         
         table.float_format = '0.3'
