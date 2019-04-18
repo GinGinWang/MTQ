@@ -154,8 +154,8 @@ class OneClassTestHelper(object):
 
             # llk maybe too large or too small
             # why llk can be Nan?
-            sample_llk[sample_llk==float('+inf')]= 10**35
-            sample_llk[sample_llk==float('-inf')]= -10**35
+            # sample_llk[sample_llk==float('+inf')]= 10**35
+            # sample_llk[sample_llk==float('-inf')]= -10**35
             print(f"NAN_num:{sum(sample_llk!=sample_llk)}")
             sample_llk[sample_llk!=sample_llk] = 0
 

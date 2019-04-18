@@ -152,6 +152,8 @@ class OneClassTrainHelper(object):
 
         model.eval()
         val_loss = 0
+        val_nllk=0
+        val_rec =0
         self.dataset.val(self.cl)
 
         loader = DataLoader(self.dataset, batch_size = 100, shuffle = False, drop_last = False,**self.kwargs)
@@ -189,17 +191,18 @@ class OneClassTrainHelper(object):
                     self.loss.en(z_dist)
 
                 val_loss += self.loss.total_loss.item()
+                if self.name in ['LSA_EN','LSA_MAF','LSA_SOS']:
+                    val_nllk += self.loss.nllk.item()*batch_size
+                    val_rec += self.loss.reconstruction_loss.item()*batch_size
                 
-                pbar.set_description('Val, Log likelihood in nats: {:.6f}'.format(-val_loss / (batch_idx+1)))
-                
-                
-            # writer.add_scalar('validation/LL', val_loss / len(loader.dataset), epoch)
+                pbar.set_description('Val_loss: {:.6f}'.format(val_loss / (batch_idx+1)))
+        
         pbar.close()
-            # if val_loss ==float('-inf'):
-            #     val_loss = -10**10
-            # if val_loss ==float('+inf'):
-            #     val_loss = 10**10
+                
+        if self.name in ['LSA_EN','LSA_MAF','LSA_SOS']:
 
+            print('Nllk: {:.6f}\tRec: {:.6f}'.format(val_nllk/epoch_size, val_rec/epoch_size))
+        
         return val_loss
 
 
