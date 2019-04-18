@@ -1,4 +1,4 @@
-python train.py  --autoencoder LSA --estimator MAF --epochs 10000 --dataset mnist  --lr 0.0001 --hidden_size 512 --batch_size 256 --num_blocks 3  --code_length 64 --select 2
+python train.py  --autoencoder LSA --estimator MAF --epochs 10000 --dataset mnist  --lr 0.01 --hidden_size 512 --batch_size 256 --num_blocks 3  --code_length 64 --select 2
 
 python test.py  --autoencoder LSA --estimator MAF --dataset mnist   --hidden_size 512 --num_blocks 3 --batch_size 256 --code_length 64 --select 2 --score_normed
 

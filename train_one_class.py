@@ -79,7 +79,7 @@ class OneClassTrainHelper(object):
             epoch_recloss = 0
             epoch_nllk = 0
 
-            loader = DataLoader(self.dataset, batch_size=self.batch_size, shuffle = True, **self.kwargs)
+            loader = DataLoader(self.dataset, batch_size = self.batch_size, shuffle = True, **self.kwargs)
 
             epoch_size = self.dataset.length
             pbar = tqdm(total=epoch_size)
@@ -172,30 +172,30 @@ class OneClassTrainHelper(object):
             with torch.no_grad():
                 if self.name == 'LSA':
                     x_r = self.model(x)
-                    self.loss.lsa(x, x_r)
+                    self.loss.lsa(x, x_r,batch_average=False)
 
                 elif self.name == 'LSA_EN':
                     x_r, z, z_dist = self.model(x)
-                    self.loss.lsa_en(x, x_r, z, z_dist)
+                    self.loss.lsa_en(x, x_r, z, z_dist,batch_average=False)
                 
                 elif self.name in ['LSA_SOS', 'LSA_MAF']:
                     x_r, z, s, log_jacob_T_inverse = self.model(x)
-                    self.loss.lsa_flow(x, x_r, s, log_jacob_T_inverse)
+                    self.loss.lsa_flow(x, x_r, s, log_jacob_T_inverse,batch_average=False)
                 
                 elif self.name in ['SOS', 'MAF','E_SOS','E_MAF']:
                     s, log_jacob_T_inverse = self.model(x)
-                    self.loss.flow(s,log_jacob_T_inverse)
+                    self.loss.flow(s,log_jacob_T_inverse,batch_average=False)
                 
                 elif self.name == 'EN':
                     z_dist = model(x)
-                    self.loss.en(z_dist)
+                    self.loss.en(z_dist,batch_average=False)
 
-                val_loss += self.loss.total_loss.item()
+                val_loss += self.loss.total_loss.sum().item()
                 if self.name in ['LSA_EN','LSA_MAF','LSA_SOS']:
-                    val_nllk += self.loss.nllk.item()*batch_size
-                    val_rec += self.loss.reconstruction_loss.item()*batch_size
-                
-                pbar.set_description('Val_loss: {:.6f}'.format(val_loss / (batch_idx+1)))
+                    val_nllk += self.loss.nllk.sum().item()
+                    val_rec += self.loss.reconstruction_loss.sum().item()
+
+                pbar.set_description('Val_loss: {:.6f}'.format(val_loss / pbar.n))
         
         pbar.close()
                 
