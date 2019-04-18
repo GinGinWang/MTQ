@@ -79,7 +79,7 @@ class OneClassTrainHelper(object):
             epoch_recloss = 0
             epoch_nllk = 0
 
-            loader = DataLoader(self.dataset, batch_size = self.batch_size, shuffle = True, **self.kwargs)
+            loader = DataLoader(self.dataset, batch_size = self.batch_size, **self.kwargs)
 
             epoch_size = self.dataset.length
             pbar = tqdm(total=epoch_size)
@@ -145,8 +145,8 @@ class OneClassTrainHelper(object):
                             epoch, epoch_loss/epoch_size, epoch_recloss/epoch_size, epoch_nllk/epoch_size))
         
             else:
-                print('Train Epoch: {}\tLoss: {:.6f}'.format(
-                            epoch, epoch_loss/epoch_size))
+                print('Train Epoch-{}: {}\tLoss: {:.6f}'.format(
+                            self.cl, epoch, epoch_loss/epoch_size))
 
     def validate(self, epoch, model, prefix = 'Validation'):
 
@@ -154,9 +154,10 @@ class OneClassTrainHelper(object):
         val_loss = 0
         val_nllk=0
         val_rec =0
+
         self.dataset.val(self.cl)
 
-        loader = DataLoader(self.dataset, batch_size = 100, shuffle = False, drop_last = False,**self.kwargs)
+        loader = DataLoader(self.dataset, batch_size = self.batch_size,**self.kwargs)
 
         epoch_size = self.dataset.length
         batch_size = len(loader)

@@ -136,8 +136,8 @@ class OneClassTestHelper(object):
             llk2 =np.dot(sample_llk,np.logical_not(sample_y)).sum()
             
             # llk1 should be larger than llk2
-            llk1 =llk1/np.sum(sample_y)
-            llk2 =llk2/(data_num-np.sum(sample_y))
+            llk1 =llk1/np.sum(sample_y) # average llk for normal examples
+            llk2 =llk2/(data_num-np.sum(sample_y)) # average llk for novel examples
             
             if self.score_normed:
                 print(f'min_llk:{min_llk},max_llk:{max_llk}'
