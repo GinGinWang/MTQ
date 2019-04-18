@@ -33,7 +33,7 @@ class CIFAR10(OneClassDataset):
 
         self.n_class = n_class
         self.select = select
-
+        self.name ='cifar10'
         self.normal_class = None
 
 

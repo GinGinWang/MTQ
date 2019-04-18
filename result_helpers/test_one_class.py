@@ -251,9 +251,9 @@ class OneClassTestHelper(object):
             if self.name in ['LSA_MAF','LSA_SOS','LSA_EN','EN','SOS','MAF']:    
                 sample_llk[i*bs:i*bs+bs] = - self.loss.nllk.cpu().numpy()
 
-            sample_llk[sample_llk!=sample_llk] = 0
-            sample_llk[sample_llk==float('+inf')]= 10**35
-            sample_llk[sample_llk==float('-inf')]= -10**35
+            # sample_llk[sample_llk!=sample_llk] = 0
+            # sample_llk[sample_llk==float('+inf')]= 10**35
+            # sample_llk[sample_llk==float('-inf')]= -10**35
             
         return sample_llk.min(), sample_llk.max(), sample_rec.min(), sample_rec.max()
 

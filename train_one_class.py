@@ -19,6 +19,8 @@ from utils import *
 import torch.optim as optim
 
 from tensorboardX import SummaryWriter
+import flows_maf_models as maffnn
+import flow_sos_models as sosfnn
 
 
 class OneClassTrainHelper(object):
@@ -68,30 +70,26 @@ class OneClassTrainHelper(object):
         self.model.load_state_dict(torch.load(join(self.checkpoints_dir, f'{self.cl}LSA.pkl')),strict= False)
 
     def train_every_epoch(self, epoch):
-            
+            # global global_step, writer
+
             self.model.train()
+            self.dataset.train(self.cl)
 
             epoch_loss = 0
             epoch_recloss = 0
             epoch_nllk = 0
 
-            loader = DataLoader(self.dataset, batch_size=self.batch_size,shuffule = True,**self.kwargs)
+            loader = DataLoader(self.dataset, batch_size=self.batch_size, shuffle = True, **self.kwargs)
 
-            epoch_size = len(self.dataset)
-            batch_size = len(loader)
+            epoch_size = self.dataset.length
+            pbar = tqdm(total=epoch_size)
 
-            if epoch % 10 ==0:
-                print(f'Train-{self.cl}:')
-            pbar = tqdm(total=len(loader.dataset))
-            pbar.set_description('Train:')
-            
             for batch_idx, (x , y) in enumerate(loader):
-                # Clear grad for every batch
-                pbar.update(x.size(0))
                 
-                self.model.zero_grad()
-               
                 x = x.to(self.device)
+                # Clear grad for every batch
+                # self.model.zero_grad()
+                self.optimizer.zero_grad()
 
                 if self.name == 'LSA':
                     x_r = self.model(x)
@@ -115,21 +113,34 @@ class OneClassTrainHelper(object):
 
 
 
+                epoch_loss = + self.loss.total_loss.item()*self.batch_size
+                
+                if self.name in ['LSA_EN','LSA_SOS','LSA_MAF']:
+                    epoch_recloss =+ self.loss.reconstruction_loss.item()*self.batch_size
+                    epoch_nllk = + self.loss.nllk.item()*self.batch_size
+
                 # backward average loss along batch
                 (self.loss.total_loss).backward()
-
                 # update params
                 self.optimizer.step()
-
-                epoch_loss = + self.loss.total_loss.item()*batch_size
-
-            # if epoch %10 ==0:
+                pbar.update(x.size(0))
+                pbar.set_description('Train, Loss: {:.6f}'.format(epoch_loss / (pbar.n)))
         
-            if self.name in ['LSA_EN','LSA_SOS','LSA_MAF']:
-                epoch_recloss =+ self.loss.reconstruction_loss.item()*batch_size
-                epoch_nllk = + self.loss.nllk.item()*batch_size
+                # writer.add_scalar('training/loss', loss.item(), global_step)
+                # global_step += 1
+
+            pbar.close()
+
+            for module in self.model.modules():
+                if isinstance(module, maffnn.BatchNormFlow):
+                    module.momentum = 0
+            for module in self.model.modules():
+                if isinstance(module, maffnn.BatchNormFlow):
+                    module.momentum = 1
 
                 # print epoch result
+            if self.name in ['LSA_EN','LSA_MAF','LSA_SOS']:
+
                 print('Train Epoch: {}\tLoss: {:.6f}\tRec: {:.6f}\tNllk: {:.6f}'.format(
                             epoch, epoch_loss/epoch_size, epoch_recloss/epoch_size, epoch_nllk/epoch_size))
         
@@ -137,22 +148,24 @@ class OneClassTrainHelper(object):
                 print('Train Epoch: {}\tLoss: {:.6f}'.format(
                             epoch, epoch_loss/epoch_size))
 
-    def validate(self, epoch, model, valid_dataset, prefix = 'Validation'):
+    def validate(self, epoch, model, prefix = 'Validation'):
 
         model.eval()
         val_loss = 0
+        self.dataset.val(self.cl)
 
-        loader = DataLoader(valid_dataset, batch_size = 100, shuffule = False, drop_last = False,**kwargs)
+        loader = DataLoader(self.dataset, batch_size = 100, shuffle = False, drop_last = False,**self.kwargs)
 
-        epoch_size = len(loader.dataset)
+        epoch_size = self.dataset.length
         batch_size = len(loader)
 
-        # pbar = tqdm(total=len(loader.dataset))
-        # pbar.set_description('Eval')
+        pbar = tqdm(total=epoch_size)
+        pbar.set_description('Eval')
 
         for batch_idx, (x,y) in enumerate(loader):
         
             x = x.to('cuda')
+            pbar.update(x.size(0))
 
             with torch.no_grad():
                 if self.name == 'LSA':
@@ -175,16 +188,17 @@ class OneClassTrainHelper(object):
                     z_dist = model(x)
                     self.loss.en(z_dist)
 
-                val_loss += self.loss.total_loss.item()*batch_size
+                val_loss += self.loss.total_loss.item()
                 
-            val_loss = val_loss/epoch_size
-            # pbar.update(x.size(0))
-            # pbar.set_description('Val_loss: {:.6f}'.format(
-            #     val_loss / pbar.n))
-            if val_loss ==float('-inf'):
-                val_loss = -10**10
-            if val_loss ==float('+inf'):
-                val_loss = 10**10
+                pbar.set_description('Val, Log likelihood in nats: {:.6f}'.format(-val_loss / (batch_idx+1)))
+                
+                
+            # writer.add_scalar('validation/LL', val_loss / len(loader.dataset), epoch)
+        pbar.close()
+            # if val_loss ==float('-inf'):
+            #     val_loss = -10**10
+            # if val_loss ==float('+inf'):
+            #     val_loss = 10**10
 
         return val_loss
 
@@ -201,17 +215,13 @@ class OneClassTrainHelper(object):
         """
         Actually performs trains.
         """     
-        writer = SummaryWriter(comment=args.flow + "_" + args.dataset)
-        global_step = 0
+        # writer = SummaryWriter(comment=self.name + "_" + self.dataset.name)
+        # global_step = 0
 
         
         best_validation_epoch = 0
         best_validation_loss = float('inf')
         best_model = None  
-
-        valid_dataset = self.dataset
-
-        valid_dataset.val(self.cl)
 
         if self.pretrained:
             self.load_pretrained_model()
@@ -228,7 +238,7 @@ class OneClassTrainHelper(object):
             self.train_every_epoch(epoch)
 
             # validate
-            validation_loss = self.validate(epoch, self.model,valid_dataset)
+            validation_loss = self.validate(epoch, self.model)
 
             if epoch > self.before_log_epochs: # wait at least some epochs to log
                
@@ -243,11 +253,8 @@ class OneClassTrainHelper(object):
                     torch.save(best_model.state_dict(), join(self.checkpoints_dir,f'{self.dataset.normal_class}{self.name}.pkl'))
 
             # converge?
-            if (epoch - best_validation_epoch >= 200) and (best_validation_epoch > self.before_log_epochs+2): # converge? 
+            if (epoch - best_validation_epoch >= 30) and (best_validation_epoch > self.before_log_epochs+2): # converge? 
                     break
-
-            print(f'{self.cl}-valid_loss:{validation_loss}')
-                
         print("Training finish! Normal_class:>>>>>",self.cl)
         
         print(join(self.checkpoints_dir,f'{self.cl}{best_model.name}.pkl'))

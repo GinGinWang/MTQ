@@ -33,11 +33,11 @@ def main():
     ## Parse command line arguments
     args = parse_arguments()
 
-    device = torch.device("cuda:0" if args.cuda else "cpu")
+    device = torch.device("cuda:0")
 
     # Lock seeds
     set_random_seed(30101990)
-    kwargs = {'num_workers': 4, 'pin_memory': True} if args.cuda else {}
+    kwargs = {'num_workers': 4, 'pin_memory': True}
 
     assert args.dataset in ['mnist', 'cifar10']
 
@@ -53,9 +53,9 @@ def main():
     # if args.pretrained:
         # dirName = f'checkpoints/{args.dataset}/combined{args.cd}/ptr{args.pretrained}/'
 
-    c, h , w = dataset.shape
-    input_size = c*h*w
-    print ("input_size:",input_size)
+    c,  h , w = dataset.shape
+    input_size = c * h * w
+    print ("input_size:", input_size)
 
     if not os.path.exists(dirName):
         os.makedirs(dirName)
@@ -247,7 +247,7 @@ def parse_arguments():
     parser.add_argument(
     '--before_log_epochs',
     type = int,
-    default = 300,
+    default = 200,
     help = 'Number of epochs before saving trained model')
 
     #K  (only for SOS flow) 

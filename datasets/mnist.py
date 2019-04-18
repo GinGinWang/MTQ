@@ -32,6 +32,7 @@ class MNIST(OneClassDataset):
 
         self.n_class = n_class
         self.select = select
+        self.name ='mnist'
 
       # Get train and test split
         self.train_split = datasets.MNIST(self.path, train=True, download=True, transform=None)
