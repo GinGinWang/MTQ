@@ -47,6 +47,7 @@ def main():
     print ("dataset shape: ",dataset.shape)
 
     dirName = f'checkpoints/{args.dataset}/combined{args.cd}/'
+
     # if args.pretrained:
         # dirName = f'checkpoints/{args.dataset}/combined{args.cd}/ptr{args.pretrained}/'
 

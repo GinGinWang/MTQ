@@ -58,7 +58,7 @@ class OneClassTrainHelper(object):
         self.lam = lam
         self.optimizer = optim.Adam(self.model.parameters(), lr= lr, weight_decay=1e-6)
 
-        if self.model.name in ['LSA_MAF']:
+        if self.model.name in ['LSA_MAF','LSA_SOS']:
 
             self.optimizerED = optim.Adam(list(self.model.encoder.parameters())+list(self.model.decoder.parameters()), lr= self.lr, weight_decay=1e-6)
             self.optimizerT = optim.Adam(self.model.estimator.parameters(), lr=self.lr, weight_decay=1e-6)
@@ -73,7 +73,7 @@ class OneClassTrainHelper(object):
         # load pretrained model
 
         self.model.load_state_dict(torch.load(join(self.checkpoints_dir, f'{self.cl}LSA.pkl')),strict= False)
-
+ 
     def train_every_epoch(self, epoch):
             # global global_step, writer
 
@@ -150,8 +150,8 @@ class OneClassTrainHelper(object):
                 # print epoch result
             if self.name in ['LSA_EN','LSA_MAF','LSA_SOS']:
 
-                print('Train Epoch: {}\tLoss: {:.6f}\tRec: {:.6f}\tNllk: {:.6f}'.format(
-                            epoch, epoch_loss/epoch_size, epoch_recloss/epoch_size, epoch_nllk/epoch_size))
+                print('Train Epoch-{}: {}\tLoss: {:.6f}\tRec: {:.6f}\tNllk: {:.6f}'.format(
+                            self.cl, epoch, epoch_loss/epoch_size, epoch_recloss/epoch_size, epoch_nllk/epoch_size))
         
             else:
                 print('Train Epoch-{}: {}\tLoss: {:.6f}'.format(
@@ -242,7 +242,8 @@ class OneClassTrainHelper(object):
         for epoch in range(self.train_epoch):
 
             # adjust learning rate
-            #adjust_learning_rate(self.optimizer, epoch, self.lr)
+            if self.name == 'LSA_SOS':
+                adjust_learning_rate(self.optimizerT, epoch, self.lr)
             # adjust lam
             # if epoch >= 30 and (epoch % 20 ==0):
 
@@ -263,10 +264,14 @@ class OneClassTrainHelper(object):
                     # if epoch % 10 == 0:
                     print(f'Best_epoch at :{best_validation_epoch} with valid_loss:{best_validation_loss}' )
 
-                    torch.save(best_model.state_dict(), join(self.checkpoints_dir,f'{self.dataset.normal_class}{self.name}.pkl'))
+                    if self.pretrained:
+
+                        torch.save(best_model.state_dict(), join(self.checkpoints_dir, f'{self.dataset.normal_class}{self.name}_ptr.pkl'))
+                    else:    
+                        torch.save(best_model.state_dict(), join(self.checkpoints_dir, f'{self.dataset.normal_class}{self.name}.pkl'))
 
             # converge?
-            if (epoch - best_validation_epoch >= 200) and (best_validation_epoch > self.before_log_epochs+2): # converge? 
+            if (epoch - best_validation_epoch >= 30) and (best_validation_epoch > self.before_log_epochs+2): # converge? 
                     break
         print("Training finish! Normal_class:>>>>>",self.cl)
         
