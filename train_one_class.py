@@ -58,6 +58,11 @@ class OneClassTrainHelper(object):
         self.lam = lam
         self.optimizer = optim.Adam(self.model.parameters(), lr= lr, weight_decay=1e-6)
 
+        if self.model.name in ['LSA_MAF']:
+
+            self.optimizerED = optim.Adam(list(self.model.encoder.parameters())+list(self.model.decoder.parameters()), lr= self.lr, weight_decay=1e-6)
+            self.optimizerT = optim.Adam(self.model.estimator.parameters(), lr=self.lr, weight_decay=1e-6)
+        
         self.cl = self.dataset.normal_class
 
         # class for computing loss
@@ -101,7 +106,7 @@ class OneClassTrainHelper(object):
                 
                 elif self.name in ['LSA_SOS', 'LSA_MAF']:
                     x_r, z, s, log_jacob_T_inverse = self.model(x)
-                    self.loss.lsa_flow(x,x_r,s,log_jacob_T_inverse)
+                    self.loss.lsa_flow(x, x_r, s, log_jacob_T_inverse)
                 
                 elif self.name in ['SOS', 'MAF','E_MAF','E_SOS']:
                     s, log_jacob_T_inverse = self.model(x)
@@ -113,18 +118,22 @@ class OneClassTrainHelper(object):
 
 
 
-                epoch_loss = + self.loss.total_loss.item()*self.batch_size
                 
-                if self.name in ['LSA_EN','LSA_SOS','LSA_MAF']:
-                    epoch_recloss =+ self.loss.reconstruction_loss.item()*self.batch_size
-                    epoch_nllk = + self.loss.nllk.item()*self.batch_size
 
                 # backward average loss along batch
                 (self.loss.total_loss).backward()
                 # update params
-                self.optimizer.step()
+                # self.optimizer.step()
+                self.optimizerT.step()
+
+                epoch_loss = + self.loss.total_loss.item()*self.batch_size
+            
+                if self.name in ['LSA_EN','LSA_SOS','LSA_MAF']:
+                    epoch_recloss =+ self.loss.reconstruction_loss.item()*self.batch_size
+                    epoch_nllk = + self.loss.nllk.item()*self.batch_size
                 pbar.update(x.size(0))
                 pbar.set_description('Train, Loss: {:.6f}'.format(epoch_loss / (pbar.n)))
+
         
                 # writer.add_scalar('training/loss', loss.item(), global_step)
                 # global_step += 1
@@ -173,39 +182,38 @@ class OneClassTrainHelper(object):
             with torch.no_grad():
                 if self.name == 'LSA':
                     x_r = self.model(x)
-                    self.loss.lsa(x, x_r,batch_average=False)
+                    self.loss.lsa(x, x_r,False)
 
                 elif self.name == 'LSA_EN':
                     x_r, z, z_dist = self.model(x)
-                    self.loss.lsa_en(x, x_r, z, z_dist,batch_average=False)
+                    self.loss.lsa_en(x, x_r, z, z_dist,False)
                 
                 elif self.name in ['LSA_SOS', 'LSA_MAF']:
                     x_r, z, s, log_jacob_T_inverse = self.model(x)
-                    self.loss.lsa_flow(x, x_r, s, log_jacob_T_inverse,batch_average=False)
+                    self.loss.lsa_flow(x, x_r, s, log_jacob_T_inverse,False)
                 
                 elif self.name in ['SOS', 'MAF','E_SOS','E_MAF']:
                     s, log_jacob_T_inverse = self.model(x)
-                    self.loss.flow(s,log_jacob_T_inverse,batch_average=False)
+                    self.loss.flow(s,log_jacob_T_inverse,False)
                 
                 elif self.name == 'EN':
                     z_dist = model(x)
-                    self.loss.en(z_dist,batch_average=False)
+                    self.loss.en(z_dist)
 
                 val_loss += self.loss.total_loss.sum().item()
                 if self.name in ['LSA_EN','LSA_MAF','LSA_SOS']:
                     val_nllk += self.loss.nllk.sum().item()
                     val_rec += self.loss.reconstruction_loss.sum().item()
 
-                pbar.set_description('Val_loss: {:.6f}'.format(val_loss / pbar.n))
+                pbar.set_description('Val_loss: {:.6f}'.format(val_loss))
         
         pbar.close()
                 
         if self.name in ['LSA_EN','LSA_MAF','LSA_SOS']:
-
-            print('Nllk: {:.6f}\tRec: {:.6f}'.format(val_nllk/epoch_size, val_rec/epoch_size))
+            print('Val_loss:{:.6f}\t Nllk: {:.6f}\t Rec: {:.6f}'.format(val_loss/epoch_size, val_nllk/epoch_size, val_rec/epoch_size))
         
         return val_loss
-
+        # return val_nllk
 
 
     
@@ -222,11 +230,12 @@ class OneClassTrainHelper(object):
         # writer = SummaryWriter(comment=self.name + "_" + self.dataset.name)
         # global_step = 0
 
-        
+        # set optimizer for different part
+            
         best_validation_epoch = 0
         best_validation_loss = float('inf')
         best_model = None  
-
+        print(f"n_parameters:{self.model.n_parameters}")
         if self.pretrained:
             self.load_pretrained_model()
 
@@ -257,7 +266,7 @@ class OneClassTrainHelper(object):
                     torch.save(best_model.state_dict(), join(self.checkpoints_dir,f'{self.dataset.normal_class}{self.name}.pkl'))
 
             # converge?
-            if (epoch - best_validation_epoch >= 30) and (best_validation_epoch > self.before_log_epochs+2): # converge? 
+            if (epoch - best_validation_epoch >= 200) and (best_validation_epoch > self.before_log_epochs+2): # converge? 
                     break
         print("Training finish! Normal_class:>>>>>",self.cl)
         

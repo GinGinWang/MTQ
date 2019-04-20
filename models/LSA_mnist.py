@@ -279,7 +279,7 @@ class LSA_MNIST(BaseModule):
 
         if self.est_name == 'EN':
                 # density distribution of z 
-            z_dist= self.estimator(z)
+            z_dist = self.estimator(z)
         elif self.est_name in ['SOS','MAF']:
             s, log_jacob_T_inverse = self.estimator(z)
 

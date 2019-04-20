@@ -214,7 +214,7 @@ class OneClassTestHelper(object):
         dataset = self.dataset
         dataset.val(cl)
 
-        loader = DataLoader(dataset, batch_size= 100)
+        loader = DataLoader(dataset, batch_size= bs)
 
         sample_llk = np.zeros(shape=(len(dataset),))
         sample_rec = np.zeros(shape=(len(dataset),))
@@ -225,24 +225,24 @@ class OneClassTestHelper(object):
 
             if self.name == 'LSA':
                 x_r = self.model(x)
-                self.loss.lsa(x, x_r)
+                self.loss.lsa(x, x_r,False)
 
             elif self.name == 'LSA_EN':
                 
                 x_r, z, z_dist = self.model(x)
-                self.loss.lsa_en(x, x_r, z, z_dist)
+                self.loss.lsa_en(x, x_r, z, z_dist,False)
             
             elif self.name in ['LSA_SOS', 'LSA_MAF']:
                 x_r, z, s, log_jacob_T_inverse = self.model(x)
-                self.loss.lsa_flow(x,x_r,s,log_jacob_T_inverse)
+                self.loss.lsa_flow(x,x_r,s,log_jacob_T_inverse,False)
             
             elif self.name in ['SOS', 'MAF']:
                 s, log_jacob_T_inverse = self.model(x)
-                self.loss.flow(s,log_jacob_T_inverse)
+                self.loss.flow(s,log_jacob_T_inverse,False)
             
             elif self.name == 'EN':
                 z_dist = model(x)
-                self.loss.en(z_dist)
+                self.loss.en(z_dist,False)
 
             # score larger-->normal data
             if self.name in ['LSA','LSA_MAF','LSA_SOS','LSA_EN']:

@@ -77,6 +77,6 @@ class TinvMAF(BaseModule):
         """
         h = z.view(-1, self.input_size)
 
-        z, z_dist = self.T_inverse(h)
+        s, log_jacob_T_inv = self.T_inverse(h)
 
-        return z, z_dist
+        return s,log_jacob_T_inv

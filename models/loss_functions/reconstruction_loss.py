@@ -27,6 +27,6 @@ class ReconstructionLoss(BaseModule):
 
         while L.dim() > 1:
             L = torch.sum(L, dim=-1)
-        if size_average:
+        if size_average: # whether got average in batch
             L = torch.mean(L)
         return L

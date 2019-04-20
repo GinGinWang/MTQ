@@ -59,8 +59,11 @@ class SumLoss(nn.Module):
         self.total_loss = self.reconstruction_loss + self.lam *self.nllk
 
     def lsa_flow(self, x, x_r, s,nagtive_log_jacob, batch_average= True):
+
         self.reconstruction_loss = self.reconstruction_loss_fn(x, x_r,batch_average)
+        
         self.nllk= self.flow_loss_fn(s,nagtive_log_jacob,batch_average)
+        
         self.total_loss = self.lam * self.nllk + self.reconstruction_loss
 
     def flow(self, s,nagtive_log_jacob, batch_average= True):

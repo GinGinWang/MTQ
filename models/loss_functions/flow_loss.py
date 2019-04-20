@@ -13,7 +13,7 @@ class FlowLoss(BaseModule):
     def __init__(self):
         super(FlowLoss, self).__init__()
 
-    def forward(self, s, log_jacob, use_J=True, size_average=True):
+    def forward(self, s, log_jacob,size_average=True):
         '''
         Args:
             s, source data s~ N(0,1) T(s) = z
@@ -24,9 +24,10 @@ class FlowLoss(BaseModule):
         log_probs = (-0.5 * s.pow(2) - 0.5 * math.log(2 * math.pi)).sum(
             -1, keepdim=True)
         # formula (3)
-        
-        loss = -(log_probs + log_jacob).sum() if use_J else -(log_probs).sum()
+        loss = -(log_probs + log_jacob).sum(-1,keepdim=True)
         
         if size_average:
-            loss /= s.size(0)
+            loss = loss.mean()
+        else:
+            loss = loss.squeeze(-1)
         return loss
