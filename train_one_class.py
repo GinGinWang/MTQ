@@ -15,7 +15,6 @@ from models.loss_functions import SumLoss
 
 import math
 
-from utils import *
 import torch.optim as optim
 
 from tensorboardX import SummaryWriter
@@ -56,12 +55,14 @@ class OneClassTrainHelper(object):
 
         self.lr = lr 
         self.lam = lam
-        self.optimizer = optim.Adam(self.model.parameters(), lr= lr, weight_decay=1e-6)
+        
 
         if self.model.name in ['LSA_MAF','LSA_SOS']:
 
-            self.optimizerED = optim.Adam(list(self.model.encoder.parameters())+list(self.model.decoder.parameters()), lr= self.lr, weight_decay=1e-6)
-            self.optimizerT = optim.Adam(self.model.estimator.parameters(), lr=self.lr, weight_decay=1e-6)
+            # self.optimizerED = optim.Adam(list(self.model.encoder.parameters())+list(self.model.decoder.parameters()), lr= self.lr, weight_decay=1e-6)
+            self.optimizer = optim.Adam(self.model.estimator.parameters(), lr=self.lr, weight_decay=1e-6)
+        else:
+            self.optimizer = optim.Adam(self.model.parameters(), lr= lr, weight_decay=1e-6)
         
         self.cl = self.dataset.normal_class
 
@@ -73,7 +74,44 @@ class OneClassTrainHelper(object):
         # load pretrained model
 
         self.model.load_state_dict(torch.load(join(self.checkpoints_dir, f'{self.cl}LSA.pkl')),strict= False)
- 
+
+
+
+    def adjust_learning_rate(self, epoch, old_validation_loss, new_validation_loss):
+        """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
+
+        # if epoch <=20:
+        #     lr = start_lr
+        # elif epoch < 30 :
+        #     lr =start_lr*0.1
+        # elif epoch <50:
+        #     lr = start_lr*0.01
+        # elif epoch<100:
+        #     lr = start_lr*0.001
+        # else:
+        #     lr = start_lr*0.0001
+        # 
+        
+        change = False # flag whether changing learning rate
+
+        # When llk is changing from Nan to real
+        if math.isnan(old_validation_loss) and (not math.isnan(new_validation_loss)):
+            change = True
+        
+        # when valid_loss start to increase
+        if new_validation_loss >old_validation_loss:
+            change = True
+
+        if change:
+            self.lr = self.lr*0.1
+            print (f"Learing Rate changed to{self.lr}")
+
+
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = self.lr
+
+
+
     def train_every_epoch(self, epoch):
             # global global_step, writer
 
@@ -94,8 +132,9 @@ class OneClassTrainHelper(object):
                 x = x.to(self.device)
                 # Clear grad for every batch
                 # self.model.zero_grad()
-                self.optimizer.zero_grad()
 
+                self.optimizer.zero_grad()
+                
                 if self.name == 'LSA':
                     x_r = self.model(x)
                     self.loss.lsa(x, x_r)
@@ -115,16 +154,14 @@ class OneClassTrainHelper(object):
                 elif self.name == 'EN':
                     z_dist = model(x)
                     self.loss.en(z_dist)    
-
-
-
-                
+      
 
                 # backward average loss along batch
+                
                 (self.loss.total_loss).backward()
                 # update params
                 # self.optimizer.step()
-                self.optimizerT.step()
+                self.optimizer.step()
 
                 epoch_loss = + self.loss.total_loss.item()*self.batch_size
             
@@ -234,16 +271,15 @@ class OneClassTrainHelper(object):
             
         best_validation_epoch = 0
         best_validation_loss = float('inf')
-        best_model = None  
+        best_model = None 
+        old_validation_loss = 0
+
         print(f"n_parameters:{self.model.n_parameters}")
         if self.pretrained:
             self.load_pretrained_model()
 
         for epoch in range(self.train_epoch):
 
-            # adjust learning rate
-            if self.name == 'LSA_SOS':
-                adjust_learning_rate(self.optimizerT, epoch, self.lr)
             # adjust lam
             # if epoch >= 30 and (epoch % 20 ==0):
 
@@ -254,6 +290,12 @@ class OneClassTrainHelper(object):
             # validate
             validation_loss = self.validate(epoch, self.model)
 
+            # adjust learning rate
+            if (self.name == 'LSA_SOS'):
+                self.adjust_learning_rate(epoch,old_validation_loss, validation_loss)
+
+            old_validation_loss = validation_loss
+            
             if epoch > self.before_log_epochs: # wait at least some epochs to log
                
                 if (validation_loss < best_validation_loss):
@@ -279,4 +321,4 @@ class OneClassTrainHelper(object):
 
         torch.save(best_model.state_dict(), join(self.checkpoints_dir,f'{self.dataset.normal_class}{self.name}.pkl'))
         
-
+    
