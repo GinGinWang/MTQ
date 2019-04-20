@@ -96,7 +96,7 @@ def main():
     model.to(device).eval()
     
     # Initialize training process
-    helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, lam = args.lam, checkpoints_dir= dirName, output_file= f"results/{model.name}_{args.dataset}_cd{args.cd}_ptr{args.pretrained}_nml{args.score_normed}_nlration{args.novel_ratio}",device = device, batch_size = args.batch_size)
+    helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, lam = args.lam, checkpoints_dir= dirName, output_file= f"results/{model.name}_{args.dataset}_cd{args.cd}_ptr{args.pretrained}_nml{args.score_normed}_nlration{args.novel_ratio}",device = device, batch_size = args.batch_size, pretrained= args.pretrained)
 
     # Start training 
     helper.test_one_class_classification()

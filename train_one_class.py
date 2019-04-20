@@ -95,20 +95,23 @@ class OneClassTrainHelper(object):
         change = False # flag whether changing learning rate
 
         # When llk is changing from Nan to real
-        if math.isnan(old_validation_loss) and (not math.isnan(new_validation_loss)):
-            change = True
         
         # when valid_loss start to increase
-        if new_validation_loss >old_validation_loss:
-            change = True
+        if self.lr > 10**(-8): #
+            # if (math.isnan(old_validation_loss)) and ( not math.isnan(new_validation_loss) ) and (not math.isinf(new_validation_loss)):
+            #     change = True
+            # elif (math.isinf(old_validation_loss)) and ( not math.isinf(new_validation_loss) ):
+            #     change = True
+            if (new_validation_loss > old_validation_loss):
+                # if (abs((new_validation_loss-old_validation_loss)/old_validation_loss)>10**(-5)):
+                    change = True
+            if change:
+                self.lr = self.lr*0.5
+                print (f"Learing Rate changed to{self.lr}")
 
-        if change:
-            self.lr = self.lr*0.1
-            print (f"Learing Rate changed to{self.lr}")
 
-
-        for param_group in self.optimizer.param_groups:
-            param_group['lr'] = self.lr
+            for param_group in self.optimizer.param_groups:
+                param_group['lr'] = self.lr
 
 
 
@@ -270,9 +273,9 @@ class OneClassTrainHelper(object):
         # set optimizer for different part
             
         best_validation_epoch = 0
-        best_validation_loss = float('inf')
+        best_validation_loss = float('+inf')
         best_model = None 
-        old_validation_loss = 0
+        old_validation_loss = float('+inf')
 
         print(f"n_parameters:{self.model.n_parameters}")
         if self.pretrained:
@@ -291,7 +294,7 @@ class OneClassTrainHelper(object):
             validation_loss = self.validate(epoch, self.model)
 
             # adjust learning rate
-            if (self.name == 'LSA_SOS'):
+            if (self.name in ['LSA_SOS','LSA_MAF']):
                 self.adjust_learning_rate(epoch,old_validation_loss, validation_loss)
 
             old_validation_loss = validation_loss
@@ -304,21 +307,24 @@ class OneClassTrainHelper(object):
                     best_model = self.model 
                     
                     # if epoch % 10 == 0:
-                    print(f'Best_epoch at :{best_validation_epoch} with valid_loss:{best_validation_loss}' )
+                    print(f'Best_epoch at :{best_validation_epoch} with valid_loss:{best_validation_loss}, with lr:{self.lr}' )
 
-                    if self.pretrained:
+                    # if self.pretrained:
 
-                        torch.save(best_model.state_dict(), join(self.checkpoints_dir, f'{self.dataset.normal_class}{self.name}_ptr.pkl'))
-                    else:    
-                        torch.save(best_model.state_dict(), join(self.checkpoints_dir, f'{self.dataset.normal_class}{self.name}.pkl'))
+                    #     torch.save(best_model.state_dict(), join(self.checkpoints_dir, f'{self.dataset.normal_class}{self.name}_ptr.pkl'))
+                    # else:    
+                    #     torch.save(best_model.state_dict(), join(self.checkpoints_dir, f'{self.dataset.normal_class}{self.name}.pkl'))
 
             # converge?
-            if (epoch - best_validation_epoch >= 30) and (best_validation_epoch > self.before_log_epochs+2): # converge? 
+            if (epoch - best_validation_epoch >= 30) and (best_validation_epoch > 0): # converge? 
                     break
         print("Training finish! Normal_class:>>>>>",self.cl)
         
         print(join(self.checkpoints_dir,f'{self.cl}{best_model.name}.pkl'))
 
-        torch.save(best_model.state_dict(), join(self.checkpoints_dir,f'{self.dataset.normal_class}{self.name}.pkl'))
+        if self.pretrained:
+            torch.save(best_model.state_dict(), join(self.checkpoints_dir,f'{self.dataset.normal_class}{self.name}_ptr.pkl'))
+        else:
+            torch.save(best_model.state_dict(), join(self.checkpoints_dir,f'{self.dataset.normal_class}{self.name}.pkl'))
         
     

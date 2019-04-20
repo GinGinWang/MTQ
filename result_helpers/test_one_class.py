@@ -12,7 +12,7 @@ from models.base import BaseModule
 from models.loss_functions import SumLoss
 from datasets.utils import novelty_score
 from datasets.utils import normalize
-
+from result_helpers.utils import *
 
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import f1_score
@@ -30,7 +30,7 @@ class OneClassTestHelper(object):
     Performs tests for one-class datasets (MNIST or CIFAR-10).
     """
 
-    def __init__(self, dataset, model, score_normed, novel_ratio, lam, checkpoints_dir, output_file, device,batch_size):
+    def __init__(self, dataset, model, score_normed, novel_ratio, lam, checkpoints_dir, output_file, device,batch_size,pretrained):
         # type: (OneClassDataset, BaseModule, str, str) -> None
         """
         Class constructor.
@@ -50,6 +50,7 @@ class OneClassTestHelper(object):
         self.device = device
         self.name = model.name
         self.bs = batch_size
+        self.pretrained = pretrained
         # control novel ratio in test sets.
         self.novel_ratio = novel_ratio
 
@@ -77,7 +78,12 @@ class OneClassTestHelper(object):
         for cl_idx, cl in enumerate(self.dataset.test_classes):
 
             # Load the checkpoint
-            self.model.load_w(join(self.checkpoints_dir, f'{cl}{self.model.name}.pkl'))
+            if self.pretrained:
+
+                self.model.load_w(join(self.checkpoints_dir, f'{cl}{self.model.name}_ptr.pkl'))
+            else:
+
+                self.model.load_w(join(self.checkpoints_dir, f'{cl}{self.model.name}.pkl'))
 
             if self.score_normed:
                 # we need a run on validation, to compute
@@ -132,13 +138,21 @@ class OneClassTestHelper(object):
                     # print (sample_llk[i])
 
             print(sample_llk)
+
+            print(f"NAN_num:{sum(sample_llk!=sample_llk)}")
+
+            # +inf,-inf,nan
+            sample_llk = modify_inf(sample_llk)
+
             llk1= np.dot(sample_llk,sample_y).sum()
-            llk2 =np.dot(sample_llk,np.logical_not(sample_y)).sum()
-            
+            llk2 = sample_llk.sum()-llk1
+
             # llk1 should be larger than llk2
-            llk1 =llk1/np.sum(sample_y) # average llk for normal examples
-            llk2 =llk2/(data_num-np.sum(sample_y)) # average llk for novel examples
-            
+            llk1 =llk1/np.sum(sample_y)
+            # average llk for normal examples
+            llk2 =llk2/(data_num-np.sum(sample_y)) 
+            # average llk for novel examples
+
             if self.score_normed:
                 print(f'min_llk:{min_llk},max_llk:{max_llk}'
                     )
@@ -154,10 +168,9 @@ class OneClassTestHelper(object):
 
             # llk maybe too large or too small
             # why llk can be Nan?
-            # sample_llk[sample_llk==float('+inf')]= 10**35
-            # sample_llk[sample_llk==float('-inf')]= -10**35
-            print(f"NAN_num:{sum(sample_llk!=sample_llk)}")
-            sample_llk[sample_llk!=sample_llk] = 0
+            
+            sample_llk[sample_llk==float('+inf')]= 10**35
+            sample_llk[sample_llk==float('-inf')]= -10**35
 
             
             sample_ns = novelty_score(sample_llk, sample_rec)
