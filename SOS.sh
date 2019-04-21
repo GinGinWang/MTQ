@@ -8,3 +8,4 @@ python test.py  --autoencoder LSA --estimator SOS --dataset mnist   --hidden_siz
 END_TIME=$(date +%s.%N)
 ELAPSED_TIME=$(echo "$END_TIME - $START_TIME" | bc )
 echo "Runtime: $ELAPSED_TIME seconds"
+

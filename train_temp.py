@@ -14,7 +14,7 @@ from models.transform_maf import TinvMAF
 from models.transform_sos import TinvSOS
 
 from datasets.utils import set_random_seed
-from train_one_class import OneClassTrainHelper
+from train_one_class_combine import OneClassTrainHelper
 
 
 
@@ -49,7 +49,7 @@ def main():
     
     print ("dataset shape: ",dataset.shape)
 
-    dirName = f'checkpoints/{args.dataset}/combined{args.cd}/'
+    dirName = f'checkpoints/{args.dataset}/combined{args.cd}/notfixed/'
     # if args.pretrained:
         # dirName = f'checkpoints/{args.dataset}/combined{args.cd}/ptr{args.pretrained}/'
 
@@ -112,7 +112,7 @@ def main():
                
         # Initialize training process
 
-        helper = OneClassTrainHelper(dataset, model, lr = args.lr, lam = args.lam,  checkpoints_dir=dirName, train_epoch=args.epochs, batch_size= args.batch_size, device= device, kwargs = kwargs, before_log_epochs = args.before_log_epochs, pretrained= args.pretrained)
+        helper = OneClassTrainHelper(dataset, model, lr = args.lr, lam = args.lam,  checkpoints_dir=dirName, train_epoch=args.epochs, batch_size= args.batch_size, device= device, kwargs = kwargs, before_log_epochs = args.before_log_epochs, pretrained= args.pretrained,fixed =False)
 
         # Start training 
         helper.train_one_class_classification()
@@ -174,7 +174,6 @@ def parse_arguments():
     parser.add_argument('--PreTrained', dest='pretrained',action = 'store_true',default = False)
 
     parser.add_argument('--NoAutoencoder', dest='coder',action='store_false', default = True)
-    
     parser.add_argument('--NoDecoder', dest='decoder_flag',action='store_false', default = True)
 
 
@@ -248,7 +247,7 @@ def parse_arguments():
     parser.add_argument(
     '--before_log_epochs',
     type = int,
-    default = 10,
+    default = 50,
     help = 'Number of epochs before saving trained model')
 
     #K  (only for SOS flow) 

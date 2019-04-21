@@ -28,7 +28,7 @@ class OneClassTrainHelper(object):
     """
 
 
-    def __init__(self, dataset, model, lr, lam, checkpoints_dir, device, kwargs, train_epoch=1000, batch_size = 100, before_log_epochs = 1000, pretrained= False, fixed = True):
+    def __init__(self, dataset, model, lr, lam, checkpoints_dir, device, kwargs, train_epoch=1000, batch_size = 100, before_log_epochs = 1000, pretrained= False,fixed = True):
 
         # type: (OneClassDataset, BaseModule, str, str) -> None
         """
@@ -61,13 +61,15 @@ class OneClassTrainHelper(object):
             if fixed:
                 self.optimizer = optim.Adam(self.model.estimator.parameters(), lr=self.lr, weight_decay=1e-6)
             else:
-                self.optimizerED = optim.Adam(list(self.model.encoder.parameters())+list(self.model.decoder.parameters()), lr= self.lr, weight_decay=1e-6)
+                self.optimizerED = optim.Adam(list(self.model.encoder.parameters())+list(self.model.decoder.parameters()), lr = self.lr, weight_decay=1e-6)
                 self.optimizerET = optim.Adam(list(self.model.encoder.parameters())+list(self.model.estimator.parameters()), lr= self.lr, weight_decay=1e-6)
                 self.optimizer = optim.Adam(self.model.parameters(), lr= self.lr, weight_decay=1e-6)
 
         else:
             self.optimizer = optim.Adam(self.model.parameters(), lr= lr, weight_decay=1e-6)
-        
+
+
+
         self.cl = self.dataset.normal_class
 
         # class for computing loss
@@ -101,9 +103,9 @@ class OneClassTrainHelper(object):
         # When llk is changing from Nan to real
         
         # when valid_loss start to increase
-        if self.lr > 10**(-8): #
-            if (math.isnan(old_validation_loss)) and ( not math.isnan(new_validation_loss) ):
-                change = True
+        if self.lr > 10**(-6): #
+            # if (math.isnan(old_validation_loss)) and ( not math.isnan(new_validation_loss) ) and (not math.isinf(new_validation_loss)):
+            #     change = True
             # elif (math.isinf(old_validation_loss)) and ( not math.isinf(new_validation_loss) ):
             #     change = True
             if (new_validation_loss > old_validation_loss):
@@ -167,9 +169,10 @@ class OneClassTrainHelper(object):
                 
                 (self.loss.total_loss).backward()
                 # update params
-                # self.optimizer.step()
-                self.optimizer.step()
+                # self.optimizerED.step()
+                # self.optimizerET.step()
 
+                self.optimizer.step()
                 epoch_loss = + self.loss.total_loss.item()*self.batch_size
             
                 if self.name in ['LSA_EN','LSA_SOS','LSA_MAF']:
@@ -320,7 +323,7 @@ class OneClassTrainHelper(object):
                         torch.save(best_model.state_dict(), join(self.checkpoints_dir, f'{self.dataset.normal_class}{self.name}.pkl'))
 
             # converge?
-            if (epoch - best_validation_epoch >= 30) and (best_validation_epoch > 0): # converge? 
+            if (epoch - best_validation_epoch >= 10) and (best_validation_epoch > 0): # converge? 
                     break
         print("Training finish! Normal_class:>>>>>",self.cl)
         
@@ -329,6 +332,6 @@ class OneClassTrainHelper(object):
         if self.pretrained:
             torch.save(best_model.state_dict(), join(self.checkpoints_dir,f'{self.dataset.normal_class}{self.name}_ptr.pkl'))
         else:
-            torch.save(best_model.state_dict(), join(self.checkpoints_dir,f'{self.dataset.normal_class}{self.name}.pkl'))
+            torch.save(best_model.state_dict(), join(self.checkpoints_dir,f'{self.dataset.normal_class}{self.name}_nf.pkl'))
         
     
