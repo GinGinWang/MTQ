@@ -103,8 +103,8 @@ class OneClassTrainHelper(object):
             # elif (math.isinf(old_validation_loss)) and ( not math.isinf(new_validation_loss) ):
             #     change = True
             if (new_validation_loss > old_validation_loss):
-                # if (abs((new_validation_loss-old_validation_loss)/old_validation_loss)>10**(-5)):
-                    change = True
+                if (abs((new_validation_loss-old_validation_loss)/old_validation_loss)>10**(-4)):
+                        change = True
             if change:
                 self.lr = self.lr*0.5
                 print (f"Learing Rate changed to{self.lr}")
@@ -316,7 +316,7 @@ class OneClassTrainHelper(object):
                     #     torch.save(best_model.state_dict(), join(self.checkpoints_dir, f'{self.dataset.normal_class}{self.name}.pkl'))
 
             # converge?
-            if (epoch - best_validation_epoch >= 30) and (best_validation_epoch > 0): # converge? 
+            if (epoch - best_validation_epoch >= 10) and (best_validation_epoch > 0): # converge? 
                     break
         print("Training finish! Normal_class:>>>>>",self.cl)
         

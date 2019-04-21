@@ -137,9 +137,9 @@ class OneClassTestHelper(object):
                     sample_llk[i*bs:i*bs+bs] = - self.loss.nllk.cpu().numpy()
                     # print (sample_llk[i])
 
-            print(sample_llk)
+            # print(sample_llk)
 
-            print(f"NAN_num:{sum(sample_llk!=sample_llk)}")
+            # print(f"NAN_num:{sum(sample_llk!=sample_llk)}")
 
             # +inf,-inf,nan
             sample_llk = modify_inf(sample_llk)
