@@ -22,6 +22,20 @@ import os
 
 import torch
 
+def create_dir(dataset, cd, pretrained, fixed):
+    
+    if pretrained:
+        dirName = f'checkpoints/{dataset}/combined{cd}/Ptr{pretrained}/Fix{fixed}/'
+    else:
+        dirName = f'checkpoints/{dataset}/combined{cd}/Ptr{pretrained}/'
+     
+    if not os.path.exists(dirName):
+        os.makedirs(dirName)
+        print(f'Make Dir:{dirName}')
+
+    return dirName
+
+
 
 
 def main():
@@ -49,19 +63,14 @@ def main():
     
     print ("dataset shape: ",dataset.shape)
 
-    dirName = f'checkpoints/{args.dataset}/combined{args.cd}/notfixed/'
-    # if args.pretrained:
-        # dirName = f'checkpoints/{args.dataset}/combined{args.cd}/ptr{args.pretrained}/'
+
+    dirName = create_dir(args.dataset,args.cd,args.pretrained,args.fixed)
 
     c,  h , w = dataset.shape
     input_size = c * h * w
     print ("input_size:", input_size)
 
-    if not os.path.exists(dirName):
-        os.makedirs(dirName)
-        print(f'Make Dir:{dirName}')
-
-
+   
 
     for cl_idx, cl in enumerate(dataset.train_classes):
 
@@ -112,7 +121,7 @@ def main():
                
         # Initialize training process
 
-        helper = OneClassTrainHelper(dataset, model, lr = args.lr, lam = args.lam,  checkpoints_dir=dirName, train_epoch=args.epochs, batch_size= args.batch_size, device= device, kwargs = kwargs, before_log_epochs = args.before_log_epochs, pretrained= args.pretrained,fixed =False)
+        helper = OneClassTrainHelper(dataset, model, lr = args.lr, lam = args.lam,  checkpoints_dir = dirName, train_epoch=args.epochs, batch_size= args.batch_size, device= device, kwargs = kwargs, before_log_epochs = args.before_log_epochs,combined = args.cd,fixed= args.fixed,pretrained =args.pretrained)
 
         # Start training 
         helper.train_one_class_classification()
@@ -173,7 +182,10 @@ def parse_arguments():
 
     parser.add_argument('--PreTrained', dest='pretrained',action = 'store_true',default = False)
 
+    parser.add_argument('--Fixed', dest='fixed',action = 'store_true', default = False)
+
     parser.add_argument('--NoAutoencoder', dest='coder',action='store_false', default = True)
+    
     parser.add_argument('--NoDecoder', dest='decoder_flag',action='store_false', default = True)
 
 

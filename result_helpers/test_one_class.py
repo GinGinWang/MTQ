@@ -30,7 +30,7 @@ class OneClassTestHelper(object):
     Performs tests for one-class datasets (MNIST or CIFAR-10).
     """
 
-    def __init__(self, dataset, model, score_normed, novel_ratio, lam, checkpoints_dir, output_file, device,batch_size,pretrained):
+    def __init__(self, dataset, model, score_normed, novel_ratio, lam, checkpoints_dir, output_file, device,batch_size, pretrained):
         # type: (OneClassDataset, BaseModule, str, str) -> None
         """
         Class constructor.
@@ -78,12 +78,8 @@ class OneClassTestHelper(object):
         for cl_idx, cl in enumerate(self.dataset.test_classes):
 
             # Load the checkpoint
-            if self.pretrained:
 
-                self.model.load_w(join(self.checkpoints_dir, f'{cl}{self.model.name}_ptr.pkl'))
-            else:
-
-                self.model.load_w(join(self.checkpoints_dir, f'{cl}{self.model.name}.pkl'))
+            self.model.load_w(join(self.checkpoints_dir, f'{cl}{self.model.name}.pkl'))
 
             if self.score_normed:
                 # we need a run on validation, to compute
@@ -165,15 +161,9 @@ class OneClassTestHelper(object):
 
             #print(sample_llk)
             # Compute the normalized novelty score
-
-            # llk maybe too large or too small
-            # why llk can be Nan?
-            
-            sample_llk[sample_llk==float('+inf')]= 10**35
-            sample_llk[sample_llk==float('-inf')]= -10**35
-
             
             sample_ns = novelty_score(sample_llk, sample_rec)
+            sample_ns = modify_inf(sample_ns)
             
             # Compute precision, recall, f1_score based on threshold
             # threshold = self.compute_threshold(cl)
@@ -267,6 +257,7 @@ class OneClassTestHelper(object):
             # sample_llk[sample_llk!=sample_llk] = 0
             # sample_llk[sample_llk==float('+inf')]= 10**35
             # sample_llk[sample_llk==float('-inf')]= -10**35
+            sample_llk = modify_inf(sample_llk)
             
         return sample_llk.min(), sample_llk.max(), sample_rec.min(), sample_rec.max()
 

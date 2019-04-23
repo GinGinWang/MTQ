@@ -28,7 +28,7 @@ class OneClassTrainHelper(object):
     """
 
 
-    def __init__(self, dataset, model, lr, lam, checkpoints_dir, device, kwargs, train_epoch=1000, batch_size = 100, before_log_epochs = 1000, pretrained= False,fixed = True):
+    def __init__(self, dataset, model, lr, lam, checkpoints_dir, device, kwargs, train_epoch=1000, batch_size = 100, before_log_epochs = 1000, combined=False, fixed = False, pretrained= False):
 
         # type: (OneClassDataset, BaseModule, str, str) -> None
         """
@@ -50,7 +50,9 @@ class OneClassTrainHelper(object):
         self.train_epoch = train_epoch
         self.batch_size = batch_size
         self.before_log_epochs = before_log_epochs
-        self.pretrained = pretrained
+        self.combined = combined
+
+        self.pretrained= pretrained
 
 
         self.lr = lr 
@@ -58,11 +60,12 @@ class OneClassTrainHelper(object):
         
 
         if self.model.name in ['LSA_MAF','LSA_SOS']:
+
             if fixed:
                 self.optimizer = optim.Adam(self.model.estimator.parameters(), lr=self.lr, weight_decay=1e-6)
             else:
-                self.optimizerED = optim.Adam(list(self.model.encoder.parameters())+list(self.model.decoder.parameters()), lr = self.lr, weight_decay=1e-6)
-                self.optimizerET = optim.Adam(list(self.model.encoder.parameters())+list(self.model.estimator.parameters()), lr= self.lr, weight_decay=1e-6)
+                # self.optimizerED = optim.Adam(list(self.model.encoder.parameters())+list(self.model.decoder.parameters()), lr = self.lr, weight_decay=1e-6)
+                # self.optimizerET = optim.Adam(list(self.model.encoder.parameters())+list(self.model.estimator.parameters()), lr= self.lr, weight_decay=1e-6)
                 self.optimizer = optim.Adam(self.model.parameters(), lr= self.lr, weight_decay=1e-6)
 
         else:
@@ -79,7 +82,7 @@ class OneClassTrainHelper(object):
     def load_pretrained_model(self):
         # load pretrained model
 
-        self.model.load_state_dict(torch.load(join(self.checkpoints_dir, f'{self.cl}LSA.pkl')),strict= False)
+        self.model.load_state_dict(torch.load(f'checkpoints/{self.dataset.name}/combined{self.combined}/PtrFalse/{self.cl}LSA.pkl'),strict = False)
 
 
 
@@ -104,8 +107,8 @@ class OneClassTrainHelper(object):
         
         # when valid_loss start to increase
         if self.lr > 10**(-6): #
-            # if (math.isnan(old_validation_loss)) and ( not math.isnan(new_validation_loss) ) and (not math.isinf(new_validation_loss)):
-            #     change = True
+            if (math.isnan(old_validation_loss)) and ( not math.isnan(new_validation_loss) ) and (not math.isinf(new_validation_loss)):
+                change = True
             # elif (math.isinf(old_validation_loss)) and ( not math.isinf(new_validation_loss) ):
             #     change = True
             if (new_validation_loss > old_validation_loss):
@@ -178,6 +181,7 @@ class OneClassTrainHelper(object):
                 if self.name in ['LSA_EN','LSA_SOS','LSA_MAF']:
                     epoch_recloss =+ self.loss.reconstruction_loss.item()*self.batch_size
                     epoch_nllk = + self.loss.nllk.item()*self.batch_size
+
                 pbar.update(x.size(0))
                 pbar.set_description('Train, Loss: {:.6f}'.format(epoch_loss / (pbar.n)))
 
@@ -195,14 +199,11 @@ class OneClassTrainHelper(object):
                     module.momentum = 1
 
                 # print epoch result
-            if self.name in ['LSA_EN','LSA_MAF','LSA_SOS']:
+            print('Train Epoch-{}: {}\tLoss: {:.6f}\tRec: {:.6f}\tNllk: {:.6f}'.format(
+                        self.cl, epoch, epoch_loss/epoch_size, epoch_recloss/epoch_size, epoch_nllk/epoch_size))
 
-                print('Train Epoch-{}: {}\tLoss: {:.6f}\tRec: {:.6f}\tNllk: {:.6f}'.format(
-                            self.cl, epoch, epoch_loss/epoch_size, epoch_recloss/epoch_size, epoch_nllk/epoch_size))
-        
-            else:
-                print('Train Epoch-{}: {}\tLoss: {:.6f}'.format(
-                            self.cl, epoch, epoch_loss/epoch_size))
+            return epoch_loss/epoch_size, epoch_recloss/epoch_size, epoch_nllk/epoch_size
+    
 
     def validate(self, epoch, model, prefix = 'Validation'):
 
@@ -256,11 +257,10 @@ class OneClassTrainHelper(object):
         
         pbar.close()
                 
-        if self.name in ['LSA_EN','LSA_MAF','LSA_SOS']:
-            print('Val_loss:{:.6f}\t Nllk: {:.6f}\t Rec: {:.6f}'.format(val_loss/epoch_size, val_nllk/epoch_size, val_rec/epoch_size))
-        
-        return val_loss
-        # return val_nllk
+        print('Val_loss:{:.6f}\t Rec: {:.6f}\t Nllk: {:.6f}'.format(val_loss/epoch_size, val_rec/epoch_size, val_nllk/epoch_size))
+
+        return val_loss/epoch_size, val_rec/epoch_size,val_nllk/epoch_size
+
 
 
     
@@ -284,7 +284,18 @@ class OneClassTrainHelper(object):
         best_model = None 
         old_validation_loss = float('+inf')
 
+        history ={}
+        history['val_loss'] =[]
+        history['val_rec'] =[]
+        history['val_nllk'] =[]
+
+        history['trn_loss'] =[]
+        history['trn_rec'] =[]
+        history['trn_nllk'] =[]
+
+
         print(f"n_parameters:{self.model.n_parameters}")
+        
         if self.pretrained:
             self.load_pretrained_model()
 
@@ -295,14 +306,15 @@ class OneClassTrainHelper(object):
 
             #     lam= min(lam*10, self.lam)  
             #     self.loss = SumLoss(self.model.name,self.lam)
-            self.train_every_epoch(epoch)
+
+            train_loss, train_rec, train_nllk= self.train_every_epoch(epoch)
 
             # validate
-            validation_loss = self.validate(epoch, self.model)
+            validation_loss,validation_rec,validation_nllk = self.validate(epoch, self.model)
 
             # adjust learning rate
-            if (self.name in ['LSA_SOS','LSA_MAF']):
-                self.adjust_learning_rate(epoch,old_validation_loss, validation_loss)
+            # if (self.name in ['LSA_SOS']):
+            #     self.adjust_learning_rate(epoch,old_validation_loss, validation_loss)
 
             old_validation_loss = validation_loss
             
@@ -316,22 +328,31 @@ class OneClassTrainHelper(object):
                     # if epoch % 10 == 0:
                     print(f'Best_epoch at :{best_validation_epoch} with valid_loss:{best_validation_loss}, with lr:{self.lr}' )
 
-                    if self.pretrained:
+                    # if self.pretrained:
 
-                        torch.save(best_model.state_dict(), join(self.checkpoints_dir, f'{self.dataset.normal_class}{self.name}_ptr.pkl'))
-                    else:    
-                        torch.save(best_model.state_dict(), join(self.checkpoints_dir, f'{self.dataset.normal_class}{self.name}.pkl'))
+                    #     torch.save(best_model.state_dict(), join(self.checkpoints_dir, f'{self.dataset.normal_class}{self.name}_ptr.pkl'))
+                    # else:    
+                    #     torch.save(best_model.state_dict(), join(self.checkpoints_dir, f'{self.dataset.normal_class}{self.name}.pkl'))
 
             # converge?
-            if (epoch - best_validation_epoch >= 10) and (best_validation_epoch > 0): # converge? 
+            if (epoch - best_validation_epoch >= 30) and (best_validation_epoch > 0): # converge? 
                     break
+
+            # record loss history
+            history['val_loss'].append(validation_loss)
+            history['val_rec'].append(validation_rec)
+            history['val_nllk'].append(validation_nllk)
+            
+            history['trn_loss'].append(train_loss)
+            history['trn_rec'].append(train_rec)
+            history['trn_nllk'].append(train_nllk)
+
         print("Training finish! Normal_class:>>>>>",self.cl)
         
         print(join(self.checkpoints_dir,f'{self.cl}{best_model.name}.pkl'))
 
-        if self.pretrained:
-            torch.save(best_model.state_dict(), join(self.checkpoints_dir,f'{self.dataset.normal_class}{self.name}_ptr.pkl'))
-        else:
-            torch.save(best_model.state_dict(), join(self.checkpoints_dir,f'{self.dataset.normal_class}{self.name}_nf.pkl'))
+        model_dir = join(self.checkpoints_dir,f'{self.dataset.normal_class}{self.name}.pkl')
+        result_dir = join(self.checkpoints_dir,f'{self.dataset.normal_class}{self.name}_history.npy')
         
-    
+        torch.save(best_model.state_dict(), model_dir)
+        np.save(result_dir,history)

@@ -184,12 +184,12 @@ class OneClassTrainHelper(object):
 
             pbar.close()
 
-            for module in self.model.modules():
-                if isinstance(module, maffnn.BatchNormFlow):
-                    module.momentum = 0
-            for module in self.model.modules():
-                if isinstance(module, maffnn.BatchNormFlow):
-                    module.momentum = 1
+            # for module in self.model.modules():
+            #     if isinstance(module, maffnn.BatchNormFlow):
+            #         module.momentum = 0
+            # for module in self.model.modules():
+            #     if isinstance(module, maffnn.BatchNormFlow):
+            #         module.momentum = 1
 
                 # print epoch result
             if self.name in ['LSA_EN','LSA_MAF','LSA_SOS']:
