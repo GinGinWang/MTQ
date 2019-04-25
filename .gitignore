@@ -2,7 +2,7 @@
 *.ckpt
 *.pkl
 *.mat
-*.txt
+# *.txt
 
 __pycache__/
 
