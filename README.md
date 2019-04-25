@@ -13,10 +13,9 @@
 * **test.py** - code for testing/run novelty dector.
 
 ### *Results*
-Results names denote the model name and parameters.
+** Results names denote the model name and parameters.
 
 * "{model_name}_{dataset}_cd{cd}_ptr{pretrained}_fix{fixed}_nml{score_normed}_nlr{novel_ratio}_b{num_blocks}_h{hidden_size}_lam{lam}.txt"
-
 * cd: use reconstruction loss as one dimension of latent vector
 * pretrained: intialize the autoencoder with pretrained model
 * fix: fix autoencoder when training the density estimator
