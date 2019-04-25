@@ -89,26 +89,26 @@ class OneClassTrainHelper(object):
     def adjust_learning_rate(self, epoch, old_validation_loss, new_validation_loss):
         """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
 
-        # if epoch <=20:
-        #     lr = start_lr
-        # elif epoch < 30 :
-        #     lr =start_lr*0.1
-        # elif epoch <50:
-        #     lr = start_lr*0.01
-        # elif epoch<100:
-        #     lr = start_lr*0.001
+        # if epoch <=10:
+        #     lr = 0.1
+        # elif epoch < 20 :
+        #     lr =0.01
+        # elif epoch <30:
+        #     lr = 0.001
+        # elif epoch <40:
+        #     lr = 0.0001
         # else:
-        #     lr = start_lr*0.0001
-        # 
+        #     lr = 0.00001
+        
         
         change = False # flag whether changing learning rate
 
         # When llk is changing from Nan to real
         
         # when valid_loss start to increase
-        if self.lr > 10**(-6): #
-            if (math.isnan(old_validation_loss)) and ( not math.isnan(new_validation_loss) ) and (not math.isinf(new_validation_loss)):
-                change = True
+        if ((self.lr > 10**(-5)) and (self.dataset.name == 'mnist')) or ((self.lr > 10**(-4)) and (self.dataset.name == 'cifar10')): #
+            # if (math.isnan(old_validation_loss)) and ( not math.isnan(new_validation_loss) ) and (not math.isinf(new_validation_loss)):
+            #     change = True
             # elif (math.isinf(old_validation_loss)) and ( not math.isinf(new_validation_loss) ):
             #     change = True
             if (new_validation_loss > old_validation_loss):
@@ -122,6 +122,8 @@ class OneClassTrainHelper(object):
             for param_group in self.optimizer.param_groups:
                 param_group['lr'] = self.lr
 
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = self.lr
 
 
     def train_every_epoch(self, epoch):
@@ -214,7 +216,7 @@ class OneClassTrainHelper(object):
 
         self.dataset.val(self.cl)
 
-        loader = DataLoader(self.dataset, batch_size = self.batch_size,**self.kwargs)
+        loader = DataLoader(self.dataset, 100 ,**self.kwargs)
 
         epoch_size = self.dataset.length
         batch_size = len(loader)
@@ -248,11 +250,14 @@ class OneClassTrainHelper(object):
                     z_dist = model(x)
                     self.loss.en(z_dist)
 
-                val_loss += self.loss.total_loss.sum().item()
                 if self.name in ['LSA_EN','LSA_MAF','LSA_SOS']:
                     val_nllk += self.loss.nllk.sum().item()
                     val_rec += self.loss.reconstruction_loss.sum().item()
+                    # val_loss = val_nllk + val_rec
+                    val_loss += self.loss.total_loss.sum().item()
 
+                else:
+                     val_loss += self.loss.total_loss.sum().item()
                 pbar.set_description('Val_loss: {:.6f}'.format(val_loss))
         
         pbar.close()
@@ -278,6 +283,10 @@ class OneClassTrainHelper(object):
         # global_step = 0
 
         # set optimizer for different part
+
+        model_dir = join(self.checkpoints_dir,f'{self.dataset.normal_class}{self.name}.pkl')
+        result_dir = join(self.checkpoints_dir,f'{self.dataset.normal_class}{self.name}_history.npy')
+
             
         best_validation_epoch = 0
         best_validation_loss = float('+inf')
@@ -306,15 +315,15 @@ class OneClassTrainHelper(object):
 
             #     lam= min(lam*10, self.lam)  
             #     self.loss = SumLoss(self.model.name,self.lam)
-
+            model_dir_epoch = join(self.checkpoints_dir,f'{self.dataset.normal_class}{self.name}_{epoch}.pkl')
             train_loss, train_rec, train_nllk= self.train_every_epoch(epoch)
 
             # validate
             validation_loss,validation_rec,validation_nllk = self.validate(epoch, self.model)
 
             # adjust learning rate
-            # if (self.name in ['LSA_SOS']):
-            #     self.adjust_learning_rate(epoch,old_validation_loss, validation_loss)
+            if (self.name in ['LSA_SOS','LSA_MAF']):
+                 self.adjust_learning_rate(epoch,old_validation_loss, validation_loss)
 
             old_validation_loss = validation_loss
             
@@ -328,14 +337,11 @@ class OneClassTrainHelper(object):
                     # if epoch % 10 == 0:
                     print(f'Best_epoch at :{best_validation_epoch} with valid_loss:{best_validation_loss}, with lr:{self.lr}' )
 
-                    # if self.pretrained:
-
-                    #     torch.save(best_model.state_dict(), join(self.checkpoints_dir, f'{self.dataset.normal_class}{self.name}_ptr.pkl'))
-                    # else:    
-                    #     torch.save(best_model.state_dict(), join(self.checkpoints_dir, f'{self.dataset.normal_class}{self.name}.pkl'))
+                    torch.save(best_model.state_dict(), model_dir_epoch)
+                    np.save(result_dir,history)
 
             # converge?
-            if (epoch - best_validation_epoch >= 30) and (best_validation_epoch > 0): # converge? 
+            if (epoch - best_validation_epoch >= 50) and (best_validation_epoch > 0): # converge? 
                     break
 
             # record loss history
@@ -351,8 +357,7 @@ class OneClassTrainHelper(object):
         
         print(join(self.checkpoints_dir,f'{self.cl}{best_model.name}.pkl'))
 
-        model_dir = join(self.checkpoints_dir,f'{self.dataset.normal_class}{self.name}.pkl')
-        result_dir = join(self.checkpoints_dir,f'{self.dataset.normal_class}{self.name}_history.npy')
+        
         
         torch.save(best_model.state_dict(), model_dir)
         np.save(result_dir,history)

@@ -35,9 +35,9 @@ def create_dir(dataset, cd, pretrained, fixed):
 
     return dirName
 
-def create_file_dir(model_name,dataset,cd,pretrained,fixed,score_normed,novel_ratio):
+def create_file_dir(model_name,dataset,cd,pretrained,fixed,score_normed,novel_ratio,num_blocks,hidden_size,lam):
 
-    dirName = f"results/{model_name}_{dataset}_cd{cd}_ptr{pretrained}_fix{fixed}_nml{score_normed}_nlration{novel_ratio}.txt"
+    dirName = f"results/{model_name}_{dataset}_cd{cd}_ptr{pretrained}_fix{fixed}_nml{score_normed}_nlr{novel_ratio}_b{num_blocks}_h{hidden_size}_lam{lam}.txt"
     
     return dirName 
 
@@ -111,7 +111,7 @@ def main():
     
     # # set to Test mode
     model.to(device).eval()
-    file_dirName = create_file_dir(model.name,args.dataset,args.cd,args.pretrained,args.fixed,args.score_normed,args.novel_ratio)
+    file_dirName = create_file_dir(model.name,args.dataset,args.cd,args.pretrained,args.fixed,args.score_normed,args.novel_ratio,args.num_blocks,args.hidden_size,args.lam)
 
     # Initialize training process
     helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, lam = args.lam, checkpoints_dir= dirName, output_file= file_dirName,device = device, batch_size = args.batch_size, pretrained= args.pretrained)
@@ -120,45 +120,45 @@ def main():
     helper.test_one_class_classification()
     
     
-    # if model.name in ['LSA_MAF','LSA_EN','LSA_SOS']:
-    #     from matplotlib import pyplot as plt
-    #     if args.select == None:
-    #         classes = range(0,args.n_class)
-    #     else:
-    #         classes = [args.select]
+    if model.name in ['LSA_MAF','LSA_EN','LSA_SOS']:
+        from matplotlib import pyplot as plt
+        if args.select == None:
+            classes = range(0,args.n_class)
+        else:
+            classes = [args.select]
         
-    #     for cl in classes:
-    #     # load result
-    #         history_dir = f'{dirName}{cl}{model.name}_history.npy'
-    #         history_data = np.load(history_dir).item()
-    #         # plot result
-    #         epoch_num = len(history_data['val_loss'])
-    #         epoch = np.arange(0,epoch_num,1)
+        for cl in classes:
+        # load result
+            history_dir = f'{dirName}{cl}{model.name}_history.npy'
+            history_data = np.load(history_dir).item()
+            # plot result
+            epoch_num = len(history_data['val_loss'])
+            epoch = np.arange(0,epoch_num,1)
             
-    #         ax1 = plt.subplot(611)
-    #         ax1.plot(epoch, history_data['val_rec'],label = 'val_rec')
-    #         ax1.legend(loc = 1)
+            ax1 = plt.subplot(611)
+            ax1.plot(epoch, history_data['val_rec'],label = 'val_rec')
+            ax1.legend(loc = 1)
             
-    #         ax2 = plt.subplot(612)
-    #         ax2.plot(epoch, history_data['val_nllk'],label = 'val_nllk')
-    #         ax2.legend(loc = 1)
+            ax2 = plt.subplot(612)
+            ax2.plot(epoch, history_data['val_nllk'],label = 'val_nllk')
+            ax2.legend(loc = 1)
             
-    #         ax3 = plt.subplot(613)
-    #         ax3.plot(epoch, history_data['trn_rec'],label = 'trn_rec')
-    #         ax3.legend(loc = 1)
+            ax3 = plt.subplot(613)
+            ax3.plot(epoch, history_data['trn_rec'],label = 'trn_rec')
+            ax3.legend(loc = 1)
 
-    #         ax4 = plt.subplot(614)
-    #         ax4.plot(epoch, history_data['trn_nllk'],label = 'trn_nllk')
-    #         ax4.legend(loc = 1)
+            ax4 = plt.subplot(614)
+            ax4.plot(epoch, history_data['trn_nllk'],label = 'trn_nllk')
+            ax4.legend(loc = 1)
             
-    #         ax5 = plt.subplot(615)
-    #         ax5.plot(epoch, history_data['val_loss'],label = 'val_loss')
+            ax5 = plt.subplot(615)
+            ax5.plot(epoch, history_data['val_loss'],label = 'val_loss')
 
-    #         ax6 = plt.subplot(616)
-    #         ax6.plot(epoch, history_data['trn_loss'],label = 'trn_loss')
+            ax6 = plt.subplot(616)
+            ax6.plot(epoch, history_data['trn_loss'],label = 'trn_loss')
             
-    #         plt.savefig(f'history_image/{cl}{model.name}_{args.dataset}_cd{args.cd}_ptr{args.pretrained}_fix{args.fixed}_nml{args.score_normed}_nlration{args.novel_ratio}.png')
-    #         plt.close('all')
+            plt.savefig(f'history_image/{cl}{model.name}_{args.dataset}_cd{args.cd}_ptr{args.pretrained}_fix{args.fixed}_nml{args.score_normed}_nlration{args.novel_ratio}_b{args.num_blocks}_h{args.hidden_size}_lam{args.lam}.png')
+            plt.close('all')
 
 
 
