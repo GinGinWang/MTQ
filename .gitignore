@@ -6,8 +6,7 @@
 
 __pycache__/
 
-results/
 checkpoints/
 
-# *results/
 data/
+history_image/
