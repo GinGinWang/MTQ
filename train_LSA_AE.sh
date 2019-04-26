@@ -1,4 +1,5 @@
-#Train LSA--doing
+#Train LSA_AE--(as pretrained model for initialization)
+
 python train_temp.py  --autoencoder LSA --epochs 1000 --dataset mnist  --lr 0.0001 --batch_size 256 --code_length 64
 
 python test_temp.py  --autoencoder LSA --epochs 1000 --dataset mnist --batch_size 256 --code_length 64

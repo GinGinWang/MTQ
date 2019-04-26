@@ -21,6 +21,6 @@
 # echo "Runtime: $ELAPSED_TIME seconds"
 
 
-python train_temp.py  --autoencoder LSA --estimator MAF --epochs 10000 --dataset mnist  --lr 0.0001 --hidden_size 1024 --batch_size 256 --num_blocks 10  --code_length 64 --before_log_epochs 100
+python train_temp.py  --autoencoder LSA --estimator MAF --epochs 10000 --dataset mnist  --lr 0.0001 --hidden_size 1024 --batch_size 256 --num_blocks 10  --code_length 64 --select 5 --before_log_epochs 100
 
-python test_temp.py  --autoencoder LSA --estimator MAF --dataset mnist   --hidden_size 1024 --num_blocks 10 --batch_size 256 --code_length 64 --score_normed 
+python test_temp.py  --autoencoder LSA --estimator MAF --dataset mnist   --hidden_size 1024 --num_blocks 10 --batch_size 256 --code_length 64 --score_normed --select 5 
