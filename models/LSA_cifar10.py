@@ -257,13 +257,19 @@ class LSA_CIFAR10(BaseModule):
             # L = torch.pow((x-x_r),2)
             # normalized version is a little better
 
-            L = torch.pow((x/x_r - 1), 2)
+            L = torch.pow((x - x_r), 2)
+            Lxr = torch.pow(x_r,2)
+            
             while L.dim() > 1:
                  L = torch.sum(L, dim=-1)
-            # L = L.view(-1,len(z))
-            L.unsqueeze_(-1)     
-            z = torch.cat((z,L),1)
+                 Lxr = torch.sum(Lxr,dim=-1)
 
+            # L = L.view(-1,len(z))
+
+            L.unsqueeze_(-1)     
+            Lxr.unsqueeze_(-1)
+            L = L/ Lxr   
+            z = torch.cat((z,L),1)
 
         if self.est_name == 'EN':
                 # density distribution of z 
