@@ -30,7 +30,7 @@ START_TIME=$(date +%s.%N)
 # 1 
 # lam = 0.001---------------------------+
 # |   7   |  0.974   |   0.791   |   0.973   | -5791.610 | -293573528490521690112.000 |
-
+# 8 0.955 0.868 0.921
 
 python train_temp.py  --autoencoder LSA --estimator SOS --epochs 1000 --dataset mnist  --lr 0.1 --hidden_size 2048 --batch_size 256 --num_blocks 2 --code_length 64 --before_log_epochs 10 --Combine_density --select 8 
 

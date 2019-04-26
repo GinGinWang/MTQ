@@ -121,7 +121,7 @@ class OneClassTrainHelper(object):
                 if self.dataset.name =='mnist':
                     self.lr = max(self.lr*0.5, 0.00001)
                 if self.dataset.name == 'cifar10':
-                    self.lr = max(self.lr*0.5,0.0001)
+                    self.lr = max(self.lr*0.5,0.001)
 
             print (f"Learing Rate changed to{self.lr}")
             for param_group in self.optimizer.param_groups:
