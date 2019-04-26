@@ -106,24 +106,26 @@ class OneClassTrainHelper(object):
         # When llk is changing from Nan to real
         
         # when valid_loss start to increase
-        if ((self.lr > 10**(-5)) and (self.dataset.name == 'mnist')) or ((self.lr > 10**(-4)) and (self.dataset.name == 'cifar10')): #
+        # if ((self.lr > 10**(-5)) and (self.dataset.name == 'mnist')) or ((self.lr > 10**(-4)) and (self.dataset.name == 'cifar10')): #
             # if (math.isnan(old_validation_loss)) and ( not math.isnan(new_validation_loss) ) and (not math.isinf(new_validation_loss)):
             #     change = True
             # elif (math.isinf(old_validation_loss)) and ( not math.isinf(new_validation_loss) ):
             #     change = True
-            if (new_validation_loss > old_validation_loss):
-                if (abs((new_validation_loss-old_validation_loss)/old_validation_loss)>10**(-4)):
-                        change = True
-            if change:
-                self.lr = self.lr*0.5
-                print (f"Learing Rate changed to{self.lr}")
+        if (new_validation_loss > old_validation_loss):
+            if (abs((new_validation_loss-old_validation_loss)/old_validation_loss)>10**(-4)):
+                    change = True
+        if change:
+            if self.combined:
+                self.lr = max(self.lr*0.5,0.0001)
+            else:
+                if self.dataset.name =='mnist':
+                    self.lr = max(self.lr*0.5, 0.00001)
+                if self.dataset.name == 'cifar10':
+                    self.lr = max(self.lr*0.5,0.0001)
 
-
+            print (f"Learing Rate changed to{self.lr}")
             for param_group in self.optimizer.param_groups:
                 param_group['lr'] = self.lr
-
-        for param_group in self.optimizer.param_groups:
-            param_group['lr'] = self.lr
 
 
     def train_every_epoch(self, epoch):
@@ -334,14 +336,14 @@ class OneClassTrainHelper(object):
                     best_validation_epoch = epoch
                     best_model = self.model 
                     
-                    # if epoch % 10 == 0:
+                    #if epoch % 10 == 0:
                     print(f'Best_epoch at :{best_validation_epoch} with valid_loss:{best_validation_loss}, with lr:{self.lr}' )
 
-                    torch.save(best_model.state_dict(), model_dir_epoch)
-                    np.save(result_dir,history)
+                    # torch.save(best_model.state_dict(), model_dir_epoch)
+                    # np.save(result_dir,history)
 
             # converge?
-            if (epoch - best_validation_epoch >= 50) and (best_validation_epoch > 0): # converge? 
+            if (epoch - best_validation_epoch >= 50) and (best_validation_epoch > 0) and (epoch > 100): # converge? 
                     break
 
             # record loss history

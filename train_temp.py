@@ -259,7 +259,7 @@ def parse_arguments():
     parser.add_argument(
     '--before_log_epochs',
     type = int,
-    default = 50,
+    default = 10,
     help = 'Number of epochs before saving trained model')
 
     #K  (only for SOS flow) 
