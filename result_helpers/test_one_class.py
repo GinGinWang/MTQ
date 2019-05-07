@@ -200,8 +200,12 @@ class OneClassTestHelper(object):
                         down= down+ torch.pow((g1-g2),2).sum().item()
                         i = i + 1
 
-                    alpha = top/down
-                    alpha = max(min(alpha,1),0)
+                    if down ==0:
+                        alpha =1
+                    else:
+                        alpha = top/down
+                        alpha = max(min(alpha,1),0)
+                    
                     s_alpha =s_alpha + alpha
                     # compute new gradient of Shared Encoder
                     i=0
