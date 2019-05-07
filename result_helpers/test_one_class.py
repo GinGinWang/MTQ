@@ -188,15 +188,14 @@ class OneClassTestHelper(object):
                     top = 0
                     down =0
                     i =0
+
                     for p in self.model.estimator.parameters():
                         p.grad.data.div(2)
+                    
                     for p in self.model.encoder.parameters():
                         g2 = (g2_list[i]-g1_list[i])
                         g1 = g1_list[i]-g2
-
-                        tmp = torch.mul((g2-g1),g2).sum().item()
-                        # print(tmp)
-                        top = top +tmp  
+                        top = top + torch.mul((g2-g1),g2).sum().item()  
                         down= down+ torch.pow((g1-g2),2).sum().item()
                         i = i + 1
 
@@ -206,13 +205,13 @@ class OneClassTestHelper(object):
                         alpha = top/down
                         alpha = max(min(alpha,1),0)
                     
-                    s_alpha =s_alpha + alpha
+                    s_alpha =s_alpha + alpha*x.shape[0]
                     # compute new gradient of Shared Encoder
                     i=0
                     for p in self.model.encoder.parameters():
                         g1 = g2_list[i]-g1_list[i]
                         g2 = g1_list[i]-g1
-                        p.grad.data = torch.mul(g1,alpha)+torch.mul(g2,(1-alpha))
+                        p.grad.data = torch.mul(alpha,g1)+torch.mul((1-alpha),g2)
                         i = i+1
                 else:
                     self._eval(x).backward()
