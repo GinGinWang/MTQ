@@ -145,8 +145,9 @@ class OneClassTestHelper(object):
                 self.model.load_state_dict(torch.load(f'checkpoints/{self.dataset.name}/combined{self.combined}/PtrFalse/{cl}LSA.pkl'),strict = False)
             elif model_name in ['LSA_ET_SOS','LSA_ET_EN','LSA_ET_MAF']:
 
-                self.model.load_state_dict(torch.load(f'checkpoints/{self.dataset.name}/combined{self.combined}/PtrTrue/FixTrue/{cl}{model_name}.pkl'),strict = False)
+                
                 self.model.load_state_dict(torch.load(f'checkpoints/{self.dataset.name}/combined{self.combined}/PtrFalse/{cl}LSA.pkl'),strict = False)
+                self.model.load_state_dict(torch.load(f'checkpoints/{self.dataset.name}/combined{self.combined}/PtrTrue/FixTrue/{cl}{model_name}.pkl'),strict = False)
             else:
                 ValueError("Setting For New Pretrained Model")
 
@@ -178,45 +179,52 @@ class OneClassTestHelper(object):
                     torch.autograd.backward(self.loss.total_loss,self.model.parameters(),retain_graph =True)
                     #g1+g2
                     g1_list= [pi.grad.data.clone() for pi in list(self.model.encoder.parameters())]    
-                    # self.optimizer.zero_grad()
-
+                    
                     torch.autograd.backward(self.loss.autoregression_loss,list(self.model.encoder.parameters())+list(self.model.estimator.parameters()))
                     #g2
                     g2_list= [pi.grad.data.clone() for pi in list(self.model.encoder.parameters())]
                     
+                    for p in self.model.estimator.parameters():
+                        p.grad.data.div(2)
                     # compute alpha
                     top = 0
                     down =0
-                    i =0
-
-                    for p in self.model.estimator.parameters():
-                        p.grad.data.div(2)
                     
+                    i =0
                     for p in self.model.encoder.parameters():
                         g2 = (g2_list[i]-g1_list[i])
-                        g1 = g1_list[i]-g2
+                        g1 = (g1_list[i]-g2).mean()
+                        g2 = g2.mean()
                         top = top + torch.mul((g2-g1),g2).sum().item()  
                         down= down+ torch.pow((g1-g2),2).sum().item()
                         i = i + 1
 
                     if down ==0:
-                        alpha =1
+                        alpha =0.5
                     else:
                         alpha = top/down
                         alpha = max(min(alpha,1),0)
-                    
+                        
                     s_alpha =s_alpha + alpha*x.shape[0]
                     # compute new gradient of Shared Encoder
                     i=0
                     for p in self.model.encoder.parameters():
-                        g1 = g2_list[i]-g1_list[i]
-                        g2 = g1_list[i]-g1
-                        p.grad.data = torch.mul(alpha,g1)+torch.mul((1-alpha),g2)
+                        g2 = g2_list[i]-g1_list[i]
+                        g1 = g1_list[i]-g2
+                        p.grad.zero_()
+                        p.grad.data += g1.mul(alpha)+g2.mul(1-alpha)
                         i = i+1
                 else:
                     self._eval(x).backward()
 
                 # Using new gradients
+                # if alpha>0.99:
+                #     for param_group in self.optimizer.param_groups:
+                #             param_group['lr'] = 0.0001
+                # else:
+                #     for param_group in self.optimizer.param_groups:
+                #             param_group['lr'] = self.lr
+
                 self.optimizer.step()
 
 
@@ -332,10 +340,14 @@ class OneClassTestHelper(object):
 
         for epoch in range(self.train_epoch):
 
-            model_dir_epoch = join(self.checkpoints_dir,f'{cl}{self.name}_{epoch}.pkl')
+            if self.mulobj:
+                model_dir_epoch = join(self.checkpoints_dir,f'{cl}{self.name}_mul_{epoch}.pkl')
+
+            else:
+                model_dir_epoch = join(self.checkpoints_dir,f'{cl}{self.name}_{epoch}.pkl')
 
             train_loss, train_rec, train_nllk= self.train_every_epoch(epoch,cl)
-
+            
             # validate
             validation_loss,validation_rec,validation_nllk = self.validate(epoch, cl)
 
@@ -343,19 +355,22 @@ class OneClassTestHelper(object):
             
             # if epoch > self.before_log_epochs: # wait at least some epochs to log
                
-            if (validation_loss < best_validation_loss):
+            if (validation_loss < best_validation_loss) and (epoch>self.before_log_epochs):
                 best_validation_loss = validation_loss
                 best_validation_epoch = epoch
                 best_model = self.model 
             
                 print(f'Best_epoch at :{best_validation_epoch} with valid_loss:{best_validation_loss}, with lr:{self.lr}' )
 
-            if (epoch % 1000 == 0 ) and (epoch > self.before_log_epochs) :
+            if (epoch % 1000 == 0 )  :
                     torch.save(self.model.state_dict(), model_dir_epoch)
                     np.save(result_dir,history)
             
-            if (epoch -best_validation_epoch) > 200:
+            if (epoch -best_validation_epoch)>100 and (epoch>self.before_log_epochs):
                 print (f"Break at Epoch:{epoch}")
+                break
+            if math.isnan(train_loss):
+                print("Broke Down")
                 break
 
              # record loss history
