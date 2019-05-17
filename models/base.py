@@ -16,7 +16,7 @@ class BaseModule(nn.Module):
 
         :param checkpoint_path: the checkpoint file to be loaded.
         """
-        self.load_state_dict(torch.load(checkpoint_path),strict=False)
+        self.load_state_dict(torch.load(checkpoint_path))
 
     def __repr__(self):
         # type: () -> str

@@ -1,6 +1,6 @@
 # Novelty Detection Using SoSflow density estimator
 
-
+### Will UPDATE SOON
 ### Content
 
 * **transform_sos.py** -  SoS flow.

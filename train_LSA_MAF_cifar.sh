@@ -19,12 +19,25 @@
 # ELAPSED_TIME=$(echo "$END_TIME - $START_TIME" | bc )
 # echo "Runtime: $ELAPSED_TIME seconds"
 
-START_TIME=$(date +%s.%N)
+# START_TIME=$(date +%s.%N)
 
-python train_temp.py  --autoencoder LSA --estimator MAF --epochs 1000 --dataset cifar10  --lr 0.01 --hidden_size 1024 --batch_size 256 --num_blocks 10  --code_length 64 --before_log_epochs 5 
+# python train_temp.py  --autoencoder LSA --estimator MAF --epochs 1000 --dataset cifar10  --lr 0.01 --hidden_size 1024 --batch_size 256 --num_blocks 10  --code_length 64 --before_log_epochs 5 
 
-python test_temp.py  --autoencoder LSA --estimator MAF --dataset cifar10   --hidden_size 1024 --num_blocks 10 --batch_size 256 --code_length 64 --score_normed  
+# python test_temp.py  --autoencoder LSA --estimator MAF --dataset cifar10   --hidden_size 1024 --num_blocks 10 --batch_size 256 --code_length 64 --score_normed  
 
-END_TIME=$(date +%s.%N)
-ELAPSED_TIME=$(echo "$END_TIME - $START_TIME" | bc )
-echo "Runtime: $ELAPSED_TIME seconds"
+# END_TIME=$(date +%s.%N)
+# ELAPSED_TIME=$(echo "$END_TIME - $START_TIME" | bc )
+# echo "Runtime: $ELAPSED_TIME seconds"
+
+#to do
+python test.py  --autoencoder LSA --estimator MAF --dataset cifar10   --hidden_size 1024 --num_blocks 10 --batch_size 256 --code_length 64 --score_normed --epochs 5000   --select 0 --MulObj
+python test.py  --autoencoder LSA --estimator MAF --dataset cifar10   --hidden_size 1024 --num_blocks 10 --batch_size 256 --code_length 64 --score_normed --epochs 5000   --select 1 --MulObj
+python test.py  --autoencoder LSA --estimator MAF --dataset cifar10   --hidden_size 1024 --num_blocks 10 --batch_size 256 --code_length 64 --score_normed --epochs 5000   --select 2 --MulObj
+
+python test.py  --autoencoder LSA --estimator MAF --dataset cifar10   --hidden_size 1024 --num_blocks 10 --batch_size 256 --code_length 64 --score_normed --epochs 5000   --select 3 --MulObj
+python test.py  --autoencoder LSA --estimator MAF --dataset cifar10   --hidden_size 1024 --num_blocks 10 --batch_size 256 --code_length 64 --score_normed --epochs 5000   --select 4 --MulObj
+python test.py  --autoencoder LSA --estimator MAF --dataset cifar10   --hidden_size 1024 --num_blocks 10 --batch_size 256 --code_length 64 --score_normed --epochs 5000   --select 5 --MulObj
+python test.py  --autoencoder LSA --estimator MAF --dataset cifar10   --hidden_size 1024 --num_blocks 10 --batch_size 256 --code_length 64 --score_normed --epochs 5000   --select 6 --MulObj
+python test.py  --autoencoder LSA --estimator MAF --dataset cifar10   --hidden_size 1024 --num_blocks 10 --batch_size 256 --code_length 64 --score_normed --epochs 5000   --select 7 --MulObj
+python test.py  --autoencoder LSA --estimator MAF --dataset cifar10   --hidden_size 1024 --num_blocks 10 --batch_size 256 --code_length 64 --score_normed --epochs 5000   --select 8 --MulObj
+python test.py  --autoencoder LSA --estimator MAF --dataset cifar10   --hidden_size 1024 --num_blocks 10 --batch_size 256 --code_length 64 --score_normed --epochs 5000   --select 9 --MulObj

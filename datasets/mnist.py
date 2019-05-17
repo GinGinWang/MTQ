@@ -40,14 +40,14 @@ class MNIST(OneClassDataset):
         self.test_split = datasets.MNIST(self.path, train=False, download=True, transform=None)
 
         # Shuffle training indexes to build a validation set (see val())
-        train_idx = np.arange(len(self.train_split))
-        np.random.shuffle(train_idx)
-        self.shuffled_train_idx = train_idx
+        self.train_idx = np.arange(len(self.train_split))
+        np.random.shuffle(self.train_idx)
+        self.shuffled_train_idx = self.train_idx
 
         # Shuffle testing indexes to build  a test set (see test())
-        test_idx = np.arange(len(self.test_split))
-        np.random.shuffle(test_idx)
-        self.shuffled_test_idx = test_idx
+        self.test_idx = np.arange(len(self.test_split))
+        # np.random.shuffle(test_idx)
+        # self.shuffled_test_idx = test_idx
 
         # Transform zone
         self.val_transform = transforms.Compose([ToFloatTensor2D()])
@@ -98,11 +98,9 @@ class MNIST(OneClassDataset):
         self.mode = 'val'
         self.transform = self.val_transform
         
-        self.val_idxs = self.shuffled_train_idx[int(0.9 * len(self.shuffled_train_idx)):]
-
-        # valid examples (10 % of training examples)
-        self.val_idxs = [idx for idx in self.val_idxs if self.train_split[idx][1] == self.normal_class]
-
+        self.val_idxs = [idx for idx in self.train_idx if self.train_split[idx][1] == self.normal_class]
+        self.val_idxs =self.val_idxs[int(0.9*len(self.val_idxs)):]
+        
         # minsize = self.min_size()
 
         # self.val_idxs = self.val_idxs[0:minsize]
@@ -141,7 +139,9 @@ class MNIST(OneClassDataset):
         self.mode = 'train'
         self.transform = self.val_transform
         # training examples are all normal
-        self.train_idxs = [idx for idx in self.shuffled_train_idx if self.train_split[idx][1] == self.normal_class]
+        self.train_idxs = [idx for idx in self.train_idx if self.train_split[idx][1] == self.normal_class]
+
+        self.train_idxs = self.train_idxs[0:int(0.9*len(self.train_idxs))]
 
         self.length = len(self.train_idxs)
         # print 
@@ -165,12 +165,13 @@ class MNIST(OneClassDataset):
         if novel_ratio == 1:
             # testing examples (norm)
             self.length = len(self.test_split)
-            normal_idxs = [idx for idx in self.shuffled_test_idx if self.test_split[idx][1] == self.normal_class]
+            
+            normal_idxs = [idx for idx in self.test_idx if self.test_split[idx][1] == self.normal_class]
             normal_num = len(normal_idxs)
             novel_num = self.length - normal_num
         else:
             # create test examples (normal)
-            self.test_idxs = [idx for idx in self.shuffled_test_idx if self.test_split[idx][1] == self.normal_class]
+            self.test_idxs = [idx for idx in self.test_idx if self.test_split[idx][1] == self.normal_class]
 
             
             # contral all test sets have same size 
@@ -182,7 +183,7 @@ class MNIST(OneClassDataset):
             # add test examples (unnormal)
             novel_num  = int(normal_num/(1-novel_ratio) - normal_num)
             
-            novel_idxs = [idx for idx in self.shuffled_test_idx if self.test_split[idx][1] != self.normal_class]
+            novel_idxs = [idx for idx in self.test_idx if self.test_split[idx][1] != self.normal_class]
 
             novel_idxs = novel_idxs[0:novel_num]
 

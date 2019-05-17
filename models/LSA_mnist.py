@@ -142,7 +142,7 @@ class LSA_MNIST(BaseModule):
     """
  
 
-    def __init__(self,  input_shape, code_length, num_blocks, hidden_size, est_name = None, combine_density= False, decoder_flag =True):
+    def __init__(self,  input_shape, code_length, num_blocks =1, hidden_size= 2048, est_name = None, combine_density= False):
         # type: (Tuple[int, int, int], int, int) -> None
         """
         Class constructor.
@@ -163,19 +163,14 @@ class LSA_MNIST(BaseModule):
         self.code_length = code_length
         self.est_name = est_name
 
-        self.decoder_flag = True
-
         self.coder_name = 'LSA'
 
         if est_name == None:  
             self.name = 'LSA'
-            
-        elif decoder_flag ==False:
-            self.name = f'E_{est_name}'
-        
         else:
             self.name = f'LSA_{est_name}'
-        print(f'{self.name}_cd_{combine_density}')
+        
+        print(f'{self.name}_cd_{combine_density} Model Initialization')
         
         # the input of estimator is latent vector z / combine_latentvector (z,|x-x_r|^2)
 
@@ -188,12 +183,10 @@ class LSA_MNIST(BaseModule):
         )
 
         # Build decoder
-        if self.decoder_flag:
-            self.decoder = Decoder(
-            code_length=code_length,
-            deepest_shape=self.encoder.deepest_shape,
-            output_shape=input_shape
-        )
+        self.decoder = Decoder(
+        code_length=code_length,
+        deepest_shape=self.encoder.deepest_shape,
+        output_shape=input_shape)
 
         # Build estimator
         if combine_density:
@@ -249,9 +242,8 @@ class LSA_MNIST(BaseModule):
         z = self.encoder(x)
         
         # Reconstruct x
-        if self.decoder_flag:
-            x_r = self.decoder(z)
-            x_r = x_r.view(-1, *self.input_shape)
+        x_r = self.decoder(z)
+        x_r = x_r.view(-1, *self.input_shape)
 
         # Estimate CPDs with autoregression
         # density estimator

@@ -23,9 +23,8 @@ class ReconstructionLoss(BaseModule):
         :param x_r: the batch of reconstructions.
         :return: the mean reconstruction loss (averaged along the batch axis).
         """
-        x_d = x.detach()
 
-        L = torch.pow((x_d - x_r), 2)
+        L = torch.pow((x - x_r), 2)
 
         while L.dim() > 1:
             L = torch.sum(L, dim=-1)
