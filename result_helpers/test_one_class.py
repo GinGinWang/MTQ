@@ -150,8 +150,8 @@ class OneClassTestHelper(object):
                 # cdf 
                 u = norm.cdf(s_numpy[i,:])
                 u = np.ones((1,s_dim))*0.5-u
-                u_q = -np.linalg.norm(u,2)
-
+                u_q = np.linalg.norm(u,2)
+                
                 q_loss.append(u_q)
         else:
             ValueError("Unknown Mapping")
