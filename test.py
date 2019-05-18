@@ -35,12 +35,16 @@ def create_dir(dataset, cd, pretrained, fixed, num_blocks,hidden_size, estimator
 
     return dirName
 
-def create_file_dir(mulobj,model_name,dataset,cd,pretrained,fixed,score_normed,novel_ratio,num_blocks,hidden_size,lam, add):
+def create_file_dir(mulobj,model_name,dataset,cd,pretrained,fixed,score_normed,novel_ratio,num_blocks,hidden_size,lam, add,checkpoint):
 
     if mulobj:
-        dirName = f"results/Mul_{model_name}_{dataset}_cd{cd}_ptr{pretrained}_fix{fixed}_nml{score_normed}_nlr{novel_ratio}_b{num_blocks}_h{hidden_size}_lam{lam}_add{add}.txt"
+        dirName = f"results/Mul_{model_name}_{dataset}_cd{cd}_ptr{pretrained}_fix{fixed}_nml{score_normed}_nlr{novel_ratio}_b{num_blocks}_h{hidden_size}_lam{lam}_add{add}"
     else:
-       dirName = f"results/{model_name}_{dataset}_cd{cd}_ptr{pretrained}_fix{fixed}_nml{score_normed}_nlr{novel_ratio}_b{num_blocks}_h{hidden_size}_lam{lam}_add{add}.txt"
+       dirName = f"results/{model_name}_{dataset}_cd{cd}_ptr{pretrained}_fix{fixed}_nml{score_normed}_nlr{novel_ratio}_b{num_blocks}_h{hidden_size}_lam{lam}_add{add}"
+    if (checkpoint == None):
+        dirName= f"{dirName}.txt"
+    else:
+        dirName = f"{dirName}_at{checkpoint}.txt"
         
     return dirName 
 
@@ -123,9 +127,9 @@ def main():
             raise ValueError('Unknown MODEL')
     
     # # set to Test mode
-    file_dirName = create_file_dir(args.mulobj,model.name,args.dataset,args.cd,args.pretrained,args.fixed,args.score_normed,args.novel_ratio,args.num_blocks,args.hidden_size,args.lam,args.add)
+    file_dirName = create_file_dir(args.mulobj,model.name,args.dataset,args.cd,args.pretrained,args.fixed,args.score_normed,args.novel_ratio,args.num_blocks,args.hidden_size,args.lam,args.add,args.checkpoint)
 
-    helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, lam = args.lam, checkpoints_dir= dirName, output_file= file_dirName,device = device, batch_size = args.batch_size, pretrained= args.pretrained, trainflag= args.trainflag, lr = args.lr, epochs=args.epochs, before_log_epochs = args.before_log_epochs,pretrained_model= args.premodel,from_pretrained = args.from_pretrained, combined=args.cd,fixed=args.fixed, mulobj=args.mulobj, add = args.add, quantile_flag= args.qt)
+    helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, lam = args.lam, checkpoints_dir= dirName, output_file= file_dirName,device = device, batch_size = args.batch_size, pretrained= args.pretrained, trainflag= args.trainflag, lr = args.lr, epochs=args.epochs, before_log_epochs = args.before_log_epochs,pretrained_model= args.premodel,from_pretrained = args.from_pretrained, combined=args.cd,fixed=args.fixed, mulobj=args.mulobj, add = args.add, quantile_flag= args.qt,checkpoint = args.checkpoint)
 
     helper.test_one_class_classification()
     
@@ -236,14 +240,20 @@ def parse_arguments():
     default=1000,
     help='number of epochs to train (default: 1000)')
     
-    # epochs 
+    # epochs before logging 
     parser.add_argument(
     '--before_log_epochs',
     type=int,
-    default=200,
-    help='number of epochs to train (default: 1000)')
-    
+    default=100,
+    help='number of epochs before logging (default: 100)')
 
+    # select checkpoint
+    parser.add_argument(
+    '--checkpoint',
+    type=int,
+    default=None,
+    help='number of epochs to use when testing (default: Use the last one)')
+    
     # learning rate 
     parser.add_argument(
     '--lr', type=float, default=0.0001, help='learning rate (default: 0.0001)')

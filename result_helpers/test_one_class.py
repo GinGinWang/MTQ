@@ -37,7 +37,7 @@ class OneClassTestHelper(object):
     Performs tests for one-class datasets (MNIST or CIFAR-10).
     """
 
-    def __init__(self, dataset, model, score_normed, novel_ratio, lam, checkpoints_dir, output_file, device,batch_size, trainflag, lr, epochs, before_log_epochs, combined, pretrained, add,from_pretrained = False, fixed= False, pretrained_model = 'LSA',mulobj=False, quantile_flag = False):
+    def __init__(self, dataset, model, score_normed, novel_ratio, lam, checkpoints_dir, output_file, device,batch_size, trainflag, lr, epochs, before_log_epochs, combined, pretrained, add,from_pretrained = False, fixed= False, pretrained_model = 'LSA',mulobj=False, quantile_flag = False, checkpoint = None):
         # type: (OneClassDataset, BaseModule, str, str) -> None
         """
         Class constructor.
@@ -55,11 +55,13 @@ class OneClassTestHelper(object):
         torch.save(self.model.state_dict(), join(checkpoints_dir, f'{model.name}_start.pkl'))
         self.combined = combined
         self.checkpoints_dir = checkpoints_dir
+        self. checkpoint = checkpoint
         self.output_file = output_file
         self.device = device
         self.name = model.name
         self.batch_size = batch_size
         self.lam = lam
+
 
         # control novel ratio in test sets.
         self.novel_ratio = novel_ratio
@@ -124,18 +126,26 @@ class OneClassTestHelper(object):
     def get_path(self):
         name    = self.name
         cl      = self.cl 
-        checkpoints_dir = self.checkpoints_dir 
+        checkpoints_dir = self.checkpoints_dir
+        checkpoint = self.checkpoint 
         lam     = self.lam 
         
-        if self.mulobj:
-            self.model_dir = join(checkpoints_dir,f'{cl}{name}_mul.pkl')
-            self.best_model_dir = join(checkpoints_dir,f'{cl}{name}_mul_b.pkl')
-            self.result_dir = join(checkpoints_dir,f'{cl}{name}_mul_history.npy')
-        else:
-            self.model_dir = join(checkpoints_dir,f'{cl}{name}_{lam}.pkl')
-            self.best_model_dir = join(checkpoints_dir,f'{cl}{name}_{lam}_b.pkl')
-            self.result_dir = join(checkpoints_dir,f'{cl}{name}_{lam}_history.npy')
+        if self. checkpoint == None:
 
+            if self.mulobj:
+                self.model_dir = join(checkpoints_dir,f'{cl}{name}_mul.pkl')
+                self.best_model_dir = join(checkpoints_dir,f'{cl}{name}_mul_b.pkl')
+                self.result_dir = join(checkpoints_dir,f'{cl}{name}_mul_history.npy')
+            else:
+                self.model_dir = join(checkpoints_dir,f'{cl}{name}_{lam}.pkl')
+                self.best_model_dir = join(checkpoints_dir,f'{cl}{name}_{lam}_b.pkl')
+                self.result_dir = join(checkpoints_dir,f'{cl}{name}_{lam}_history.npy')
+        else:
+            # select one epoch to test
+            if self.mulobj:
+                self.model_dir = join(checkpoints_dir,f'{cl}{self.name}_mul_{checkpoint}.pkl')
+            else:
+                self.model_dir = join(checkpoints_dir,f'{cl}{self.name}_{lam}_{checkpoint}.pkl')
 
     def _eval_quantile(self, s, method_name='n_cdf'):
     #  from s~N(R^d) to u~(0,1)^d
@@ -151,7 +161,7 @@ class OneClassTestHelper(object):
                 u = norm.cdf(s_numpy[i,:])
                 u = np.ones((1,s_dim))*0.5-u
                 u_q = np.linalg.norm(u,2)
-                
+
                 q_loss.append(u_q)
         else:
             ValueError("Unknown Mapping")
@@ -168,7 +178,7 @@ class OneClassTestHelper(object):
         elif self.name == 'LSA_EN':
             x_r, z, z_dist = self.model(x)
             tot_loss = self.loss(x, x_r, z, z_dist,average)
-        
+            
         elif self.name in ['LSA_SOS', 'LSA_MAF']:
             x_r, z, s, log_jacob_T_inverse = self.model(x)
             tot_loss = self.loss(x, x_r, s, log_jacob_T_inverse,average)
@@ -279,6 +289,13 @@ class OneClassTestHelper(object):
                     torch.autograd.backward(self.loss.total_loss,self.model.parameters(),retain_graph =True)
                     #g1+g2
                     g1_list= [pi.grad.data.clone() for pi in list(self.model.encoder.parameters())]    
+                    # print (g1_list[0][0,0,0,0])
+                    # torch.autograd.backward(self.loss.reconstruction_loss,self.model.parameters(),retain_graph =True)
+                    # g1_list= [pi.grad.data.clone() for pi in list(self.model.encoder.parameters())]    
+                    # print (g1_list[0][0,0,0,0])
+                    # torch.autograd.backward(self.loss.autoregression_loss,self.model.parameters(),retain_graph =True)
+                    # g1_list= [pi.grad.data.clone() for pi in list(self.model.encoder.parameters())]
+                    # print (g1_list[0][0,0,0,0])
                     
                     torch.autograd.backward(self.loss.autoregression_loss,list(self.model.encoder.parameters())+list(self.model.estimator.parameters()))
                     #g2
@@ -286,6 +303,7 @@ class OneClassTestHelper(object):
                     
                     for p in self.model.estimator.parameters():
                         p.grad.data.div(2)
+
                     # compute alpha
                     top = 0
                     down = 0
@@ -296,38 +314,37 @@ class OneClassTestHelper(object):
                         g1   =  (g1_list[i]-g2)
                         g1 = g1.view(-1,)
                         g2 = g2.view(-1,)
-                        
-                        # g1   =  (g1_list[i]-g2).mean()
-                        # g2   =  g2.mean()
-                        # top  =  top + torch.mul((g2-g1),g2).item() 
-                        
                         top   =  top + torch.mul((g2-g1),g2).sum()
                         down  =  down+ torch.pow((g1-g2),2).sum()
                         i     =  i + 1
 
-                    if down ==0:
+                    if down == 0:
                         alpha =0.5
                     else:
-                        alpha = (top/down)
+                        alpha = (top/down).item()
                         alpha = max(min(alpha,1),0)
                         
                     
                     # compute new gradient of Shared Encoder
                     i=0
 
-                    s_alpha =s_alpha + alpha*x.shape[0]
+                    s_alpha =s_alpha + alpha*x.shape[0] 
                     for p in self.model.encoder.parameters():
                         newlrg2 = g2_list[i]-g1_list[i]
-                        newlrg1 = g1_list[i]-newlrg2
+                        # newlrg1 = g1_list[i]-newlrg2
+                        newlrg1 = 2*g1_list[i]-g2_list[i]
                         p.grad.zero_()
                         p.grad.data = newlrg1.mul(alpha)+newlrg2.mul(1-alpha)
-                        # p.grad.data += newlrg1+newlrg2
+                        # if i ==0:
+                        #     print (alpha)
+                        #     print(p.grad.data[0,0,0,0])
                         i = i+1
                 else:
                     self._eval(x).backward()
 
-                
                 self.optimizer.step()
+                
+
 
 
                 
@@ -709,7 +726,7 @@ class OneClassTestHelper(object):
         
 
         # format
-        table.float_format = '0.3'
+        table.float_format = '0.4'
         return table
 
 
