@@ -15,8 +15,6 @@ from models.transform_maf import TinvMAF
 from models.transform_sos import TinvSOS
 
 from datasets.utils import set_random_seed
-
-
 from result_helpers import OneClassTestHelper
 import os
 
