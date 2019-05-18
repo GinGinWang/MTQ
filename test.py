@@ -23,13 +23,14 @@ import os
 import torch
 import numpy as np
 
-def create_dir(dataset, cd, pretrained, fixed):
+def create_dir(dataset, cd, pretrained, fixed, num_blocks,hidden_size, estimator):
     
     if pretrained:
         dirName = f'checkpoints/{dataset}/combined{cd}/Ptr{pretrained}/Fix{fixed}/'
     else:
         dirName = f'checkpoints/{dataset}/combined{cd}/Ptr{pretrained}/'
-     
+    if estimator == 'SOS':
+        dirName = f'{dirName}b{num_blocks}h{hidden_size}/'
     if not os.path.exists(dirName):
         os.makedirs(dirName)
         print(f'Make Dir:{dirName}')
@@ -69,7 +70,7 @@ def main():
     
     print ("dataset shape: ",dataset.shape)
 
-    dirName = create_dir(args.dataset, args.cd,args.pretrained, args.fixed)
+    dirName = create_dir(args.dataset, args.cd,args.pretrained, args.fixed,args.num_blocks,args.hidden_size,args.estimator)
     
     c, h , w = dataset.shape
 
