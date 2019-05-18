@@ -75,7 +75,7 @@ class OneClassTestHelper(object):
 
         # Set up loss function
         # encoder + decoder
-        if self.name == 'LSA':
+        if self.name in ['LSA','AAE']:
             self.loss =LSALoss(cpd_channels=100)
         # encoder + estimator+ decoder
         elif self.name == 'LSA_EN':
@@ -162,7 +162,7 @@ class OneClassTestHelper(object):
                 u = np.ones((1,s_dim))*0.5-u
                 u_q = np.linalg.norm(u,2)
 
-                q_loss.append(u_q)
+                q_loss.append(-u_q)
         else:
             ValueError("Unknown Mapping")
 
@@ -170,7 +170,7 @@ class OneClassTestHelper(object):
     
     def _eval(self, x, average = True, quantile_flag = False):
 
-        if self.name == 'LSA':
+        if self.name in ['LSA','AAE']:
             # ok
             x_r = self.model(x)
             tot_loss = self.loss(x, x_r,average)
@@ -178,7 +178,7 @@ class OneClassTestHelper(object):
         elif self.name == 'LSA_EN':
             x_r, z, z_dist = self.model(x)
             tot_loss = self.loss(x, x_r, z, z_dist,average)
-            
+
         elif self.name in ['LSA_SOS', 'LSA_MAF']:
             x_r, z, s, log_jacob_T_inverse = self.model(x)
             tot_loss = self.loss(x, x_r, s, log_jacob_T_inverse,average)

@@ -9,6 +9,7 @@ from models import LSA_MNIST
 from models import LSA_CIFAR10
 from models import LSAET_CIFAR10
 from models import LSAET_MNIST
+from models import AAE_CIFAR10
 # Estimator
 from models.estimator_1D import Estimator1D
 from models.transform_maf import TinvMAF
@@ -123,6 +124,8 @@ def main():
             
                 model =LSAET_CIFAR10(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator,hidden_size= args.hidden_size).cuda()
             
+        elif args.autoencoder == 'AAE':
+                model =AAE_CIFAR10(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.cd,hidden_size= args.hidden_size).cuda()
         else:
             raise ValueError('Unknown MODEL')
     

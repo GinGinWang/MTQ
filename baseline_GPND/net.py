@@ -116,14 +116,14 @@ class Discriminator(nn.Module):
 
 class Encoder(nn.Module):
     # initializers
-    def __init__(self, z_size, d=128, channels=1):
+    def __init__(self, code_length, d=128, channels=1):
         super(Encoder, self).__init__()
         self.conv1_1 = nn.Conv2d(channels, d//2, 4, 2, 1)
         self.conv2 = nn.Conv2d(d // 2, d*2, 4, 2, 1)
         self.conv2_bn = nn.BatchNorm2d(d*2)
         self.conv3 = nn.Conv2d(d*2, d*4, 4, 2, 1)
         self.conv3_bn = nn.BatchNorm2d(d*4)
-        self.conv4 = nn.Conv2d(d * 4, z_size, 4, 1, 0)
+        self.conv4 = nn.Conv2d(d * 4, code_length, 4, 1, 0)
 
     # weight_init
     def weight_init(self, mean, std):
