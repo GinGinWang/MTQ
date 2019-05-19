@@ -153,20 +153,29 @@ class OneClassTestHelper(object):
         bs = s.shape[0]
         s_dim = s.shape[1]
         s_numpy = s.cpu().numpy()
-        q_loss = []
+        q1 = []
+        q2 = []
+        qinf = []
         if method_name=='n_cdf':
             for i in range(bs):
                 # for every sample
                 # cdf 
                 u = norm.cdf(s_numpy[i,:])
                 u = np.ones((1,s_dim))*0.5-u
-                u_q = np.linalg.norm(u,2)
+                # norm 1 
+                uq_1 = np.linalg.norm(u,1)
+                # norm 2 
+                uq_2 = np.linalg.norm(u)
+                # norm inf 
+                uq_inf = np.linalg.norm(u,inf)
 
-                q_loss.append(-u_q)
+                q1.append(-uq_1)
+                q2.append(-uq_2)
+                qinf.append(-uq_inf)
         else:
             ValueError("Unknown Mapping")
 
-        return q_loss
+        return q1, q2, qinf
     
     def _eval(self, x, average = True, quantile_flag = False):
 
@@ -184,8 +193,8 @@ class OneClassTestHelper(object):
             tot_loss = self.loss(x, x_r, s, log_jacob_T_inverse,average)
             # compute quantiles
             if quantile_flag:
-                q_loss = self._eval_quantile(s)
-                return tot_loss, q_loss
+                q1,q2,qinf = self._eval_quantile(s)
+                return tot_loss, q1,q2,qinf
 
         elif self.name in ['SOS', 'MAF','LSA_ET_MAF','LSA_ET_SOS']:
             s, log_jacob_T_inverse = self.model(x)
@@ -547,7 +556,10 @@ class OneClassTestHelper(object):
 
             sample_llk = np.zeros(shape=(len(self.dataset),))
             sample_rec = np.zeros(shape=(len(self.dataset),))
-            sample_qt = np.zeros(shape=(len(self.dataset),))
+            sample_q1 = np.zeros(shape=(len(self.dataset),))
+            sample_q2 = np.zeros(shape=(len(self.dataset),))
+            sample_qinf = np.zeros(shape=(len(self.dataset),))
+            
             sample_y = np.zeros(shape=(len(self.dataset),))
 
             for i, (x, y) in tqdm(enumerate(loader), desc=f'Computing scores for {self.dataset}'):
@@ -556,13 +568,13 @@ class OneClassTestHelper(object):
 
                 with torch.no_grad():
                     if quantile_flag:
-                       tot_loss, q_loss = self._eval(x, average = False, quantile_flag =quantile_flag)
+                       tot_loss, q1,q2, qinf = self._eval(x, average = False, quantile_flag =quantile_flag)
                     else:
                         tot_loss = self._eval(x,average = False,quantile_flag = quantile_flag)
                 
                 sample_y[i*bs:i*bs+bs] = y
                 # score larger-->normal data
-                if self.name in ['LSA','LSA_MAF','LSA_SOS','LSA_EN','LSA_QT']:
+                if self.name in ['LSA','LSA_MAF','LSA_SOS','LSA_EN','LSA_QT','AAE']:
                     sample_rec[i*bs:i*bs+bs] = - self.loss.reconstruction_loss.cpu().numpy()
                     
                 if self.name in ['LSA_MAF','LSA_SOS','LSA_EN','LSA_QT',
@@ -571,7 +583,9 @@ class OneClassTestHelper(object):
                     sample_llk[i*bs:i*bs+bs] = - self.loss.autoregression_loss.cpu().numpy()
                 
                 if quantile_flag:
-                    sample_qt[i*bs:i*bs+bs] = q_loss
+                    sample_q1[i*bs:i*bs+bs] = q1
+                    sample_q2[i*bs:i*bs+bs] = q2
+                    sample_qinf[i*bs:i*bs+bs] = qinf
 
             # +inf,-inf,nan
             sample_llk = modify_inf(sample_llk)
@@ -599,8 +613,9 @@ class OneClassTestHelper(object):
             # Compute the normalized novelty score
             
             if quantile_flag:
-                sample_ns2 = novelty_score(sample_qt, sample_rec)
-                sample_ns2 = modify_inf(sample_ns2)
+                sample_ns2_q1 = novelty_score(sample_q1, sample_rec)
+                sample_ns2_q2 = novelty_score(sample_q2, sample_rec)
+                sample_ns2_qinf = novelty_score(sample_qinf, sample_rec)
                 
             sample_ns = novelty_score(sample_llk, sample_rec)
 
@@ -634,9 +649,15 @@ class OneClassTestHelper(object):
             
             # add metrics related to quantile 
             if quantile_flag:
-                this_class_metrics.append(roc_auc_score(sample_y, sample_ns2))
-                this_class_metrics.append(roc_auc_score(sample_y,sample_qt))
+                this_class_metrics.append(roc_auc_score(sample_y, sample_ns2_q1))
 
+                this_class_metrics.append(roc_auc_score(sample_y, sample_ns2_q2))
+
+                this_class_metrics.append(roc_auc_score(sample_y, sample_ns2_qinf))
+
+                this_class_metrics.append(roc_auc_score(sample_y,sample_q1))
+                this_class_metrics.append(roc_auc_score(sample_y,sample_q2))
+                this_class_metrics.append(roc_auc_score(sample_y,sample_qinf))
 
             # write on table
             oc_table.add_row([cl_idx] + this_class_metrics)
