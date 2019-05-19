@@ -167,7 +167,7 @@ class OneClassTestHelper(object):
                 # norm 2 
                 uq_2 = np.linalg.norm(u)
                 # norm inf 
-                uq_inf = np.linalg.norm(u,inf)
+                uq_inf = np.linalg.norm(u,np.inf)
 
                 q1.append(-uq_1)
                 q2.append(-uq_2)
@@ -545,10 +545,12 @@ class OneClassTestHelper(object):
             
             self.model.eval()
 
-            if self.score_normed:
                 # normalizing coefficient of the Novelty Score (Eq.9 in LSA)
-                min_llk, max_llk, min_rec, max_rec = self.compute_normalizing_coefficients(cl)
-
+            min_llk, max_llk, min_rec, max_rec,min_q1,max_q1,min_q2,max_q2,min_qinf,max_qinf = self.compute_normalizing_coefficients(cl)
+            print(f'min_q1:{min_q1},max_q1:{max_q1}')
+            print(f'min_q2:{min_q2},max_q2:{max_q2}')
+            print(f'min_q1:{min_qinf},max_q1:{max_qinf}'
+                    )
             # Test sets
             self.dataset.test(cl,self.novel_ratio)
             data_num = len(self.dataset)
@@ -693,13 +695,23 @@ class OneClassTestHelper(object):
 
         sample_llk = np.zeros(shape=(len(self.dataset),))
         sample_rec = np.zeros(shape=(len(self.dataset),))
-        
+        sample_q1 = np.zeros(shape=(len(self.dataset),))
+        sample_q2 = np.zeros(shape=(len(self.dataset),))
+        sample_qinf = np.zeros(shape=(len(self.dataset),))
+
         for i, (x, y) in enumerate(loader):
             
             x = x.to(self.device)
             with torch.no_grad():
-                loss = self._eval(x,False)
+                if quantile_flag:
+                    tot_loss, q1,q2, qinf = self._eval(x, average = False, quantile_flag =quantile_flag)
+                    sample_q1[i*bs:i*bs+bs] = q1
+                    sample_q2[i*bs:i*bs+bs] = q2
+                    sample_qinf[i*bs:i*bs+bs] = qinf
 
+                else:
+                    tot_loss = self._eval(x,average = False,quantile_flag = quantile_flag)
+                
             # score larger-->normal data
             if self.name in ['LSA','LSA_MAF','LSA_SOS','LSA_EN','LSA_QT']:
                 sample_rec[i*bs:i*bs+bs] = - self.loss.reconstruction_loss.cpu().numpy()
@@ -710,8 +722,9 @@ class OneClassTestHelper(object):
                 sample_llk[i*bs:i*bs+bs] = - self.loss.autoregression_loss.cpu().numpy()
 
             sample_llk = modify_inf(sample_llk)
-            
-        return sample_llk.min(), sample_llk.max(), sample_rec.min(), sample_rec.max()
+
+        return sample_llk.min(), sample_llk.max(), sample_rec.min(), sample_rec.max(),sample_q1.min(),sample_q1.max(),sample_q2.min(),sample_q2.max(),sample_qinf.min(), sample_qinf.max()
+
 
     @property
     def empty_table(self):
@@ -726,7 +739,8 @@ class OneClassTestHelper(object):
 
             if self.quantile_flag:
                 table.field_names = ['Class', 'AUROC-NS', 'AUROC-LLK', 'AUROC-REC','llk1','llk2'
-                ,'AUROC-NSQ','AUROC-QT']
+                ,'AUROC-NSq1','AUROC-NSq2','AUROC-NSqinf','AUROC-q1','AUROC-q2','AUROC-qinf']
+
             else:
             
                 table.field_names = ['Class', 'AUROC-NS', 'AUROC-LLK', 'AUROC-REC','llk1','llk2'
