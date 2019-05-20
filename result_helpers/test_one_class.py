@@ -132,23 +132,22 @@ class OneClassTestHelper(object):
         checkpoint = self.checkpoint 
         lam     = self.lam 
         
-        if self. checkpoint == None:
-
-            if self.mulobj:
-                self.model_dir = join(checkpoints_dir,f'{cl}{name}_mul.pkl')
-                self.best_model_dir = join(checkpoints_dir,f'{cl}{name}_mul_b.pkl')
-                self.result_dir = join(checkpoints_dir,f'{cl}{name}_mul_history.npy')
-            else:
-                self.model_dir = join(checkpoints_dir,f'{cl}{name}_{lam}.pkl')
-                self.best_model_dir = join(checkpoints_dir,f'{cl}{name}_{lam}_b.pkl')
-                self.result_dir = join(checkpoints_dir,f'{cl}{name}_{lam}_history.npy')
+        if self.mulobj:
+            self.model_dir = join(checkpoints_dir,f'{cl}{name}_mul.pkl')
+            self.best_model_dir = join(checkpoints_dir,f'{cl}{name}_mul_b.pkl')
+            self.result_dir = join(checkpoints_dir,f'{cl}{name}_mul_history.npy')
         else:
-            # select one epoch to test
-            if self.mulobj:
-                self.model_dir = join(checkpoints_dir,f'{cl}{self.name}_mul_{checkpoint}.pkl')
-            else:
-                self.model_dir = join(checkpoints_dir,f'{cl}{self.name}_{lam}_{checkpoint}.pkl')
-
+            self.model_dir = join(checkpoints_dir,f'{cl}{name}_{lam}.pkl')
+            self.best_model_dir = join(checkpoints_dir,f'{cl}{name}_{lam}_b.pkl')
+            self.result_dir = join(checkpoints_dir,f'{cl}{name}_{lam}_history.npy')
+    
+        if (not (self.checkpoint ==None)) and (not self.trainflag):
+                # select one epoch to test
+                if self.mulobj:
+                    self.model_dir = join(checkpoints_dir,f'{cl}{self.name}_mul_{checkpoint}.pkl')
+                else:
+                    self.model_dir = join(checkpoints_dir,f'{cl}{self.name}_{lam}_{checkpoint}.pkl')
+        
     def _eval_quantile(self, s, method_name='n_cdf'):
     #  from s~N(R^d) to u~(0,1)^d
     #  u_i = phi(s_i), where phi is the cdf of N(0,1)
@@ -218,7 +217,7 @@ class OneClassTestHelper(object):
         if self.pretrained:
             if model_name == 'LSA':
                 
-                self.model.load_state_dict(torch.load(f'checkpoints/{self.dataset.name}/combined{self.combined}/PtrFalse/{cl}LSA.pkl'),strict = False)
+                self.model.load_state_dict(torch.load(f'checkpoints/{self.dataset.name}/combined{self.combined}/PtrFalse/{cl}LSA_{self.lam}.pkl'),strict = False)
             elif model_name in ['LSA_SOS']:
 
                 self.model.load_state_dict(torch.load(f'checkpoints/{self.dataset.name}/combined{self.combined}/PtrFalse/{cl}LSA.pkl'),strict = False)
@@ -381,7 +380,7 @@ class OneClassTestHelper(object):
                 # print epoch result
             if self.name in ['LSA_EN','LSA_SOS','LSA_MAF','AAE_SOS']:
                 
-                print('Train Epoch-{}: {}\tLoss: {:.6f}\tRec: {:.6f}\tNllk: {:.6f}'.format(
+                print('{}Train Epoch-{}: {}\tLoss: {:.6f}\tRec: {:.6f}\tNllk: {:.6f}'.format(self.name,
                         self.dataset.normal_class, epoch, epoch_loss/epoch_size, epoch_recloss/epoch_size, epoch_nllk/epoch_size))
             else:
                 print('Train Epoch-{}: {}\tLoss:{:.6f}\t'.format(
@@ -468,14 +467,22 @@ class OneClassTestHelper(object):
         
         if self.pretrained:
             self.load_pretrained_model(self.pretrained_model,cl)
+        
+        if not(self.checkpoint == None): # start from that check point 
+            self.model.load_w(self.model_dir)
+            cknum =  int (self.checkpoint)
+            print(f"Continue Training from {cknum}")
+        else:
+            cknum = 0
 
         for epoch in range(self.train_epoch):
 
+            epoch_new = epoch + cknum
             if self.mulobj:
-                model_dir_epoch = join(self.checkpoints_dir,f'{cl}{self.name}_mul_{epoch}.pkl')
+                model_dir_epoch = join(self.checkpoints_dir,f'{cl}{self.name}_mul_{epoch_new}.pkl')
 
             else:
-                model_dir_epoch = join(self.checkpoints_dir,f'{cl}{self.name}_{self.lam}_{epoch}.pkl')
+                model_dir_epoch = join(self.checkpoints_dir,f'{cl}{self.name}_{self.lam}_{epoch_new}.pkl')
 
             
             train_loss, train_rec, train_nllk= self.train_every_epoch(epoch,cl)
@@ -499,10 +506,13 @@ class OneClassTestHelper(object):
                     torch.save(self.model.state_dict(), model_dir_epoch)
                     np.save(self.result_dir,history)
             
+            
+
             # if (epoch -best_validation_epoch)>100 and (epoch>self.before_log_epochs):
             #     print (f"Break at Epoch:{epoch}")
             #     break
             
+
             # record loss history
             history['val_loss'].append(validation_loss)
             history['val_rec'].append(validation_rec)

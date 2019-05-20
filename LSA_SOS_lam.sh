@@ -1,4 +1,4 @@
-python test.py  --autoencoder LSA --estimator SOS  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000    --lr 0.0001   --num_blocks 1 --hidden_size 2048  --lam 1
+# python test.py  --autoencoder LSA --estimator SOS  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000    --lr 0.0001   --num_blocks 1 --hidden_size 2048  --lam 1 --NoTrain --Qt
 # +-------+----------+-----------+-----------+---------+---------+-----------+----------+
 # | Class | AUROC-NS | AUROC-LLK | AUROC-REC |   llk1  |   llk2  | AUROC-NSQ | AUROC-QT |
 # +-------+----------+-----------+-----------+---------+---------+-----------+----------+
@@ -14,10 +14,11 @@ python test.py  --autoencoder LSA --estimator SOS  --dataset mnist --batch_size 
 # |   9   |  0.645   |   0.420   |   0.879   | 442.251 | 446.644 |   0.878   |  0.402   |
 # |  avg  |  0.798   |   0.607   |   0.866   | 457.952 | 440.493 |   0.866   |  0.585   |
 # +-------+----------+-----------+-----------+---------+---------+-----------+----------+
-python test.py  --autoencoder LSA --estimator SOS  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000    --lr 0.0001   --num_blocks 1 --hidden_size 2048  --lam 0.1
-python test.py  --autoencoder LSA --estimator SOS  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000    --lr 0.0001   --num_blocks 1 --hidden_size 2048  --lam 0.01
-python test.py  --autoencoder LSA --estimator SOS  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000    --lr 0.0001   --num_blocks 1 --hidden_size 2048  --lam 10
-python test.py  --autoencoder LSA --estimator SOS  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000    --lr 0.0001   --num_blocks 1 --hidden_size 2048  --lam 100
+python test.py  --autoencoder LSA --estimator SOS  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000    --lr 0.0001   --num_blocks 1 --hidden_size 2048  --lam 0.1 --NoTrain --Qt
+# python test.py  --autoencoder LSA --estimator SOS  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000    --lr 0.0001   --num_blocks 1 --hidden_size 2048  --lam 0.01 --NoTrain --Qt
+# python test.py  --autoencoder LSA --estimator SOS  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000    --lr 0.0001   --num_blocks 1 --hidden_size 2048  --lam 10 --NoTrain --Qt
+
+
 
 
 

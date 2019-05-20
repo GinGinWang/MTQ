@@ -14,7 +14,7 @@ from sklearn.externals.joblib import Parallel, delayed
 from keras.models import Model, Input, Sequential
 from keras.layers import Dense, Dropout
 from keras.utils import to_categorical
-from utils import load_cifar10, load_cats_vs_dogs, load_fashion_mnist, load_cifar100
+from utils import load_cifar10, load_cats_vs_dogs, load_fashion_mnist, load_cifar100, load_mnist
 from utils import save_roc_pr_curve_data, get_class_name_from_index, get_channels_axis
 from transformations import Transformer
 from models.wide_residual_network import create_wide_residual_network
@@ -350,12 +350,12 @@ def _adgan_experiment(dataset_load_fn, dataset_name, single_class_ind, gpu_q):
 
 def run_experiments(load_dataset_fn, dataset_name, q, n_classes):
 
-    # CAE OC-SVM
-    processes = [Process(target=_cae_ocsvm_experiment,
-                         args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
-    for p in processes:
-        p.start()
-        p.join()
+    # # CAE OC-SVM
+    # processes = [Process(target=_cae_ocsvm_experiment,
+    #                      args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
+    # for p in processes:
+    #     p.start()
+    #     p.join()
 
     # Raw OC-SVM
     for c in range(n_classes):
@@ -396,13 +396,13 @@ def run_experiments(load_dataset_fn, dataset_name, q, n_classes):
         for p in processes:
             p.join()
 
-    # ADGAN
-    processes = [Process(target=_adgan_experiment,
-                         args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
-    for p in processes:
-        p.start()
-    for p in processes:
-        p.join()
+    # # ADGAN
+    # processes = [Process(target=_adgan_experiment,
+    #                      args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
+    # for p in processes:
+    #     p.start()
+    # for p in processes:
+    #     p.join()
 
 
 def create_auc_table(metric='roc_auc'):
@@ -447,9 +447,10 @@ if __name__ == '__main__':
         q.put(str(g))
 
     experiments_list = [
-        # (load_cifar10, 'cifar10', 10),
         # (load_cifar100, 'cifar100', 20),
         (load_fashion_mnist, 'fashion-mnist', 10),
+        (load_mnist, 'fashion-mnist', 10),
+        (load_cifar10, 'cifar10', 10)
         # (load_cats_vs_dogs, 'cats-vs-dogs', 2),
     ]
 

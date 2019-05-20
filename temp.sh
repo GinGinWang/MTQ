@@ -30,4 +30,8 @@
 
 # python test.py  --autoencoder LSA --estimator SOS  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000    --lr 0.0001 --MulObj  --num_blocks 1 --hidden_size 2048 --NoTrain --Qt  --checkpoint 800
 
-python test.py  --autoencoder LSA --estimator SOS  --dataset fmnist --batch_size 256 --code_length 64    --epochs 1000  --score_normed  --lr 0.00001 --MulObj --num_blocks 1 --hidden_size 2048  --select 0 
+
+# python test.py  --autoencoder LSA --estimator SOS  --dataset fmnist --batch_size 256 --code_length 64    --checkpoint 1000   --lr 0.00001 --MulObj --num_blocks 1 --hidden_size 2048 --select 0 --NoTrain
+
+
+python test.py --autoencoder LSA --dataset fmnist --batch_size 256 --code_length 64 --checkpoint b  --lr 0.001 --NoTrain --select 0
