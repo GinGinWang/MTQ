@@ -82,6 +82,8 @@ class OneClassTestHelper(object):
             self.loss = LSAENLoss(cpd_channels=100,lam=lam)
         elif self.name == 'LSA_SOS':
             self.loss =LSASOSLoss(lam)
+        elif self.name == 'AAE_SOS':
+            self.loss =LSASOSLoss(lam)
         elif self.name == 'LSA_MAF':
             self.loss =LSAMAFLoss(lam)
         elif self.name == 'LSA_QT':
@@ -161,7 +163,7 @@ class OneClassTestHelper(object):
                 # for every sample
                 # cdf 
                 u = norm.cdf(s_numpy[i,:])
-                u = np.ones((1,s_dim))*0.5-u
+                u = abs(np.ones((1,s_dim))*0.5-u)
                 # norm 1 
                 uq_1 = np.linalg.norm(u,1)
                 # norm 2 
@@ -170,7 +172,9 @@ class OneClassTestHelper(object):
                 uq_inf = np.linalg.norm(u,np.inf)
 
                 q1.append(-uq_1)
+
                 q2.append(-uq_2)
+
                 qinf.append(-uq_inf)
         else:
             ValueError("Unknown Mapping")
@@ -188,20 +192,20 @@ class OneClassTestHelper(object):
             x_r, z, z_dist = self.model(x)
             tot_loss = self.loss(x, x_r, z, z_dist,average)
 
-        elif self.name in ['LSA_SOS', 'LSA_MAF']:
+        elif self.name in ['LSA_SOS', 'LSA_MAF','AAE_SOS']:
             x_r, z, s, log_jacob_T_inverse = self.model(x)
             tot_loss = self.loss(x, x_r, s, log_jacob_T_inverse,average)
             # compute quantiles
             if quantile_flag:
                 q1,q2,qinf = self._eval_quantile(s)
-                return tot_loss, q1,q2,qinf
+                return tot_loss, q1, q2,qinf
 
         elif self.name in ['SOS', 'MAF','LSA_ET_MAF','LSA_ET_SOS']:
             s, log_jacob_T_inverse = self.model(x)
             tot_loss = self.loss(s, log_jacob_T_inverse,average)
             if quantile_flag:
-                q_loss= self._eval_quantile(s)
-                return tot_loss, q_loss
+                q1,q2,qinf = self._eval_quantile(s)
+                return tot_loss, q1,q2,qinf
 
         elif self.name in ['LSA_ET_EN']:
             z, z_dist = self.model(x)
@@ -279,7 +283,7 @@ class OneClassTestHelper(object):
 
             self.dataset.train(cl)
             loader = DataLoader(self.dataset, batch_size = self.batch_size,shuffle=True)
-
+            dataset_name = self.dataset.name
             epoch_size = self.dataset.length
             pbar = tqdm(total=epoch_size)
             s_alpha = 0
@@ -298,6 +302,8 @@ class OneClassTestHelper(object):
                     torch.autograd.backward(self.loss.total_loss,self.model.parameters(),retain_graph =True)
                     #g1+g2
                     g1_list= [pi.grad.data.clone() for pi in list(self.model.encoder.parameters())]    
+                    
+                    
                     # print (g1_list[0][0,0,0,0])
                     # torch.autograd.backward(self.loss.reconstruction_loss,self.model.parameters(),retain_graph =True)
                     # g1_list= [pi.grad.data.clone() for pi in list(self.model.encoder.parameters())]    
@@ -307,6 +313,7 @@ class OneClassTestHelper(object):
                     # print (g1_list[0][0,0,0,0])
                     
                     torch.autograd.backward(self.loss.autoregression_loss,list(self.model.encoder.parameters())+list(self.model.estimator.parameters()))
+                    
                     #g2
                     g2_list= [pi.grad.data.clone() for pi in list(self.model.encoder.parameters())]
                     
@@ -337,7 +344,9 @@ class OneClassTestHelper(object):
                     # compute new gradient of Shared Encoder
                     i=0
 
-                    s_alpha =s_alpha + alpha*x.shape[0] 
+                    
+                    s_alpha =s_alpha + alpha*x.shape[0]
+
                     for p in self.model.encoder.parameters():
                         newlrg2 = g2_list[i]-g1_list[i]
                         # newlrg1 = g1_list[i]-newlrg2
@@ -359,7 +368,7 @@ class OneClassTestHelper(object):
                 
                 epoch_loss = + self.loss.total_loss.item()*x.shape[0]
 
-                if self.name in ['LSA_EN','LSA_SOS','LSA_MAF']:
+                if self.name in ['LSA_EN','LSA_SOS','LSA_MAF','AAE_SOS']:
                     epoch_recloss =+ self.loss.reconstruction_loss.item()*x.shape[0]
                     epoch_nllk = + self.loss.autoregression_loss.item()*x.shape[0]
 
@@ -370,7 +379,7 @@ class OneClassTestHelper(object):
             pbar.close()
 
                 # print epoch result
-            if self.name in ['LSA_EN','LSA_SOS','LSA_MAF']:
+            if self.name in ['LSA_EN','LSA_SOS','LSA_MAF','AAE_SOS']:
                 
                 print('Train Epoch-{}: {}\tLoss: {:.6f}\tRec: {:.6f}\tNllk: {:.6f}'.format(
                         self.dataset.normal_class, epoch, epoch_loss/epoch_size, epoch_recloss/epoch_size, epoch_nllk/epoch_size))
@@ -551,6 +560,12 @@ class OneClassTestHelper(object):
             print(f'min_q2:{min_q2},max_q2:{max_q2}')
             print(f'min_q1:{min_qinf},max_q1:{max_qinf}'
                     )
+            # analyze a,b 
+            # a1 = max_q1/64.0
+            # b1=  min_q1/64.0
+            # a2 = math.sqrt(max_q2*max_q2/64.0)
+            # b2= math.sqrt(min_q2*min_q2/64.0)
+
             # Test sets
             self.dataset.test(cl,self.novel_ratio)
             data_num = len(self.dataset)
@@ -570,7 +585,7 @@ class OneClassTestHelper(object):
 
                 with torch.no_grad():
                     if quantile_flag:
-                       tot_loss, q1,q2, qinf = self._eval(x, average = False, quantile_flag =quantile_flag)
+                       tot_loss, q1, q2, qinf = self._eval(x, average = False, quantile_flag =quantile_flag)
                     else:
                         tot_loss = self._eval(x,average = False,quantile_flag = quantile_flag)
                 
@@ -601,26 +616,31 @@ class OneClassTestHelper(object):
             llk2 =llk2/(data_num-np.sum(sample_y)) 
             # average llk for novel examples
 
-            if self.score_normed:
-                print(f'min_llk:{min_llk},max_llk:{max_llk}'
+            print(f'min_llk:{min_llk},max_llk:{max_llk}'
                     )
-                print(f'min_rec:{min_rec},max_rec:{max_rec}')
+            print(f'min_rec:{min_rec},max_rec:{max_rec}')
 
                 # Normalize scores
-                sample_llk = normalize(sample_llk, min_llk, max_llk)
+            sample_llk_n = normalize(sample_llk, min_llk, max_llk)
+            sample_rec_n = normalize(sample_rec, min_rec, max_rec)
+            # sample_q1_n = normalize(sample_q1, min_q1, max_q1)
+            # sample_q2_n = normalize(sample_q2, min_q2, max_q2)
+            # sample_qinf_n = normalize(sample_qinf, min_qinf, max_qinf)
 
-                sample_rec = normalize(sample_rec, min_rec, max_rec)
 
             #print(sample_llk)
             # Compute the normalized novelty score
-            
+            if self.score_normed:
+                sample_rec =sample_rec_n
+                sample_llk = sample_llk_n
+
             if quantile_flag:
                 sample_ns2_q1 = novelty_score(sample_q1, sample_rec)
                 sample_ns2_q2 = novelty_score(sample_q2, sample_rec)
                 sample_ns2_qinf = novelty_score(sample_qinf, sample_rec)
                 
+            
             sample_ns = novelty_score(sample_llk, sample_rec)
-
             sample_ns = modify_inf(sample_ns)
 
             # Compute precision, recall, f1_score based on threshold
@@ -690,6 +710,7 @@ class OneClassTestHelper(object):
         :return: a tuple of normalizing coefficients in the form (llk_min, llk_max, rec_min, rec_max).
         """
         bs = self.batch_size
+        quantile_flag = self.quantile_flag
         self.dataset.val(cl)
         loader = DataLoader(self.dataset, batch_size= bs)
 
@@ -704,7 +725,7 @@ class OneClassTestHelper(object):
             x = x.to(self.device)
             with torch.no_grad():
                 if quantile_flag:
-                    tot_loss, q1,q2, qinf = self._eval(x, average = False, quantile_flag =quantile_flag)
+                    tot_loss, q1, q2, qinf = self._eval(x, average = False, quantile_flag =quantile_flag)
                     sample_q1[i*bs:i*bs+bs] = q1
                     sample_q2[i*bs:i*bs+bs] = q2
                     sample_qinf[i*bs:i*bs+bs] = qinf

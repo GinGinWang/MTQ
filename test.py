@@ -3,6 +3,7 @@ from argparse import Namespace
 
 from datasets.mnist import MNIST
 from datasets.cifar10 import CIFAR10
+from datasets.FMNIST import FMNIST
 
 # LSA
 from models import LSA_MNIST
@@ -64,9 +65,12 @@ def main():
     # prepare dataset in train mode
     if args.dataset == 'mnist':
         dataset = MNIST(path='data/MNIST', n_class = args.n_class, select = args.select)
+    elif args.dataset == 'fmnist':
+        dataset = FMNIST(path='data/FMNIST', n_class = args.n_class, select = args.select)
 
     elif args.dataset == 'cifar10':
         dataset = CIFAR10(path='data/CIFAR', n_class = args.n_class, select= args.select)
+
     else:
         raise ValueError('Unknown dataset')
     
@@ -107,7 +111,7 @@ def main():
             print(f'Autoencoder:{args.autoencoder}')
             print(f'Density Estimator:{args.estimator}')
             
-            if args.dataset == 'mnist': 
+            if args.dataset in ['mnist','fmnist']: 
 
                 model =LSA_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator, combine_density = args.cd,hidden_size= args.hidden_size).cuda()
             
@@ -253,7 +257,7 @@ def parse_arguments():
     # select checkpoint
     parser.add_argument(
     '--checkpoint',
-    type=int,
+    type=str,
     default=None,
     help='number of epochs to use when testing (default: Use the last one)')
     

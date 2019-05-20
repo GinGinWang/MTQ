@@ -65,7 +65,7 @@ def extract_batch(data, it, batch_size):
 def main(inliner_classes, total_classes):
     cl = inliner_classes[0]
     batch_size = 128
-    zsize = 32
+    zsize = 64
     mnist_train = []
     mnist_valid = []
 
