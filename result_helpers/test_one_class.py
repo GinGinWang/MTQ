@@ -18,9 +18,7 @@ from datasets.utils import normalize
 from result_helpers.utils import *
 
 from sklearn.metrics import roc_auc_score
-from sklearn.metrics import f1_score
-from sklearn.metrics import recall_score
-from sklearn.metrics import precision_score
+from sklearn.metrics import precision_recall_fscore_support
 
 from models import *
 import math
@@ -37,7 +35,7 @@ class OneClassTestHelper(object):
     Performs tests for one-class datasets (MNIST or CIFAR-10).
     """
 
-    def __init__(self, dataset, model, score_normed, novel_ratio, lam, checkpoints_dir, output_file, device,batch_size, trainflag, lr, epochs, before_log_epochs, combined, pretrained, add,from_pretrained = False, fixed= False, pretrained_model = 'LSA',mulobj=False, quantile_flag = False, checkpoint = None):
+    def __init__(self, dataset, model, score_normed, novel_ratio, lam, checkpoints_dir, output_file, device,batch_size, trainflag, lr, epochs, before_log_epochs, combined, pretrained, add, noise, from_pretrained = False, fixed= False, pretrained_model = 'LSA',mulobj=False, quantile_flag = False, checkpoint = None):
         # type: (OneClassDataset, BaseModule, str, str) -> None
         """
         Class constructor.
@@ -61,6 +59,7 @@ class OneClassTestHelper(object):
         self.name = model.name
         self.batch_size = batch_size
         self.lam = lam
+        self.noise = noise 
 
 
         # control novel ratio in test sets.
@@ -98,7 +97,9 @@ class OneClassTestHelper(object):
             self.loss =LSAETMAFLoss()
         elif self.name == 'LSA_ET_QT':
             self.loss =LSAETQTLoss() 
-        
+        # only estimator
+        elif self.name == 'SOS':
+            self.loss =SOSLoss()
         else:
             ValueError("Wrong Model Name")
         
@@ -135,10 +136,12 @@ class OneClassTestHelper(object):
         if self.mulobj:
             self.model_dir = join(checkpoints_dir,f'{cl}{name}_mul.pkl')
             self.best_model_dir = join(checkpoints_dir,f'{cl}{name}_mul_b.pkl')
+            self.double_best_model_dir = join(checkpoints_dir,f'{cl}{name}_mul_bb.pkl')
             self.result_dir = join(checkpoints_dir,f'{cl}{name}_mul_history.npy')
         else:
             self.model_dir = join(checkpoints_dir,f'{cl}{name}_{lam}.pkl')
             self.best_model_dir = join(checkpoints_dir,f'{cl}{name}_{lam}_b.pkl')
+            self.double_best_model_dir = join(checkpoints_dir,f'{cl}{name}_{lam}_bb.pkl')
             self.result_dir = join(checkpoints_dir,f'{cl}{name}_{lam}_history.npy')
     
         if (not (self.checkpoint ==None)) and (not self.trainflag):
@@ -191,6 +194,7 @@ class OneClassTestHelper(object):
             x_r, z, z_dist = self.model(x)
             tot_loss = self.loss(x, x_r, z, z_dist,average)
 
+
         elif self.name in ['LSA_SOS', 'LSA_MAF','AAE_SOS']:
             x_r, z, s, log_jacob_T_inverse = self.model(x)
             tot_loss = self.loss(x, x_r, s, log_jacob_T_inverse,average)
@@ -218,9 +222,10 @@ class OneClassTestHelper(object):
             if model_name == 'LSA':
                 
                 self.model.load_state_dict(torch.load(f'checkpoints/{self.dataset.name}/combined{self.combined}/PtrFalse/{cl}LSA_{self.lam}.pkl'),strict = False)
+            
             elif model_name in ['LSA_SOS']:
 
-                self.model.load_state_dict(torch.load(f'checkpoints/{self.dataset.name}/combined{self.combined}/PtrFalse/{cl}LSA.pkl'),strict = False)
+                self.model.load_state_dict(torch.load(f'checkpoints/{self.dataset.name}/combined{self.combined}/PtrFalse/{cl}LSA_{self.lam}.pkl'),strict = False)
                 self.model.load_state_dict(torch.load(f'checkpoints/{self.dataset.name}/combined{self.combined}/PtrTrue/FixTrue/{cl}{model_name}.pkl'),strict = False)
             else:
                 ValueError("Setting For New Pretrained Model")
@@ -276,11 +281,11 @@ class OneClassTestHelper(object):
             #         newlr  = 0.000001
             #     for param_group in self.optimizer.param_groups:
             #                 param_group['lr'] = newlr
-
-         
-
-
-            self.dataset.train(cl)
+            noise = self.noise 
+            if noise>0:
+                self.dataset.train(normal_class =cl, noise_ratio= noise)
+            else:
+                self.dataset.train(cl)
             loader = DataLoader(self.dataset, batch_size = self.batch_size,shuffle=True)
             dataset_name = self.dataset.name
             epoch_size = self.dataset.length
@@ -361,10 +366,6 @@ class OneClassTestHelper(object):
 
                 self.optimizer.step()
                 
-
-
-
-                
                 epoch_loss = + self.loss.total_loss.item()*x.shape[0]
 
                 if self.name in ['LSA_EN','LSA_SOS','LSA_MAF','AAE_SOS']:
@@ -377,7 +378,7 @@ class OneClassTestHelper(object):
 
             pbar.close()
 
-                # print epoch result
+            # print epoch result
             if self.name in ['LSA_EN','LSA_SOS','LSA_MAF','AAE_SOS']:
                 
                 print('{}Train Epoch-{}: {}\tLoss: {:.6f}\tRec: {:.6f}\tNllk: {:.6f}'.format(self.name,
@@ -450,7 +451,12 @@ class OneClassTestHelper(object):
         """     
 
         best_validation_epoch = 0
+        
+
         best_validation_loss = float('+inf')
+        best_validation_rec = float('+inf')
+        best_validation_nllk = float('+inf')
+
         best_model = None 
         old_validation_loss = float('+inf')
 
@@ -499,16 +505,23 @@ class OneClassTestHelper(object):
                 best_model = self.model 
                 if (epoch>self.before_log_epochs):
                     torch.save(best_model.state_dict(), self.best_model_dir)
+                print(f'Best_epoch at :{epoch} with valid_loss:{best_validation_loss}' )
+                
+                if (validation_rec< best_validation_rec) and (validation_nllk<best_validation_nllk):
+                    torch.save(self.model.state_dict(),self.double_best_model_dir)
+                    double_best_validation_epoch = epoch
+                    best_validation_rec = validation_rec
+                    best_validation_nllk = validation_nllk
+                    print(f'Double_Best_epoch at :{epoch} with valid_loss:{best_validation_loss}')
 
-                print(f'Best_epoch at :{best_validation_epoch} with valid_loss:{best_validation_loss}, with lr:{self.lr}' )
 
-            if (epoch % 200 == 0 ) :
+            if (epoch % 50 == 0 ) :
                     torch.save(self.model.state_dict(), model_dir_epoch)
                     np.save(self.result_dir,history)
             
             
 
-            # if (epoch -best_validation_epoch)>100 and (epoch>self.before_log_epochs):
+            # if (self.dataset.name =='cifar10') and (self.name=='LSA_SOS') and (epoch - double_best_validation_epoch)> 200:
             #     print (f"Break at Epoch:{epoch}")
             #     break
             
@@ -566,19 +579,11 @@ class OneClassTestHelper(object):
 
                 # normalizing coefficient of the Novelty Score (Eq.9 in LSA)
             min_llk, max_llk, min_rec, max_rec,min_q1,max_q1,min_q2,max_q2,min_qinf,max_qinf = self.compute_normalizing_coefficients(cl)
-            print(f'min_q1:{min_q1},max_q1:{max_q1}')
-            print(f'min_q2:{min_q2},max_q2:{max_q2}')
-            print(f'min_q1:{min_qinf},max_q1:{max_qinf}'
-                    )
-            # analyze a,b 
-            # a1 = max_q1/64.0
-            # b1=  min_q1/64.0
-            # a2 = math.sqrt(max_q2*max_q2/64.0)
-            # b2= math.sqrt(min_q2*min_q2/64.0)
-
+            
             # Test sets
             self.dataset.test(cl,self.novel_ratio)
-            data_num = len(self.dataset)
+            data_num = self.dataset.length
+            print(data_num)
             loader = DataLoader(self.dataset, batch_size = bs)
 
             sample_llk = np.zeros(shape=(len(self.dataset),))
@@ -630,37 +635,41 @@ class OneClassTestHelper(object):
                     )
             print(f'min_rec:{min_rec},max_rec:{max_rec}')
 
-                # Normalize scores
+            
+            # Normalize scores
             sample_llk_n = normalize(sample_llk, min_llk, max_llk)
             sample_rec_n = normalize(sample_rec, min_rec, max_rec)
-            # sample_q1_n = normalize(sample_q1, min_q1, max_q1)
-            # sample_q2_n = normalize(sample_q2, min_q2, max_q2)
-            # sample_qinf_n = normalize(sample_qinf, min_qinf, max_qinf)
 
-
+            
             #print(sample_llk)
             # Compute the normalized novelty score
             if self.score_normed:
-                sample_rec =sample_rec_n
-                sample_llk = sample_llk_n
-
-            if quantile_flag:
-                sample_ns2_q1 = novelty_score(sample_q1, sample_rec)
-                sample_ns2_q2 = novelty_score(sample_q2, sample_rec)
-                sample_ns2_qinf = novelty_score(sample_qinf, sample_rec)
-                
+                sample_rec = sample_rec_n
+                sample_llk = sample_llk_n    
             
             sample_ns = novelty_score(sample_llk, sample_rec)
             sample_ns = modify_inf(sample_ns)
 
             # Compute precision, recall, f1_score based on threshold
-            # threshold = self.compute_threshold(cl)
-            # y_hat = np.less(sample_ns, threshold)
+            # if we know a/100 is the percentile of novelty samples in test set
+            sample_ns_t = sample_ns
+            # y = 1 normal, y = 0 novel
+            real_nr= float(sum(sample_y==0)/len(sample_y))            
+            print(f"Real Novelty_Num: {sum(sample_y==0)} in {len(sample_y)} samples, Novel Ratio= {real_nr}")
 
-            # precision = precision_score(sample_y,y_hat)
-            # f1 = f1_score(sample_y, y_hat)
-            # recall = recall_score(sample_y, y_hat)
 
+            threshold = np.percentile(sample_ns_t, 20)
+
+            y_hat = np.where(sample_ns_t >= threshold, 1, 0)
+            
+            print(f"Predicted Novelty_Num: {sum(y_hat==0)} in {len(y_hat)} samples")
+
+            
+            ####################################################
+            precision, recall, f1, _ = precision_recall_fscore_support((sample_y==0),(y_hat==0), average="binary")
+            ####################################################
+
+            
             ## metrics 
             this_class_metrics = [
             roc_auc_score(sample_y, sample_ns)    #
@@ -673,20 +682,22 @@ class OneClassTestHelper(object):
                 this_class_metrics.append(
                 roc_auc_score(sample_y, sample_rec))
 
+            this_class_metrics.append(precision)
+
+            this_class_metrics.append(f1)
+
+            this_class_metrics.append(recall)
+
+
+
             if self.name in ['LSA_EN','LSA_SOS','LSA_MAF','LSA_QT',
-            'LSA_ET_EN','LSA_ET_SOS','LSA_ET_MAF','LSA_ET_QT']:
+            'LSA_ET_EN','LSA_ET_SOS','LSA_ET_MAF','LSA_ET_QT','SOS']:
 
                 this_class_metrics.append(llk1)
                 this_class_metrics.append(llk2)
-            
+
             # add metrics related to quantile 
             if quantile_flag:
-                this_class_metrics.append(roc_auc_score(sample_y, sample_ns2_q1))
-
-                this_class_metrics.append(roc_auc_score(sample_y, sample_ns2_q2))
-
-                this_class_metrics.append(roc_auc_score(sample_y, sample_ns2_qinf))
-
                 this_class_metrics.append(roc_auc_score(sample_y,sample_q1))
                 this_class_metrics.append(roc_auc_score(sample_y,sample_q2))
                 this_class_metrics.append(roc_auc_score(sample_y,sample_qinf))
@@ -700,6 +711,7 @@ class OneClassTestHelper(object):
 
 
 
+        
         # Compute average AUROC and print table
         all_metrics = np.array(all_metrics)
         avg_metrics = np.mean(all_metrics, axis=0)
@@ -709,9 +721,7 @@ class OneClassTestHelper(object):
         # Save table
         with open(self.output_file, mode='w') as f:
             f.write(str(oc_table))
-
-    
-        
+     
     def compute_normalizing_coefficients(self,cl):
         # type: (int) -> Tuple[float, float, float, float]
         """
@@ -730,8 +740,7 @@ class OneClassTestHelper(object):
         sample_q2 = np.zeros(shape=(len(self.dataset),))
         sample_qinf = np.zeros(shape=(len(self.dataset),))
 
-        for i, (x, y) in enumerate(loader):
-            
+        for i, (x, y) in enumerate(loader): 
             x = x.to(self.device)
             with torch.no_grad():
                 if quantile_flag:
@@ -769,25 +778,25 @@ class OneClassTestHelper(object):
         if self.name in ['LSA_MAF','LSA_SOS','LSA_EN']:
 
             if self.quantile_flag:
-                table.field_names = ['Class', 'AUROC-NS', 'AUROC-LLK', 'AUROC-REC','llk1','llk2'
-                ,'AUROC-NSq1','AUROC-NSq2','AUROC-NSqinf','AUROC-q1','AUROC-q2','AUROC-qinf']
-
+                table.field_names = ['Class', 'AUROC-NS', 'AUROC-LLK', 'AUROC-REC','PRCISION','F1','RECALL','llk1','llk2'
+                ,'AUROC-q1','AUROC-q2','AUROC-qinf']
+            
             else:
             
-                table.field_names = ['Class', 'AUROC-NS', 'AUROC-LLK', 'AUROC-REC','llk1','llk2'
+                table.field_names = ['Class', 'AUROC-NS', 'AUROC-LLK', 'AUROC-REC','PRCISION','F1','RECALL','llk1','llk2'
                 ]
+
         elif self.name in ['MAF','SOS','EN','LSA',]:
-            table.field_names = ['Class', 'AUROC-NS'
+            
+            if self.quantile_flag:
+                table.field_names = ['Class', 'AUROC-NS','PRCISION','F1','RECALL','llk1','llk2','AUROC-q1','AUROC-q2','AUROC-qinf']
+
+            else:
+                 table.field_names = ['Class', 'AUROC-NS','PRCISION','F1','RECALL',
                 ]
 
         elif self.name in ['LSA_ET_QT','LSA_ET_EN','LSA_ET_MAF','LSA_ET_SOS']:
-            table.field_names = ['Class', 'AUROC-NS','llk1','llk2']
-                
-            
-        elif self.name  in ['LSA_QT']:
-            table.field_names = ['Class', 'AUROC-NS', 'AUROC-QT', 'AUROC-REC','q1','q2'
-                ]
-
+            table.field_names = ['Class', 'AUROC-NS','PRCISION','F1','RECALL','llk1','llk2']
         # add new metric title related to quantile 
         
 

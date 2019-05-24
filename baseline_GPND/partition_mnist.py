@@ -3,19 +3,24 @@ from utils.download import download
 import random
 import pickle
 
-download(directory="mnist", url="http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz", extract_gz=True)
-download(directory="mnist", url="http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz", extract_gz=True)
-download(directory="mnist", url="http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz", extract_gz=True)
-download(directory="mnist", url="http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz", extract_gz=True)
+download(directory="mnist", url="http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-images-idx3-ubyte.gz", extract_gz=True)
+download(directory="mnist", url="http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-labels-idx1-ubyte.gz", extract_gz=True)
+download(directory="mnist", url="http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-images-idx3-ubyte.gz", extract_gz=True)
+download(directory="mnist", url="http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-labels-idx1-ubyte.gz", extract_gz=True)
 
-folds = 3
+
+
+
+# folds = 3
 
 #Split mnist into 5 folds:
-mnist = items_train = mnist_reader.Reader('mnist', train=True).items
-items_test = mnist_reader.Reader('mnist', test=True).items 
-class_bins = {}
-items_valid = mnist[int(0.9*len(items_train)):]
-random.shuffle(mnist)
+mnist = items_train = mnist_reader.Reader('fmnist', train=True).items
+items_test = mnist_reader.Reader('fmnist', test=True).items 
+
+# class_bins = {}
+random.shuffle(items_train)
+# items_valid = mnist[int(0.9*len(items_train)):]
+items_train = mnist
 
 # for x in mnist:
 #     if x[0] not in class_bins:

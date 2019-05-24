@@ -1,8 +1,4 @@
-python test.py  --autoencoder LSA --estimator EN  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000  --score_normed  --lr 0.0001 --MulObj --NoTrain 
-python test.py  --autoencoder LSA --estimator EN  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000  --score_normed  --lr 0.0001 --MulObj --NoTrain  --checkpoint 200
-python test.py  --autoencoder LSA --estimator EN  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000  --score_normed  --lr 0.0001 --MulObj --NoTrain --checkpoint 400
-python test.py  --autoencoder LSA --estimator EN  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000  --score_normed  --lr 0.0001 --MulObj --NoTrain  --checkpoint 600
-python test.py  --autoencoder LSA --estimator EN  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000  --score_normed  --lr 0.0001 --MulObj --NoTrain  --checkpoint 800
+python test.py  --autoencoder LSA --estimator EN  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000  --score_normed  --lr 0.0001 --MulObj --NoTrain
 
 # +-------+----------+-----------+-----------+-----------+-----------+
 # | Class | AUROC-NS | AUROC-LLK | AUROC-REC |    llk1   |    llk2   |
@@ -21,11 +17,6 @@ python test.py  --autoencoder LSA --estimator EN  --dataset mnist --batch_size 2
 # +-------+----------+-----------+-----------+-----------+-----------+
 
 python test.py  --autoencoder LSA --estimator EN  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000  --score_normed  --lr 0.0001 --NoTrain 
-
-python test.py  --autoencoder LSA --estimator EN  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000  --score_normed  --lr 0.0001 --NoTrain --checkpoint 200
-python test.py  --autoencoder LSA --estimator EN  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000  --score_normed  --lr 0.0001 --NoTrain --checkpoint 400
-python test.py  --autoencoder LSA --estimator EN  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000  --score_normed  --lr 0.0001 --NoTrain --checkpoint 600
-python test.py  --autoencoder LSA --estimator EN  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000  --score_normed  --lr 0.0001 --NoTrain --checkpoint 800
 # +-------+----------+-----------+-----------+-----------+-----------+
 # | Class | AUROC-NS | AUROC-LLK | AUROC-REC |    llk1   |    llk2   |
 # +-------+----------+-----------+-----------+-----------+-----------+

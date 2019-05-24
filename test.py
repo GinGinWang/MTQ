@@ -4,13 +4,15 @@ from argparse import Namespace
 from datasets.mnist import MNIST
 from datasets.cifar10 import CIFAR10
 from datasets.FMNIST import FMNIST
-
+from datasets.thyroid import THYROID
+from datasets.KDDCUP import KDDCUP
 # LSA
 from models import LSA_MNIST
 from models import LSA_CIFAR10
 from models import LSAET_CIFAR10
 from models import LSAET_MNIST
 from models import AAE_CIFAR10
+from models import LSA_THYROID
 # Estimator
 from models.estimator_1D import Estimator1D
 from models.transform_maf import TinvMAF
@@ -23,7 +25,7 @@ import os
 import torch
 import numpy as np
 
-def create_dir(dataset, cd, pretrained, fixed, num_blocks,hidden_size, estimator):
+def create_dir(dataset, cd, pretrained, fixed, num_blocks,hidden_size, estimator,noise = 0):
     
     if pretrained:
         dirName = f'checkpoints/{dataset}/combined{cd}/Ptr{pretrained}/Fix{fixed}/'
@@ -31,6 +33,8 @@ def create_dir(dataset, cd, pretrained, fixed, num_blocks,hidden_size, estimator
         dirName = f'checkpoints/{dataset}/combined{cd}/Ptr{pretrained}/'
     if estimator == 'SOS':
         dirName = f'{dirName}b{num_blocks}h{hidden_size}/'
+    if noise >0:
+        dirName = f'checkpoints/noise_{noise}/'
     if not os.path.exists(dirName):
         os.makedirs(dirName)
         print(f'Make Dir:{dirName}')
@@ -71,22 +75,26 @@ def main():
     elif args.dataset == 'cifar10':
         dataset = CIFAR10(path='data/CIFAR', n_class = args.n_class, select= args.select)
 
+    elif args.dataset == 'thyroid':
+        dataset = THYROID(path ='data/UCI/thyroid.mat')
+    elif args.dataset == 'kddcup':
+        dataset = KDDCUP()
     else:
         raise ValueError('Unknown dataset')
     
     
     print ("dataset shape: ",dataset.shape)
 
-    dirName = create_dir(args.dataset, args.cd,args.pretrained, args.fixed,args.num_blocks,args.hidden_size,args.estimator)
+    dirName = create_dir(args.dataset, args.cd,args.pretrained, args.fixed,args.num_blocks,args.hidden_size,args.estimator,args.noise)
     
-    c, h , w = dataset.shape
+    # c,h,w = dataset.shape
 
     # Build Model
     # Build Model
 
     if (not args.coder):
         # directly estimate density by model
-
+        c,h,w = dataset.shape
         # build Density Estimator
         if args.estimator == 'MAF':
             model = TinvMAF(args.num_blocks, c*h*w,args.hidden_size).cuda()
@@ -115,6 +123,10 @@ def main():
 
                 model =LSA_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator, combine_density = args.cd,hidden_size= args.hidden_size).cuda()
             
+
+            elif args.dataset in ['kddcup']:
+                model =LSA_THYROID(num_blocks=args.num_blocks, hidden_size= args.hidden_size).cuda()
+
             elif args.dataset == 'cifar10':
             
                 model =LSA_CIFAR10(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.cd,hidden_size= args.hidden_size).cuda()
@@ -136,14 +148,10 @@ def main():
     # # set to Test mode
     file_dirName = create_file_dir(args.mulobj,model.name,args.dataset,args.cd,args.pretrained,args.fixed,args.score_normed,args.novel_ratio,args.num_blocks,args.hidden_size,args.lam,args.add,args.checkpoint)
 
-    helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, lam = args.lam, checkpoints_dir= dirName, output_file= file_dirName,device = device, batch_size = args.batch_size, pretrained= args.pretrained, trainflag= args.trainflag, lr = args.lr, epochs=args.epochs, before_log_epochs = args.before_log_epochs,pretrained_model= args.premodel,from_pretrained = args.from_pretrained, combined=args.cd,fixed=args.fixed, mulobj=args.mulobj, add = args.add, quantile_flag= args.qt,checkpoint = args.checkpoint)
+    helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, lam = args.lam, checkpoints_dir= dirName, output_file= file_dirName,device = device, batch_size = args.batch_size, pretrained= args.pretrained, trainflag= args.trainflag, lr = args.lr, epochs=args.epochs, before_log_epochs = args.before_log_epochs,pretrained_model= args.premodel,from_pretrained = args.from_pretrained, combined=args.cd,fixed=args.fixed, mulobj=args.mulobj, add = args.add, quantile_flag= args.qt,checkpoint = args.checkpoint, noise= args.noise)
 
     helper.test_one_class_classification()
     
-
-
-
-
     
     # if model.name in ['LSA_MAF','LSA_EN','LSA_SOS']:
     #     from matplotlib import pyplot as plt
@@ -251,7 +259,7 @@ def parse_arguments():
     parser.add_argument(
     '--before_log_epochs',
     type=int,
-    default=100,
+    default=-1,
     help='number of epochs before logging (default: 100)')
 
     # select checkpoint
@@ -332,6 +340,11 @@ def parse_arguments():
     default=1,
     help='tradeoff between reconstruction loss and autoregression loss')
     
+    parser.add_argument(
+    '--noise',
+    type=float,
+    default=0,
+    help='noise in training data')
 
     return parser.parse_args()
 

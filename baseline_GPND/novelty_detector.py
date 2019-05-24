@@ -115,7 +115,7 @@ def main(inliner_classes, total_classes = 10):
     batch_size = 64
     mnist_train = []
     mnist_valid = []
-    z_size = 64
+    z_size = 32
 
     def shuffle_in_unison(a, b):
         assert len(a) == len(b)

@@ -55,7 +55,7 @@ class Decoder(BaseModule):
     """
     CIFAR10 model decoder.
     """
-    def __init__(self, code_length, output_shape):
+    def __init__(self, code_length, deepest_shape, output_shape):
         # type: (int, Tuple[int, int, int], Tuple[int, int, int]) -> None
         """
         Class constructor.
