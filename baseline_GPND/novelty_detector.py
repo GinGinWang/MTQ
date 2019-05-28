@@ -141,11 +141,11 @@ def main(inliner_classes, total_classes = 10):
     #         else:
     #             mnist_train += fold
 
-    with open('traindata.pkl', 'rb') as pkl:
+    with open('traindata_f.pkl', 'rb') as pkl:
         mnist_train = pickle.load(pkl)
-    with open('validdata.pkl', 'rb') as pkl:
-        mnist_valid = pickle.load(pkl)
-    with open('testdata.pkl', 'rb') as pkl:
+    # with open('validdata_f.pkl', 'rb') as pkl:
+    #     mnist_valid = pickle.load(pkl)
+    with open('testdata_f.pkl', 'rb') as pkl:
         mnist_test = pickle.load(pkl)
 
     #keep only train classes
@@ -168,8 +168,8 @@ def main(inliner_classes, total_classes = 10):
     G.eval()
     E.eval()
 
-    G.load_state_dict(torch.load(f"{cl}Gmodel.pkl"))
-    E.load_state_dict(torch.load(f"{cl}Emodel.pkl"))
+    G.load_state_dict(torch.load(f"fmnist_{cl}Gmodel.pkl"))
+    E.load_state_dict(torch.load(f"fmnist_{cl}Emodel.pkl"))
 
     sample = torch.randn(64, z_size).to(device)
     sample = G(sample.view(-1, z_size, 1, 1)).cpu()
@@ -257,105 +257,105 @@ def main(inliner_classes, total_classes = 10):
         gennorm_param[1, i] = loc
         gennorm_param[2, i] = scale
 
-    def compute_threshold(mnist_valid, percentage):
-        #############################################################################################
-        # Searching for threshold on validation set
-        random.shuffle(mnist_valid)
-        # mnist_valid_outlier = [x for x in mnist_valid if x[0] in outlier_classes]
-        # mnist_valid_inliner = [x for x in mnist_valid if x[0] in inliner_classes]
+    # def compute_threshold(mnist_valid, percentage):
+    #     #############################################################################################
+    #     # Searching for threshold on validation set
+    #     random.shuffle(mnist_valid)
+    #     # mnist_valid_outlier = [x for x in mnist_valid if x[0] in outlier_classes]
+    #     # mnist_valid_inliner = [x for x in mnist_valid if x[0] in inliner_classes]
 
-        # inliner_count = len(mnist_valid_inliner)
-        # outlier_count = inliner_count * percentage // (100 - percentage)
+    #     # inliner_count = len(mnist_valid_inliner)
+    #     # outlier_count = inliner_count * percentage // (100 - percentage)
 
-        # if len(mnist_valid_outlier) > outlier_count:
-        #     mnist_valid_outlier = mnist_valid_outlier[:outlier_count]
-        # else:
-        #     outlier_count = len(mnist_valid_outlier)
-        #     inliner_count = outlier_count * (100 - percentage) // percentage
-        #     mnist_valid_inliner = mnist_valid_inliner[:inliner_count]
+    #     # if len(mnist_valid_outlier) > outlier_count:
+    #     #     mnist_valid_outlier = mnist_valid_outlier[:outlier_count]
+    #     # else:
+    #     #     outlier_count = len(mnist_valid_outlier)
+    #     #     inliner_count = outlier_count * (100 - percentage) // percentage
+    #     #     mnist_valid_inliner = mnist_valid_inliner[:inliner_count]
 
-        # _mnist_valid = mnist_valid_outlier + mnist_valid_inliner
-        _mnist_valid = mnist_valid
-        random.shuffle(_mnist_valid)
+    #     # _mnist_valid = mnist_valid_outlier + mnist_valid_inliner
+    #     _mnist_valid = mnist_valid
+    #     random.shuffle(_mnist_valid)
 
-        mnist_valid_x, mnist_valid_y = list_of_pairs_to_numpy(_mnist_valid)
+    #     mnist_valid_x, mnist_valid_y = list_of_pairs_to_numpy(_mnist_valid)
 
-        result = []
-        novel = []
+    #     result = []
+    #     novel = []
 
-        for it in range(len(mnist_valid_x) // batch_size):
-            x = Variable(extract_batch(mnist_valid_x, it, batch_size).view(-1, 32 * 32).data, requires_grad=True)
-            label = extract_batch_(mnist_valid_y, it, batch_size)
+    #     for it in range(len(mnist_valid_x) // batch_size):
+    #         x = Variable(extract_batch(mnist_valid_x, it, batch_size).view(-1, 32 * 32).data, requires_grad=True)
+    #         label = extract_batch_(mnist_valid_y, it, batch_size)
 
-            z = E(x.view(-1, 1, 32, 32))
-            recon_batch = G(z)
-            z = z.squeeze()
+    #         z = E(x.view(-1, 1, 32, 32))
+    #         recon_batch = G(z)
+    #         z = z.squeeze()
 
-            J = compute_jacobian(x, z)
-            J = J.cpu().numpy()
-            z = z.cpu().detach().numpy()
+    #         J = compute_jacobian(x, z)
+    #         J = J.cpu().numpy()
+    #         z = z.cpu().detach().numpy()
 
-            recon_batch = recon_batch.squeeze().cpu().detach().numpy()
-            x = x.squeeze().cpu().detach().numpy()
+    #         recon_batch = recon_batch.squeeze().cpu().detach().numpy()
+    #         x = x.squeeze().cpu().detach().numpy()
 
-            for i in range(batch_size):
-                u, s, vh = np.linalg.svd(J[i, :, :], full_matrices=False)
-                logD = np.sum(np.log(np.abs(s))) # | \mathrm{det} S^{-1} |
+    #         for i in range(batch_size):
+    #             u, s, vh = np.linalg.svd(J[i, :, :], full_matrices=False)
+    #             logD = np.sum(np.log(np.abs(s))) # | \mathrm{det} S^{-1} |
 
-                p = scipy.stats.gennorm.pdf(z[i], gennorm_param[0, :], gennorm_param[1, :], gennorm_param[2, :])
-                logPz = np.sum(np.log(p))
+    #             p = scipy.stats.gennorm.pdf(z[i], gennorm_param[0, :], gennorm_param[1, :], gennorm_param[2, :])
+    #             logPz = np.sum(np.log(p))
 
-                # Sometimes, due to rounding some element in p may be zero resulting in Inf in logPz
-                # In this case, just assign some large negative value to make sure that the sample 
-                # is classified as unknown. 
-                if not np.isfinite(logPz):
-                    logPz = -1000
+    #             # Sometimes, due to rounding some element in p may be zero resulting in Inf in logPz
+    #             # In this case, just assign some large negative value to make sure that the sample 
+    #             # is classified as unknown. 
+    #             if not np.isfinite(logPz):
+    #                 logPz = -1000
 
-                distance = np.sum(np.power(x[i].flatten() - recon_batch[i].flatten(), power))
+    #             distance = np.sum(np.power(x[i].flatten() - recon_batch[i].flatten(), power))
 
-                logPe = np.log(r_pdf(distance, bin_edges, counts)) # p_{\|W^{\perp}\|} (\|w^{\perp}\|)
-                logPe -= np.log(distance) * (32 * 32 - z_size) # \| w^{\perp} \|}^{m-n}
+    #             logPe = np.log(r_pdf(distance, bin_edges, counts)) # p_{\|W^{\perp}\|} (\|w^{\perp}\|)
+    #             logPe -= np.log(distance) * (32 * 32 - z_size) # \| w^{\perp} \|}^{m-n}
 
-                P = logD + logPz + logPe
+    #             P = logD + logPz + logPe
 
-                result.append(P)
-                novel.append(label[i].item() in inliner_classes)
+    #             result.append(P)
+    #             novel.append(label[i].item() in inliner_classes)
 
-        result = np.asarray(result, dtype=np.float32)
-        novel = np.asarray(novel, dtype=np.float32)
+    #     result = np.asarray(result, dtype=np.float32)
+    #     novel = np.asarray(novel, dtype=np.float32)
 
-        minP = min(result) - 1
-        maxP = max(result) + 1
+    #     minP = min(result) - 1
+    #     maxP = max(result) + 1
 
-        best_e = 0
-        best_f = 0
-        best_e_ = 0
-        best_f_ = 0
+    #     best_e = 0
+    #     best_f = 0
+    #     best_e_ = 0
+    #     best_f_ = 0
 
-        not_novel = np.logical_not(novel)
+    #     not_novel = np.logical_not(novel)
 
-        for e in np.arange(minP, maxP, 0.1):
-            y = np.greater(result, e)
+    #     for e in np.arange(minP, maxP, 0.1):
+    #         y = np.greater(result, e)
 
-            true_positive = np.sum(np.logical_and(y, novel))
-            false_positive = np.sum(np.logical_and(y, not_novel))
-            false_negative = np.sum(np.logical_and(np.logical_not(y), novel))
+    #         true_positive = np.sum(np.logical_and(y, novel))
+    #         false_positive = np.sum(np.logical_and(y, not_novel))
+    #         false_negative = np.sum(np.logical_and(np.logical_not(y), novel))
 
-            if true_positive > 0:
-                f = GetF1(true_positive, false_positive, false_negative)
-                if f > best_f:
-                    best_f = f
-                    best_e = e
-                if f >= best_f_:
-                    best_f_ = f
-                    best_e_ = e
+    #         if true_positive > 0:
+    #             f = GetF1(true_positive, false_positive, false_negative)
+    #             if f > best_f:
+    #                 best_f = f
+    #                 best_e = e
+    #             if f >= best_f_:
+    #                 best_f_ = f
+    #                 best_e_ = e
 
-        best_e = (best_e + best_e_) / 2.0
+    #     best_e = (best_e + best_e_) / 2.0
 
-        print("Best e: ", best_e)
-        return best_e
+    #     print("Best e: ", best_e)
+    #     return best_e
 
-    def test(mnist_test, percentage, e):
+    def test(mnist_test):
         true_positive = 0
         true_negative = 0
         false_positive = 0
@@ -402,6 +402,7 @@ def main(inliner_classes, total_classes = 10):
             x = x.squeeze().cpu().detach().numpy()
 
             for i in range(batch_size):
+                print(f"{cl}{it}-{i}")
                 u, s, vh = np.linalg.svd(J[i, :, :], full_matrices=False)
                 logD = np.sum(np.log(np.abs(s)))
 
@@ -423,16 +424,16 @@ def main(inliner_classes, total_classes = 10):
 
                 P = logD + logPz + logPe
 
-                if (label[i].item() in inliner_classes) != (P > e):
-                    if not label[i].item() in inliner_classes:
-                        false_positive += 1
-                    if label[i].item() in inliner_classes:
-                        false_negative += 1
-                else:
-                    if label[i].item() in inliner_classes:
-                        true_positive += 1
-                    else:
-                        true_negative += 1
+                # if (label[i].item() in inliner_classes) != (P > e):
+                #     if not label[i].item() in inliner_classes:
+                #         false_positive += 1
+                #     if label[i].item() in inliner_classes:
+                #         false_negative += 1
+                # else:
+                #     if label[i].item() in inliner_classes:
+                #         true_positive += 1
+                #     else:
+                #         true_negative += 1
 
                 result.append(((label[i].item() in inliner_classes), P))
 
@@ -446,14 +447,14 @@ def main(inliner_classes, total_classes = 10):
         except:
             auc = 0
 
-        with open('result_d%d_p%d.pkl' % (inliner_classes[0], percentage), 'wb') as output:
+        with open('result_d%d.pkl' % (inliner_classes[0]), 'wb') as output:
             pickle.dump(result, output)
 
-        print("Percentage ", percentage)
-        print("Error ", error)
-        f1 = GetF1(true_positive, false_positive, false_negative)
-        print("F1 ", GetF1(true_positive, false_positive, false_negative))
-        print("AUC ", auc)
+        # print("Percentage ", percentage)
+        # print("Error ", error)
+        # f1 = GetF1(true_positive, false_positive, false_negative)
+        # print("F1 ", GetF1(true_positive, false_positive, false_negative))
+        # print("AUC ", auc)
 
         #inliers
         X1 = [x[1] for x in result if x[0]]
@@ -464,94 +465,93 @@ def main(inliner_classes, total_classes = 10):
         minP = min([x[1] for x in result]) - 1
         maxP = max([x[1] for x in result]) + 1
 
-        ##################################################################
-        # FPR at TPR 95
-        ##################################################################
-        fpr95 = 0.0
-        clothest_tpr = 1.0
-        dist_tpr = 1.0
-        for e in np.arange(minP, maxP, 0.2):
-            tpr = np.sum(np.greater_equal(X1, e)) / np.float(len(X1))
-            fpr = np.sum(np.greater_equal(Y1, e)) / np.float(len(Y1))
-            if abs(tpr - 0.95) < dist_tpr:
-                dist_tpr = abs(tpr - 0.95)
-                clothest_tpr = tpr
-                fpr95 = fpr
+        # ##################################################################
+        # # FPR at TPR 95
+        # ##################################################################
+        # fpr95 = 0.0
+        # clothest_tpr = 1.0
+        # dist_tpr = 1.0
+        # for e in np.arange(minP, maxP, 0.2):
+        #     tpr = np.sum(np.greater_equal(X1, e)) / np.float(len(X1))
+        #     fpr = np.sum(np.greater_equal(Y1, e)) / np.float(len(Y1))
+        #     if abs(tpr - 0.95) < dist_tpr:
+        #         dist_tpr = abs(tpr - 0.95)
+        #         clothest_tpr = tpr
+        #         fpr95 = fpr
 
-        print("tpr: ", clothest_tpr)
-        print("fpr95: ", fpr95)
+        # print("tpr: ", clothest_tpr)
+        # print("fpr95: ", fpr95)
 
-        ##################################################################
-        # Detection error
-        ##################################################################
-        error = 1.0
-        for e in np.arange(minP, maxP, 0.2):
-            tpr = np.sum(np.less(X1, e)) / np.float(len(X1))
-            fpr = np.sum(np.greater_equal(Y1, e)) / np.float(len(Y1))
-            error = np.minimum(error, (tpr + fpr) / 2.0)
+        # ##################################################################
+        # # Detection error
+        # ##################################################################
+        # error = 1.0
+        # for e in np.arange(minP, maxP, 0.2):
+        #     tpr = np.sum(np.less(X1, e)) / np.float(len(X1))
+        #     fpr = np.sum(np.greater_equal(Y1, e)) / np.float(len(Y1))
+        #     error = np.minimum(error, (tpr + fpr) / 2.0)
 
-        print("Detection error: ", error)
+        # print("Detection error: ", error)
 
-        ##################################################################
-        # AUPR IN
-        ##################################################################
-        auprin = 0.0
-        recallTemp = 1.0
-        for e in np.arange(minP, maxP, 0.2):
-            tp = np.sum(np.greater_equal(X1, e))
-            fp = np.sum(np.greater_equal(Y1, e))
-            if tp + fp == 0:
-                continue
-            precision = tp / (tp + fp)
-            recall = tp / np.float(len(X1))
-            auprin += (recallTemp-recall)*precision
-            recallTemp = recall
-        auprin += recall * precision
+        # ##################################################################
+        # # AUPR IN
+        # ##################################################################
+        # auprin = 0.0
+        # recallTemp = 1.0
+        # for e in np.arange(minP, maxP, 0.2):
+        #     tp = np.sum(np.greater_equal(X1, e))
+        #     fp = np.sum(np.greater_equal(Y1, e))
+        #     if tp + fp == 0:
+        #         continue
+        #     precision = tp / (tp + fp)
+        #     recall = tp / np.float(len(X1))
+        #     auprin += (recallTemp-recall)*precision
+        #     recallTemp = recall
+        # auprin += recall * precision
 
-        print("auprin: ", auprin)
+        # print("auprin: ", auprin)
 
 
-        ##################################################################
-        # AUPR OUT
-        ##################################################################
-        minp, maxP = -maxP, -minP
-        X1 = [-x for x in X1]
-        Y1 = [-x for x in Y1]
-        auprout = 0.0
-        recallTemp = 1.0
-        for e in np.arange(minP, maxP, 0.2):
-            tp = np.sum(np.greater_equal(Y1, e))
-            fp = np.sum(np.greater_equal(X1, e))
-            if tp + fp == 0:
-                continue
-            precision = tp / (tp + fp)
-            recall = tp / np.float(len(Y1))
-            auprout += (recallTemp-recall)*precision
-            recallTemp = recall
-        auprout += recall * precision
+        # ##################################################################
+        # # AUPR OUT
+        # ##################################################################
+        # minp, maxP = -maxP, -minP
+        # X1 = [-x for x in X1]
+        # Y1 = [-x for x in Y1]
+        # auprout = 0.0
+        # recallTemp = 1.0
+        # for e in np.arange(minP, maxP, 0.2):
+        #     tp = np.sum(np.greater_equal(Y1, e))
+        #     fp = np.sum(np.greater_equal(X1, e))
+        #     if tp + fp == 0:
+        #         continue
+        #     precision = tp / (tp + fp)
+        #     recall = tp / np.float(len(Y1))
+        #     auprout += (recallTemp-recall)*precision
+        #     recallTemp = recall
+        # auprout += recall * precision
 
-        print("auprout: ", auprout)
+        # print("auprout: ", auprout)
 
         with open(os.path.join("results.txt"), "a") as file:
             file.write(
-                "Class: %d\n Percentage: %d\n"
-                "Error: %f\n F1: %f\n AUC: %f\nfpr95: %f"
-                "\nDetection: %f\nauprin: %f\nauprout: %f\n\n" %
-                (inliner_classes[0], percentage, error, f1, auc, fpr95, error, auprin, auprout))
+                "Class: %d\n AUC:%f\n\n" %
+                (inliner_classes[0],auc))
 
-        return auc, f1, fpr95, error, auprin, auprout
+        print(auc)
+        return auc
 
     # percentages = [10, 20, 30, 40, 50]
-    percentages = [100]
-    results = {}
+    # percentages = [100]
+    # results = {}
 
-    for p in percentages:
-        e = compute_threshold(mnist_valid, p)
-        results[p] = test(mnist_test, p, e)
+    # for p in percentages:
+    #     e = compute_threshold(mnist_valid, p)
+    results = test(mnist_test)
 
     return results
 
 if __name__ == '__main__':
-    for i in range(0,10):
-        print("Class{i}")
-        main([i], 10)
+    # for i in range(0,10):
+    print("Class{i}")
+    main([9], 10)

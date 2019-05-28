@@ -366,11 +366,11 @@ class OneClassTestHelper(object):
 
                 self.optimizer.step()
                 
-                epoch_loss = + self.loss.total_loss.item()*x.shape[0]
+                epoch_loss + =  self.loss.total_loss.item()*x.shape[0]
 
                 if self.name in ['LSA_EN','LSA_SOS','LSA_MAF','AAE_SOS']:
-                    epoch_recloss =+ self.loss.reconstruction_loss.item()*x.shape[0]
-                    epoch_nllk = + self.loss.autoregression_loss.item()*x.shape[0]
+                    epoch_recloss + = self.loss.reconstruction_loss.item()*x.shape[0]
+                    epoch_nllk + =  self.loss.autoregression_loss.item()*x.shape[0]
 
                 pbar.update(x.size(0))
                 pbar.set_description('Train, Loss: {:.6f}'.format(epoch_loss / (pbar.n)))
@@ -586,8 +586,8 @@ class OneClassTestHelper(object):
             print(data_num)
             loader = DataLoader(self.dataset, batch_size = bs)
 
-            sample_llk = np.zeros(shape=(len(self.dataset),))
-            sample_rec = np.zeros(shape=(len(self.dataset),))
+            sample_nllk = np.zeros(shape=(len(self.dataset),))
+            sample_nrec = np.zeros(shape=(len(self.dataset),))
             sample_q1 = np.zeros(shape=(len(self.dataset),))
             sample_q2 = np.zeros(shape=(len(self.dataset),))
             sample_qinf = np.zeros(shape=(len(self.dataset),))
@@ -607,12 +607,12 @@ class OneClassTestHelper(object):
                 sample_y[i*bs:i*bs+bs] = y
                 # score larger-->normal data
                 if self.name in ['LSA','LSA_MAF','LSA_SOS','LSA_EN','LSA_QT','AAE']:
-                    sample_rec[i*bs:i*bs+bs] = - self.loss.reconstruction_loss.cpu().numpy()
+                    sample_nrec[i*bs:i*bs+bs] = - self.loss.reconstruction_loss.cpu().numpy()
                     
                 if self.name in ['LSA_MAF','LSA_SOS','LSA_EN','LSA_QT',
                 'EN','SOS','MAF',
                 'LSA_ET_QT','LSA_ET_EN','LSA_ET_MAF','LSA_ET_SOS']:    
-                    sample_llk[i*bs:i*bs+bs] = - self.loss.autoregression_loss.cpu().numpy()
+                    sample_nllk[i*bs:i*bs+bs] = - self.loss.autoregression_loss.cpu().numpy()
                 
                 if quantile_flag:
                     sample_q1[i*bs:i*bs+bs] = q1
@@ -620,10 +620,10 @@ class OneClassTestHelper(object):
                     sample_qinf[i*bs:i*bs+bs] = qinf
 
             # +inf,-inf,nan
-            sample_llk = modify_inf(sample_llk)
+            sample_nllk = modify_inf(sample_nllk)
 
-            llk1= np.dot(sample_llk,sample_y).sum()
-            llk2 = sample_llk.sum()-llk1
+            llk1= np.dot(sample_nllk,sample_y).sum()
+            llk2 = sample_nllk.sum()-llk1
 
             # llk1 should be larger than llk2
             llk1 =llk1/np.sum(sample_y)
@@ -637,17 +637,17 @@ class OneClassTestHelper(object):
 
             
             # Normalize scores
-            sample_llk_n = normalize(sample_llk, min_llk, max_llk)
-            sample_rec_n = normalize(sample_rec, min_rec, max_rec)
+            sample_nllk_n = normalize(sample_nllk, min_llk, max_llk)
+            sample_nrec_n = normalize(sample_nrec, min_rec, max_rec)
 
             
-            #print(sample_llk)
+            #print(sample_nllk)
             # Compute the normalized novelty score
             if self.score_normed:
-                sample_rec = sample_rec_n
-                sample_llk = sample_llk_n    
+                sample_nrec = sample_nrec_n
+                sample_nllk = sample_nllk_n    
             
-            sample_ns = novelty_score(sample_llk, sample_rec)
+            sample_ns = novelty_score(sample_nllk, sample_nrec)
             sample_ns = modify_inf(sample_ns)
 
             # Compute precision, recall, f1_score based on threshold
@@ -677,10 +677,10 @@ class OneClassTestHelper(object):
 
             if self.name in ['LSA_EN','LSA_SOS','LSA_MAF','LSA_QT']:
                 this_class_metrics.append(
-                roc_auc_score(sample_y, sample_llk))
+                roc_auc_score(sample_y, sample_nllk))
                 
                 this_class_metrics.append(
-                roc_auc_score(sample_y, sample_rec))
+                roc_auc_score(sample_y, sample_nrec))
 
             this_class_metrics.append(precision)
 
@@ -734,8 +734,8 @@ class OneClassTestHelper(object):
         self.dataset.val(cl)
         loader = DataLoader(self.dataset, batch_size= bs)
 
-        sample_llk = np.zeros(shape=(len(self.dataset),))
-        sample_rec = np.zeros(shape=(len(self.dataset),))
+        sample_nllk = np.zeros(shape=(len(self.dataset),))
+        sample_nrec = np.zeros(shape=(len(self.dataset),))
         sample_q1 = np.zeros(shape=(len(self.dataset),))
         sample_q2 = np.zeros(shape=(len(self.dataset),))
         sample_qinf = np.zeros(shape=(len(self.dataset),))
@@ -754,16 +754,16 @@ class OneClassTestHelper(object):
                 
             # score larger-->normal data
             if self.name in ['LSA','LSA_MAF','LSA_SOS','LSA_EN','LSA_QT']:
-                sample_rec[i*bs:i*bs+bs] = - self.loss.reconstruction_loss.cpu().numpy()
+                sample_nrec[i*bs:i*bs+bs] = - self.loss.reconstruction_loss.cpu().numpy()
             
             if self.name in ['LSA_MAF','LSA_SOS','LSA_EN','LSA_QT',
             'LSA_ET_EN','LSA_ET_MAF','LSA_ET_SOS','LSA_ET_QT',
             'EN','SOS','MAF']:    
-                sample_llk[i*bs:i*bs+bs] = - self.loss.autoregression_loss.cpu().numpy()
+                sample_nllk[i*bs:i*bs+bs] = - self.loss.autoregression_loss.cpu().numpy()
 
-            sample_llk = modify_inf(sample_llk)
+            sample_nllk = modify_inf(sample_nllk)
 
-        return sample_llk.min(), sample_llk.max(), sample_rec.min(), sample_rec.max(),sample_q1.min(),sample_q1.max(),sample_q2.min(),sample_q2.max(),sample_qinf.min(), sample_qinf.max()
+        return sample_nllk.min(), sample_nllk.max(), sample_nrec.min(), sample_nrec.max(),sample_q1.min(),sample_q1.max(),sample_q2.min(),sample_q2.max(),sample_qinf.min(), sample_qinf.max()
 
 
     @property

@@ -82,8 +82,9 @@ class CIFAR10(OneClassDataset):
         # Update mode, indexes, length and transform
         self.mode = 'val'
         self.transform = self.val_transform
+        # self.val_idxs = [idx for idx in self.train_idx if self.train_split[idx][1] == self.normal_class]
         self.val_idxs = [idx for idx in self.train_idx if self.train_split[idx][1] == self.normal_class]
-        self.val_idxs =self.val_idxs[int(0.9*len(self.val_idxs)):]
+        # self.val_idxs =self.val_idxs[int(0.9*len(self.val_idxs)):]
         self.length = len(self.val_idxs)
         print(f'Valset prepared, Num:{self.length}')
 
@@ -128,7 +129,7 @@ class CIFAR10(OneClassDataset):
         print(f"Training Set prepared, Num:{self.length}")
 #---------------------------------------------------------------------
 
-    def test(self, normal_class, novel_ratio):
+    def test(self, normal_class, novel_ratio = 1):
         # type: (int) -> None
         """
         Sets MNIST in test mode.

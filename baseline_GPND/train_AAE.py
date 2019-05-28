@@ -67,7 +67,7 @@ def main(inliner_classes, total_classes):
     batch_size = 128
     zsize = 32
     mnist_train = []
-    mnist_valid = []
+    # mnist_valid = []
 
     # for i in range(folds):
     #     if i != folding_id:
@@ -77,10 +77,10 @@ def main(inliner_classes, total_classes):
     #             mnist_valid = fold
     #         else:
     #             mnist_train += fold
-    with open('traindata.pkl', 'rb') as pkl:
+    with open('traindata_f.pkl', 'rb') as pkl:
         mnist_train = pickle.load(pkl)
-    with open('validdata.pkl', 'rb') as pkl:
-        mnist_valid = pickle.load(pkl)
+    # with open('validdata_f.pkl', 'rb') as pkl:
+        # mnist_valid = pickle.load(pkl)
         
     outlier_classes = []
     for i in range(total_classes):
@@ -276,10 +276,10 @@ def main(inliner_classes, total_classes):
 
 
     print("Training finish!... save training results")
-    torch.save(G.state_dict(), f"{cl}Gmodel.pkl")
-    torch.save(E.state_dict(), f"{cl}Emodel.pkl")
-    torch.save(D.state_dict(), f"{cl}Dmodel.pkl")
-    torch.save(ZD.state_dict(),f"{cl}ZDmodel.pkl")
+    torch.save(G.state_dict(), f"fmnist_{cl}Gmodel.pkl")
+    torch.save(E.state_dict(), f"fmnist_{cl}Emodel.pkl")
+    torch.save(D.state_dict(), f"fmnist_{cl}Dmodel.pkl")
+    torch.save(ZD.state_dict(),f"fmnist_{cl}ZDmodel.pkl")
 
 if __name__ == '__main__':
     for i in range(10):

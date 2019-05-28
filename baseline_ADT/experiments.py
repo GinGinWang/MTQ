@@ -369,42 +369,42 @@ def run_experiments(load_dataset_fn, dataset_name, q, n_classes):
             for p in processes:
                 p.join()
 
-    # DSEBM
-    for _ in range(n_runs):
-        processes = [Process(target=_dsebm_experiment,
-                             args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
-        for p in processes:
-            p.start()
-        for p in processes:
-            p.join()
+    # # DSEBM
+    # for _ in range(n_runs):
+    #     processes = [Process(target=_dsebm_experiment,
+    #                          args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
+    #     for p in processes:
+    #         p.start()
+    #     for p in processes:
+    #         p.join()
 
-    # DAGMM
-    for _ in range(n_runs):
-        processes = [Process(target=_dagmm_experiment,
-                             args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
-        for p in processes:
-            p.start()
-        for p in processes:
-            p.join()
+    # # DAGMM
+    # for _ in range(n_runs):
+    #     processes = [Process(target=_dagmm_experiment,
+    #                          args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
+    #     for p in processes:
+    #         p.start()
+    #     for p in processes:
+    #         p.join()
 
-    # Raw OC-SVM
-    for c in range(n_classes):
-        _raw_ocsvm_experiment(load_dataset_fn, dataset_name, c)
+    # # Raw OC-SVM
+    # for c in range(n_classes):
+    #     _raw_ocsvm_experiment(load_dataset_fn, dataset_name, c)
 
-    # CAE OC-SVM
-    processes = [Process(target=_cae_ocsvm_experiment,
-                         args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
-    for p in processes:
-        p.start()
-        p.join()
+    # # CAE OC-SVM
+    # processes = [Process(target=_cae_ocsvm_experiment,
+    #                      args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
+    # for p in processes:
+    #     p.start()
+    #     p.join()
 
-    # ADGAN
-    processes = [Process(target=_adgan_experiment,
-                         args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
-    for p in processes:
-        p.start()
-    for p in processes:
-        p.join()
+    # # ADGAN
+    # processes = [Process(target=_adgan_experiment,
+    #                      args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
+    # for p in processes:
+    #     p.start()
+    # for p in processes:
+    #     p.join()
 
 
 def create_auc_table(metric='roc_auc'):
@@ -450,8 +450,8 @@ if __name__ == '__main__':
 
     experiments_list = [
         # (load_cifar100, 'cifar100', 20),
-        (load_fashion_mnist, 'fashion-mnist', 10),
-        (load_mnist, 'fashion-mnist', 10),
+        # (load_fashion_mnist, 'fashion-mnist', 10),
+        # (load_mnist, 'fashion-mnist', 10),
         (load_cifar10, 'cifar10', 10)
         # (load_cats_vs_dogs, 'cats-vs-dogs', 2),
     ]

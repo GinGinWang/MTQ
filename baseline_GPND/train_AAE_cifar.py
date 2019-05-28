@@ -69,7 +69,7 @@ def main(inliner_classes, total_classes):
     cl = inliner_classes[0]
     print("Training for {cl}")
     batch_size = 128
-    zsize = 32
+    zsize = 256
     
 
 
@@ -234,7 +234,7 @@ def main(inliner_classes, total_classes):
             y_fake_z = torch.zeros(1 if zd_merge else ZD_result.shape[0])
             ZD_fake_loss = BCE_loss(ZD_result, y_fake_z)
 
-            ZD_train_loss = ZD_real_loss + ZD_fake_loss
+            ZD_train_loss = (ZD_real_loss + ZD_fake_loss)*2.0
             ZD_train_loss.backward()
 
             ZD_optimizer.step()
@@ -290,10 +290,10 @@ def main(inliner_classes, total_classes):
 
 
     print("Training finish!... save training results")
-    torch.save(G.state_dict(), f"{cl}cifar_Gmodel.pkl")
-    torch.save(E.state_dict(), f"{cl}cifar_Emodel.pkl")
-    torch.save(D.state_dict(), f"{cl}cifar_Dmodel.pkl")
-    torch.save(ZD.state_dict(),f"{cl}cifar_ZDmodel.pkl")
+    torch.save(G.state_dict(),f"cifar_c{cl}_z{zsize}_G.pkl")
+    torch.save(E.state_dict(), f"cifar_c{cl}_z{zsize}_E.pkl")
+    torch.save(D.state_dict(), f"cifar_c{cl}_z{zsize}_D.pkl")
+    torch.save(ZD.state_dict(),f"cifar_c{cl}_z{zsize}_Z.pkl")
 
 if __name__ == '__main__':
     for i in range(10):

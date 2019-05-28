@@ -3,10 +3,10 @@ from utils.download import download
 import random
 import pickle
 
-download(directory="mnist", url="http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-images-idx3-ubyte.gz", extract_gz=True)
-download(directory="mnist", url="http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-labels-idx1-ubyte.gz", extract_gz=True)
-download(directory="mnist", url="http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-images-idx3-ubyte.gz", extract_gz=True)
-download(directory="mnist", url="http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-labels-idx1-ubyte.gz", extract_gz=True)
+download(directory="fmnist", url="http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-images-idx3-ubyte.gz", extract_gz=True)
+download(directory="fmnist", url="http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-labels-idx1-ubyte.gz", extract_gz=True)
+download(directory="fmnist", url="http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-images-idx3-ubyte.gz", extract_gz=True)
+download(directory="fmnist", url="http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-labels-idx1-ubyte.gz", extract_gz=True)
 
 
 
@@ -18,9 +18,9 @@ mnist = items_train = mnist_reader.Reader('fmnist', train=True).items
 items_test = mnist_reader.Reader('fmnist', test=True).items 
 
 # class_bins = {}
-random.shuffle(items_train)
-# items_valid = mnist[int(0.9*len(items_train)):]
-items_train = mnist
+items_train = random.shuffle(items_train)
+# items_valid = items_train[int(0.9*len(items_train)):]
+# items_train = items_train[0:int(0.9*len(items_train))]
 
 # for x in mnist:
 #     if x[0] not in class_bins:
@@ -47,12 +47,12 @@ items_train = mnist
 #     pickle.dump(mnist_folds[i], output)
 #     output.close()
 
-output = open('traindata.pkl' , 'wb')
+output = open('traindata_f.pkl' , 'wb')
 pickle.dump(mnist, output)
 output.close()
-output = open('testdata.pkl' , 'wb')
+output = open('testdata_f.pkl' , 'wb')
 pickle.dump(items_test, output)
 output.close()
-output = open('validdata.pkl', 'wb')
+output = open('validdata_f.pkl', 'wb')
 pickle.dump(items_test, output)
 output.close()
