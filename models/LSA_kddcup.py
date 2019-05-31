@@ -119,7 +119,7 @@ class Decoder(BaseModule):
         return o
 
 
-class LSA_THYROID(BaseModule):
+class LSA_KDDCUP(BaseModule):
     """
     LSA model for MNIST one-class classification.
     """
@@ -140,7 +140,7 @@ class LSA_THYROID(BaseModule):
                             True  =  input of estimator is (z,|x-xr|^2)
 
         """
-        super(LSA_THYROID, self).__init__()
+        super(LSA_KDDCUP, self).__init__()
 
         
         self.coder_name = 'LSA'

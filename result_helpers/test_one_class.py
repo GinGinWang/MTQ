@@ -35,7 +35,7 @@ class OneClassTestHelper(object):
     Performs tests for one-class datasets (MNIST or CIFAR-10).
     """
 
-    def __init__(self, dataset, model, score_normed, novel_ratio, lam, checkpoints_dir, output_file, device,batch_size, trainflag, lr, epochs, before_log_epochs, combined, pretrained, add, noise, from_pretrained = False, fixed= False, pretrained_model = 'LSA',mulobj=False, quantile_flag = False, checkpoint = None):
+    def __init__(self, dataset, model, score_normed, novel_ratio, lam, checkpoints_dir, output_file, device, batch_size, trainflag, lr, epochs, before_log_epochs, pretrained, add, noise, fixed= False, pretrained_model = 'LSA',mulobj=False, quantile_flag = False, checkpoint = None):
         # type: (OneClassDataset, BaseModule, str, str) -> None
         """
         Class constructor.
@@ -51,7 +51,6 @@ class OneClassTestHelper(object):
         self.model = model
         # save initialization
         torch.save(self.model.state_dict(), join(checkpoints_dir, f'{model.name}_start.pkl'))
-        self.combined = combined
         self.checkpoints_dir = checkpoints_dir
         self. checkpoint = checkpoint
         self.output_file = output_file
@@ -59,6 +58,7 @@ class OneClassTestHelper(object):
         self.name = model.name
         self.batch_size = batch_size
         self.lam = lam
+
         self.noise = noise 
 
 
@@ -119,7 +119,7 @@ class OneClassTestHelper(object):
                 self.optimizer = optim.Adam(self.model.parameters(), lr= lr, weight_decay=1e-6)
 
             self.pretrained = pretrained
-            self.from_pretrained = from_pretrained
+            # self.from_pretrained = from_pretrained
             self.pretrained_model = pretrained_model
             self.lr = lr
             self.train_epoch = epochs
@@ -281,7 +281,9 @@ class OneClassTestHelper(object):
             #         newlr  = 0.000001
             #     for param_group in self.optimizer.param_groups:
             #                 param_group['lr'] = newlr
-            noise = self.noise 
+
+            noise = self.noise
+
             if noise>0:
                 self.dataset.train(normal_class =cl, noise_ratio= noise)
             else:
@@ -366,11 +368,11 @@ class OneClassTestHelper(object):
 
                 self.optimizer.step()
                 
-                epoch_loss + =  self.loss.total_loss.item()*x.shape[0]
+                epoch_loss +=  self.loss.total_loss.item()*x.shape[0]
 
                 if self.name in ['LSA_EN','LSA_SOS','LSA_MAF','AAE_SOS']:
-                    epoch_recloss + = self.loss.reconstruction_loss.item()*x.shape[0]
-                    epoch_nllk + =  self.loss.autoregression_loss.item()*x.shape[0]
+                    epoch_recloss += self.loss.reconstruction_loss.item()*x.shape[0]
+                    epoch_nllk +=  self.loss.autoregression_loss.item()*x.shape[0]
 
                 pbar.update(x.size(0))
                 pbar.set_description('Train, Loss: {:.6f}'.format(epoch_loss / (pbar.n)))
@@ -586,7 +588,7 @@ class OneClassTestHelper(object):
             print(data_num)
             loader = DataLoader(self.dataset, batch_size = bs)
 
-            sample_nllk = np.zeros(shape=(len(self.dataset),))
+            sample_llk = np.zeros(shape=(len(self.dataset),))
             sample_nrec = np.zeros(shape=(len(self.dataset),))
             sample_q1 = np.zeros(shape=(len(self.dataset),))
             sample_q2 = np.zeros(shape=(len(self.dataset),))
@@ -612,7 +614,7 @@ class OneClassTestHelper(object):
                 if self.name in ['LSA_MAF','LSA_SOS','LSA_EN','LSA_QT',
                 'EN','SOS','MAF',
                 'LSA_ET_QT','LSA_ET_EN','LSA_ET_MAF','LSA_ET_SOS']:    
-                    sample_nllk[i*bs:i*bs+bs] = - self.loss.autoregression_loss.cpu().numpy()
+                    sample_llk[i*bs:i*bs+bs] = - self.loss.autoregression_loss.cpu().numpy()
                 
                 if quantile_flag:
                     sample_q1[i*bs:i*bs+bs] = q1
@@ -620,10 +622,10 @@ class OneClassTestHelper(object):
                     sample_qinf[i*bs:i*bs+bs] = qinf
 
             # +inf,-inf,nan
-            sample_nllk = modify_inf(sample_nllk)
+            sample_llk = modify_inf(sample_llk)
 
-            llk1= np.dot(sample_nllk,sample_y).sum()
-            llk2 = sample_nllk.sum()-llk1
+            llk1= np.dot(sample_llk,sample_y).sum()
+            llk2 = sample_llk.sum()-llk1
 
             # llk1 should be larger than llk2
             llk1 =llk1/np.sum(sample_y)
@@ -637,17 +639,17 @@ class OneClassTestHelper(object):
 
             
             # Normalize scores
-            sample_nllk_n = normalize(sample_nllk, min_llk, max_llk)
+            sample_llk_n = normalize(sample_llk, min_llk, max_llk)
             sample_nrec_n = normalize(sample_nrec, min_rec, max_rec)
 
             
-            #print(sample_nllk)
+            #print(sample_llk)
             # Compute the normalized novelty score
             if self.score_normed:
                 sample_nrec = sample_nrec_n
-                sample_nllk = sample_nllk_n    
+                sample_llk = sample_llk_n    
             
-            sample_ns = novelty_score(sample_nllk, sample_nrec)
+            sample_ns = novelty_score(sample_llk, sample_nrec)
             sample_ns = modify_inf(sample_ns)
 
             # Compute precision, recall, f1_score based on threshold
@@ -677,7 +679,7 @@ class OneClassTestHelper(object):
 
             if self.name in ['LSA_EN','LSA_SOS','LSA_MAF','LSA_QT']:
                 this_class_metrics.append(
-                roc_auc_score(sample_y, sample_nllk))
+                roc_auc_score(sample_y, sample_llk))
                 
                 this_class_metrics.append(
                 roc_auc_score(sample_y, sample_nrec))
@@ -734,7 +736,7 @@ class OneClassTestHelper(object):
         self.dataset.val(cl)
         loader = DataLoader(self.dataset, batch_size= bs)
 
-        sample_nllk = np.zeros(shape=(len(self.dataset),))
+        sample_llk = np.zeros(shape=(len(self.dataset),))
         sample_nrec = np.zeros(shape=(len(self.dataset),))
         sample_q1 = np.zeros(shape=(len(self.dataset),))
         sample_q2 = np.zeros(shape=(len(self.dataset),))
@@ -759,11 +761,11 @@ class OneClassTestHelper(object):
             if self.name in ['LSA_MAF','LSA_SOS','LSA_EN','LSA_QT',
             'LSA_ET_EN','LSA_ET_MAF','LSA_ET_SOS','LSA_ET_QT',
             'EN','SOS','MAF']:    
-                sample_nllk[i*bs:i*bs+bs] = - self.loss.autoregression_loss.cpu().numpy()
+                sample_llk[i*bs:i*bs+bs] = - self.loss.autoregression_loss.cpu().numpy()
 
-            sample_nllk = modify_inf(sample_nllk)
+            sample_llk = modify_inf(sample_llk)
 
-        return sample_nllk.min(), sample_nllk.max(), sample_nrec.min(), sample_nrec.max(),sample_q1.min(),sample_q1.max(),sample_q2.min(),sample_q2.max(),sample_qinf.min(), sample_qinf.max()
+        return sample_llk.min(), sample_llk.max(), sample_nrec.min(), sample_nrec.max(),sample_q1.min(),sample_q1.max(),sample_q2.min(),sample_q2.max(),sample_qinf.min(), sample_qinf.max()
 
 
     @property

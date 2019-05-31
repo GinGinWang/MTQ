@@ -45,7 +45,7 @@ def normalize(samples, min, max):
     return result
 
 
-def novelty_score(sample_llk_norm, sample_rec_norm):
+def novelty_score(sample_llk_norm, sample_nrec_norm):
     # type: (np.ndarray, np.ndarray) -> np.ndarray
     """
     Computes the normalized novelty score given likelihood scores, reconstruction scores
@@ -56,7 +56,7 @@ def novelty_score(sample_llk_norm, sample_rec_norm):
     """
 
     # Sum
-    ns = sample_llk_norm + sample_rec_norm
+    ns = sample_llk_norm + sample_nrec_norm
 
     return ns
 

@@ -12,7 +12,7 @@ from models import LSA_CIFAR10
 from models import LSAET_CIFAR10
 from models import LSAET_MNIST
 from models import AAE_CIFAR10
-from models import LSA_THYROID
+from models import LSA_KDDCUP
 # Estimator
 from models.estimator_1D import Estimator1D
 from models.transform_maf import TinvMAF
@@ -92,9 +92,11 @@ def main():
     # Build Model
     # Build Model
 
-    if (not args.coder):
-        # directly estimate density by model
+    if (args.autoencoder == None):
+        # directly estimate density by estimator
+        print (f'No Autoencoder, only use Density Estimator: {args.estimator}')
         c,h,w = dataset.shape
+
         # build Density Estimator
         if args.estimator == 'MAF':
             model = TinvMAF(args.num_blocks, c*h*w,args.hidden_size).cuda()
@@ -102,17 +104,16 @@ def main():
         elif args.estimator == 'SOS':
             model = TinvSOS(args.num_blocks, c*h*w,args.hidden_size).cuda()
 
-    # 1-D estimator from LSA
+        # 1-D estimator from LSA
         elif args.estimator == 'EN':
             self.model = Estimator1D(
             code_length=c*h*w,
             fm_list=[32, 32, 32, 32],
             cpd_channels=100).cuda()
+        
         else:
             raise ValueError('Unknown Estimator')
         
-        print (f'No Autoencoder, only use Density Estimator: {args.estimator}')
-
 
     else:
         if args.autoencoder == "LSA":
@@ -125,30 +126,37 @@ def main():
             
 
             elif args.dataset in ['kddcup']:
-                model =LSA_THYROID(num_blocks=args.num_blocks, hidden_size= args.hidden_size).cuda()
+                model =LSA_KDDCUP(num_blocks=args.num_blocks, hidden_size= args.hidden_size).cuda()
 
             elif args.dataset == 'cifar10':
-            
                 model =LSA_CIFAR10(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.cd,hidden_size= args.hidden_size).cuda()
-        elif args.autoencoder == 'LSA_ET':
+            else:
+                ValueError("Unknown Dataset")
+        
+        # elif args.autoencoder == 'LSA_ET':
 
-            if args.dataset == 'mnist': 
+        #     if args.dataset == 'mnist': 
 
-                model =LSAET_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator,hidden_size= args.hidden_size).cuda()
+        #         model =LSAET_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator,hidden_size= args.hidden_size).cuda()
             
-            elif args.dataset == 'cifar10':
+        #     elif args.dataset == 'cifar10':
             
-                model =LSAET_CIFAR10(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator,hidden_size= args.hidden_size).cuda()
+        #         model =LSAET_CIFAR10(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator,hidden_size= args.hidden_size).cuda()
             
         elif args.autoencoder == 'AAE':
+            if args.dataset == 'cifar10':
                 model =AAE_CIFAR10(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.cd,hidden_size= args.hidden_size).cuda()
+            # elif args.dataset == 'mnist':
+            # elfi args.dataset == 'fmmnist':
+            else:
+                ValueError ('Unknown Dataset') 
         else:
-            raise ValueError('Unknown MODEL')
+            raise ValueError('Unknown Autoencoder')
     
     # # set to Test mode
-    file_dirName = create_file_dir(args.mulobj,model.name,args.dataset,args.cd,args.pretrained,args.fixed,args.score_normed,args.novel_ratio,args.num_blocks,args.hidden_size,args.lam,args.add,args.checkpoint)
+    file_dirName = create_file_dir(args.mulobj,model.name,args.dataset,args.cd,args.pretrained,args.fixed,args.score_normed,args.novel_ratio,args.num_blocks,args.hidden_size,args.lam, args.add, args.checkpoint)
 
-    helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, lam = args.lam, checkpoints_dir= dirName, output_file= file_dirName,device = device, batch_size = args.batch_size, pretrained= args.pretrained, trainflag= args.trainflag, lr = args.lr, epochs=args.epochs, before_log_epochs = args.before_log_epochs,pretrained_model= args.premodel,from_pretrained = args.from_pretrained, combined=args.cd,fixed=args.fixed, mulobj=args.mulobj, add = args.add, quantile_flag= args.qt,checkpoint = args.checkpoint, noise= args.noise)
+    helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, lam = args.lam, checkpoints_dir= dirName, output_file= file_dirName,device = device, batch_size = args.batch_size, pretrained= args.pretrained, trainflag= args.trainflag, lr = args.lr, epochs=args.epochs, before_log_epochs = args.before_log_epochs,pretrained_model= args.premodel,fixed=args.fixed, mulobj=args.mulobj, add = args.add, quantile_flag= args.qt,checkpoint = args.checkpoint, noise= args.noise)
 
     helper.test_one_class_classification()
     
@@ -217,7 +225,7 @@ def parse_arguments():
     # autoencoder name 
     parser.add_argument('--autoencoder', type=str,
                         help='The Autoencoder framework.'
-                        'Choose among `LSA`', metavar='')
+                        'Choose among `LSA`,`AAE`', metavar='')
     # density estimator
     parser.add_argument('--estimator', type=str, help='The name of density estimator.'
                         'Choose among `SOS`, `MAF`', metavar='')
@@ -226,20 +234,21 @@ def parse_arguments():
                         help='The name of the dataset to perform tests on.'
                         'Choose among `mnist`, `cifar10`', metavar='')
     
-    parser.add_argument('--Combine_density', dest='cd',action = 'store_true',default = False)
-    parser.add_argument('--PreTrained', dest='pretrained',action = 'store_true',default = False)
+    parser.add_argument('--Combine_density', dest='cd',action = 'store_true',default = False, help = 'Use reconstruction loss as one dimension of latent vector')
+    parser.add_argument('--PreTrained', dest='pretrained',action = 'store_true',default = False, help = 'Use Pretrained Model')
     parser.add_argument('--Add', dest='add',action = 'store_true',default = False)
-    parser.add_argument('--Qt', dest='qt',action = 'store_true',default = False)
+    parser.add_argument('--Qt', dest='qt',action = 'store_true',default = False, help ='Output Quantile-based novelty score')
 
 
-    parser.add_argument('--premodel',type= str, default='LSA')
-    parser.add_argument('--Fixed', dest='fixed',action = 'store_true', default = False)
-    parser.add_argument('--from_pretrained', dest= 'from_pretrained',action='store_true', default=False)
-    parser.add_argument('--NoTrain', dest= 'trainflag',action='store_false', default=True)
+    parser.add_argument('--premodel',type= str, default='LSA',help = 'Pretrained autoencoder')
+    parser.add_argument('--Fixed', dest='fixed',action = 'store_true', default = False, help = 'Fix the autoencoder while training')
+    # parser.add_argument('--from_pretrained', dest= 'from_pretrained',action='store_true', default=False)
+    parser.add_argument('--NoTrain', dest= 'trainflag',action='store_false', default=True, help = 'Test Mode')
 
     parser.add_argument('--MulObj', dest= 'mulobj',action='store_true', default=False)
-    parser.add_argument('--NoDecoder', dest='decoder_flag',action='store_false', default = True)
-    parser.add_argument('--NoAutoencoder', dest='coder',action='store_false', default = True)
+    
+    # parser.add_argument('--NoDecoder', dest='decoder_flag',action='store_false', default = True)
+    # parser.add_argument('--NoAutoencoder', dest='coder',action='store_false', default = True)
     
     # batch size for test
     parser.add_argument(
@@ -253,7 +262,7 @@ def parse_arguments():
     '--epochs',
     type=int,
     default=1000,
-    help='number of epochs to train (default: 1000)')
+    help='number of epochs to train/test (default: 1000)')
     
     # epochs before logging 
     parser.add_argument(
@@ -267,7 +276,7 @@ def parse_arguments():
     '--checkpoint',
     type=str,
     default=None,
-    help='number of epochs to use when testing (default: Use the last one)')
+    help='number of epochs to check when testing (default: Use the last one)')
     
     # learning rate 
     parser.add_argument(
@@ -284,7 +293,7 @@ def parse_arguments():
     parser.add_argument(
     '--num_blocks',
     type=int,
-    default=5,
+    default=1,
     help='number of invertible blocks (default: 5)')
 
 
@@ -312,6 +321,7 @@ def parse_arguments():
 
     # novel ratio
     # default use 10% novel examples in test set
+
     parser.add_argument(
         '--novel_ratio',
         type = float,
@@ -331,9 +341,6 @@ def parse_arguments():
     default = None,
     help = 'Select one specific class for training')
 
-    #K  (only for SOS flow) 
-    
-    #M (only for SOS flow)
     parser.add_argument(
     '--lam',
     type=float,
