@@ -1,0 +1,1 @@
+python test.py  --autoencoder LSA --estimator EN  --dataset cifar10 --batch_size 256 --code_length 64  --epochs 200  --score_normed  --lr 0.001 --lam 0.1 

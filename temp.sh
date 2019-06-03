@@ -62,4 +62,5 @@
 
 # python test.py  --autoencoder LSA --estimator SOS  --dataset cifar10 --batch_size 256 --code_length 64    --epochs 200    --lr 0.001  --num_blocks 1 --hidden_size 2048 --lam 0.01 --NoTrain --checkpoint b
 
-python test.py  --autoencoder LSA --estimator SOS  --dataset cifar10 --batch_size 256 --code_length 64    --epochs 200    --lr 0.001  --num_blocks 1 --hidden_size 2048  --lam 0.0001 --NoTrain  --Qt --n_class 5
+# python test.py  --autoencoder LSA --estimator SOS  --dataset cifar10 --batch_size 256 --code_length 64    --epochs 200    --lr 0.001  --num_blocks 1 --hidden_size 2048  --lam 0.0001 --NoTrain  --Qt --n_class 5
+

@@ -44,7 +44,7 @@ def _transformations_experiment(dataset_load_fn, dataset_name, single_class_ind,
 
     x_train_task = x_train[y_train.flatten() == single_class_ind]
 
-    x_train_task=x_train_task[0:int(0.9*len(x_train_task))] ## select 90% as training task
+    # x_train_task=x_train_task[0:int(0.9*len(x_train_task))] ## select 90% as training task
     
     transformations_inds = np.tile(np.arange(transformer.n_transforms), len(x_train_task))
     x_train_task_transformed = transformer.transform_batch(np.repeat(x_train_task, transformer.n_transforms, axis=0),
@@ -141,7 +141,7 @@ def _raw_ocsvm_experiment(dataset_load_fn, dataset_name, single_class_ind):
 
     x_train_task = x_train[y_train.flatten() == single_class_ind]
     
-    x_train_task=x_train_task[0:int(0.9*len(x_train_task))] ## select 90% as training task
+    # x_train_task=x_train_task[0:int(0.9*len(x_train_task))] ## select 90% as training task
     
     if dataset_name in ['cats-vs-dogs']:  # OC-SVM is quadratic on the number of examples, so subsample training set
         subsample_inds = np.random.choice(len(x_train_task), 5000, replace=False)
@@ -182,7 +182,7 @@ def _cae_ocsvm_experiment(dataset_load_fn, dataset_name, single_class_ind, gpu_q
     cae.compile('adam', 'mse')
 
     x_train_task = x_train[y_train.flatten() == single_class_ind]
-    x_train_task=x_train_task[0:int(0.9*len(x_train_task))] ## select 90% as training task
+    # x_train_task=x_train_task[0:int(0.9*len(x_train_task))] ## select 90% as training task
     
     x_test_task = x_test[y_test.flatten() == single_class_ind]  # This is just for visual monitoring
     cae.fit(x=x_train_task, y=x_train_task, batch_size=128, epochs=200, validation_data=(x_test_task, x_test_task))
@@ -232,7 +232,7 @@ def _dsebm_experiment(dataset_load_fn, dataset_name, single_class_ind, gpu_q):
     epochs = 200
     reconstruction_mdl.compile('adam', 'mse')
     x_train_task = x_train[y_train.flatten() == single_class_ind]
-    x_train_task=x_train_task[0:int(0.9*len(x_train_task))] ## select 90% as training task
+    # x_train_task=x_train_task[0:int(0.9*len(x_train_task))] ## select 90% as training task
     
     x_test_task = x_test[y_test.flatten() == single_class_ind]  # This is just for visual monitoring
     reconstruction_mdl.fit(x=x_train_task, y=x_train_task,
@@ -276,7 +276,7 @@ def _dagmm_experiment(dataset_load_fn, dataset_name, single_class_ind, gpu_q):
     dagmm_mdl.compile('adam', ['mse', lambda y_true, y_pred: lambda_energy*y_pred])
 
     x_train_task = x_train[y_train.flatten() == single_class_ind]
-    x_train_task=x_train_task[0:int(0.9*len(x_train_task))] ## select 90% as training task
+    # x_train_task=x_train_task[0:int(0.9*len(x_train_task))] ## select 90% as training task
     
     x_test_task = x_test[y_test.flatten() == single_class_ind]  # This is just for visual monitoring
     dagmm_mdl.fit(x=x_train_task, y=[x_train_task, np.zeros((len(x_train_task), 1))],  # second y is dummy
@@ -328,7 +328,7 @@ def _adgan_experiment(dataset_load_fn, dataset_name, single_class_ind, gpu_q):
     epochs = 100
 
     x_train_task = x_train[y_train.flatten() == single_class_ind]
-    x_train_task=x_train_task[0:int(0.9*len(x_train_task))] ## select 90% as training task
+    # x_train_task=x_train_task[0:int(0.9*len(x_train_task))] ## select 90% as training task
     
 
     def data_gen(b_size):
@@ -349,11 +349,45 @@ def _adgan_experiment(dataset_load_fn, dataset_name, single_class_ind, gpu_q):
 
 
 def run_experiments(load_dataset_fn, dataset_name, q, n_classes):
-
-
+    n_runs = 1
     
-        # n_runs = 
-    n_runs = 5
+    # Raw OC-SVM
+    # for c in range(n_classes):
+    #     _raw_ocsvm_experiment(load_dataset_fn, dataset_name, c)
+
+    # CAE OC-SVM
+    processes = [Process(target=_cae_ocsvm_experiment,
+                         args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
+    for p in processes:
+        p.start()
+        p.join()
+
+
+    # DSEBM
+    for _ in range(n_runs):
+        processes = [Process(target=_dsebm_experiment,
+                             args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
+        for p in processes:
+            p.start()
+        for p in processes:
+            p.join()
+
+    # DAGMM
+    for _ in range(n_runs):
+        processes = [Process(target=_dagmm_experiment,
+                             args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
+        for p in processes:
+            p.start()
+        for p in processes:
+            p.join()
+
+    # ADGAN
+    processes = [Process(target=_adgan_experiment,
+                         args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
+    for p in processes:
+        p.start()
+    for p in processes:
+        p.join()
 
     # Transformations
     for _ in range(n_runs):
@@ -369,43 +403,7 @@ def run_experiments(load_dataset_fn, dataset_name, q, n_classes):
             for p in processes:
                 p.join()
 
-    # # DSEBM
-    # for _ in range(n_runs):
-    #     processes = [Process(target=_dsebm_experiment,
-    #                          args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
-    #     for p in processes:
-    #         p.start()
-    #     for p in processes:
-    #         p.join()
-
-    # # DAGMM
-    # for _ in range(n_runs):
-    #     processes = [Process(target=_dagmm_experiment,
-    #                          args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
-    #     for p in processes:
-    #         p.start()
-    #     for p in processes:
-    #         p.join()
-
-    # # Raw OC-SVM
-    # for c in range(n_classes):
-    #     _raw_ocsvm_experiment(load_dataset_fn, dataset_name, c)
-
-    # # CAE OC-SVM
-    # processes = [Process(target=_cae_ocsvm_experiment,
-    #                      args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
-    # for p in processes:
-    #     p.start()
-    #     p.join()
-
-    # # ADGAN
-    # processes = [Process(target=_adgan_experiment,
-    #                      args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
-    # for p in processes:
-    #     p.start()
-    # for p in processes:
-    #     p.join()
-
+    
 
 def create_auc_table(metric='roc_auc'):
     file_path = glob(os.path.join(RESULTS_DIR, '*', '*.npz'))
@@ -441,6 +439,7 @@ def create_auc_table(metric='roc_auc'):
 
 
 if __name__ == '__main__':
+
     freeze_support()
     N_GPUS = 1
     man = Manager()

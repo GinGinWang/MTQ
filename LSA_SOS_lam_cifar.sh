@@ -35,7 +35,7 @@
 # +-------+----------+-----------+-----------+----------+--------+--------+----------+----------+----------+----------+------------+
 
 
-python test.py  --autoencoder LSA --estimator SOS  --dataset cifar10 --batch_size 256 --code_length 64    --epochs 200    --lr 0.001  --num_blocks 1 --hidden_size 2048  --lam 0.0001 
+# python test.py  --autoencoder LSA --estimator SOS  --dataset cifar10 --batch_size 256 --code_length 64    --epochs 200    --lr 0.001  --num_blocks 1 --hidden_size 2048  --lam 0.0001 
 
 
 # +-------+----------+-----------+-----------+----------+--------+--------+----------+----------+
@@ -73,11 +73,6 @@ python test.py  --autoencoder LSA --estimator SOS  --dataset cifar10 --batch_siz
 # |  avg  |  0.5748  |   0.5030  |   0.5730  |  0.7288  | 0.2335 | 0.1427 | 482.5634 | 482.2627 |  0.5164  |  0.5131  |   0.5156   |
 # +-------+----------+-----------+-----------+----------+--------+--------+----------+----------+----------+----------+------------+
 
+python test.py  --autoencoder LSA --estimator SOS  --dataset cifar10 --batch_size 256 --code_length 64    --epochs 1000    --lr 0.001  --num_blocks 1 --hidden_size 2048  --lam 0.00001 --NoTrain
 
-# python test.py  --autoencoder LSA --estimator SOS  --dataset cifar10 --batch_size 256 --code_length 64    --epochs 200    --lr 0.001  --num_blocks 1 --hidden_size 2048  --lam 1 
-# python test.py  --autoencoder LSA --estimator SOS  --dataset cifar10 --batch_size 256 --code_length 64    --epochs 200    --lr 0.001  --num_blocks 1 --hidden_size 2048  --lam 10 
-
-
-python test.py  --autoencoder LSA --estimator SOS  --dataset cifar10 --batch_size 256 --code_length 64    --epochs 1000    --lr 0.001  --num_blocks 1 --hidden_size 2048  --lam 0.0001 --NoTrain --select 0 --checkpoint 1000
-
-# python test.py  --autoencoder LSA --estimator SOS  --dataset cifar10 --batch_size 256 --code_length 64    --epochs 10000    --lr 0.001  --num_blocks 1 --hidden_size 2048  --lam 0.00001 
+python test.py  --autoencoder LSA --estimator SOS  --dataset cifar10 --batch_size 256 --code_length 64    --epochs 1000    --lr 0.001  --num_blocks 1 --hidden_size 2048  --lam 0.000001 --NoTrain

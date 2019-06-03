@@ -654,7 +654,10 @@ class OneClassTestHelper(object):
 
             # Compute precision, recall, f1_score based on threshold
             # if we know a/100 is the percentile of novelty samples in test set
-            sample_ns_t = sample_ns
+            sample_ns_t = sample_llk
+            # sample_ns_t = sample_q1
+            # smaple_ns_t = sample_q2
+            # sample_ns_t = sample_q3
             # y = 1 normal, y = 0 novel
             real_nr= float(sum(sample_y==0)/len(sample_y))            
             print(f"Real Novelty_Num: {sum(sample_y==0)} in {len(sample_y)} samples, Novel Ratio= {real_nr}")
