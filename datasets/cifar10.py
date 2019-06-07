@@ -82,9 +82,15 @@ class CIFAR10(OneClassDataset):
         # Update mode, indexes, length and transform
         self.mode = 'val'
         self.transform = self.val_transform
-        self.val_idxs = [idx for idx in self.train_idx if self.train_split[idx][1] == self.normal_class]
-        self.val_idxs =self.val_idxs[int(0.9*len(self.val_idxs)):]
+
+        # self.val_idxs = [idx for idx in self.train_idx if self.train_split[idx][1] == self.normal_class]
+        # self.val_idxs =self.val_idxs[int(0.9*len(self.val_idxs)):]
+
+        self.val_idxs = self.shuffled_train_idx[int(0.9 * len(self.shuffled_train_idx)):]
+        self.val_idxs = [idx for idx in self.val_idxs if self.train_split[idx][1] == self.normal_class]
+        
         self.length = len(self.val_idxs)
+        
         print(f'Valset prepared, Num:{self.length}')
 
 
@@ -102,6 +108,7 @@ class CIFAR10(OneClassDataset):
         self.val_idxs = self.shuffled_train_idx[int(0.9 * len(self.shuffled_train_idx)):]
         
         self.length = len(self.val_idxs)
+
         print(f'Val2 Set prepared, Num:{self.length}')
 #--------------------------------------------------------------------
     def train(self, normal_class):
@@ -119,10 +126,14 @@ class CIFAR10(OneClassDataset):
         self.transform = self.val_transform
         
         # training examples are all normal
-        self.train_idxs = [idx for idx in self.train_idx if self.train_split[idx][1] == self.normal_class]
+        # self.train_idxs = [idx for idx in self.train_idx if self.train_split[idx][1] == self.normal_class]
+        # self.train_idxs = self.train_idxs[0:int(0.9*len(self.train_idxs))]
 
-        self.train_idxs = self.train_idxs[0:int(0.9*len(self.train_idxs))]
 
+        self.train_idxs = self.shuffled_train_idx[0:int(0.9 * len(self.shuffled_train_idx))]
+        self.train_idxs = [idx for idx in self.train_idxs if self.train_split[idx][1] == self.normal_class]
+        
+        
         self.length = len(self.train_idxs)
         # print 
         print(f"Training Set prepared, Num:{self.length}")

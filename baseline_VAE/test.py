@@ -5,7 +5,7 @@ import utils
 import visual
 
 
-def train_model(model, dataset, epochs=10,
+def test_model(model, dataset, epochs=10,
                 batch_size=32, sample_size=32,
                 lr=3e-04, weight_decay=1e-5,
                 loss_log_interval=30,
@@ -14,14 +14,10 @@ def train_model(model, dataset, epochs=10,
                 resume=False,
                 cuda=False):
     # prepare optimizer and model
-    model.train()
-    optimizer = optim.Adam(
-        model.parameters(), lr=lr,
-        weight_decay=weight_decay,
-    )
-
+    model.eval()
+    
     if resume:
-        epoch_start = utils.load_checkpoint(model, checkpoint_dir)
+        epoch_start = utils.(model, checkpoint_dir)
     else:
         epoch_start = 1
 
@@ -38,7 +34,7 @@ def train_model(model, dataset, epochs=10,
             x = Variable(x).cuda() if cuda else Variable(x)
 
             # flush gradients and run the model forward
-            optimizer.zero_grad()
+            # optimizer.zero_grad()
             (mean, logvar), x_reconstructed = model(x)
             reconstruction_loss = model.reconstruction_loss(x_reconstructed, x)
             kl_divergence_loss = model.kl_divergence_loss(mean, logvar)

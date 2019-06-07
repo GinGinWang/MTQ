@@ -10,14 +10,13 @@ from datasets.base import OneClassDataset
 from datasets.transforms import OCToFloatTensor2D
 from datasets.transforms import ToFloat32
 from datasets.transforms import ToFloatTensor2D
-from scipy import misc
+
 
 class MNIST(OneClassDataset):
     """
     Models MNIST dataset for one class classification.
     """
-    def __init__(self, path, n_class = 10, select = None):
-
+    def __init__(self, path):
         # type: (str) -> None
         """
         Class constructor.
@@ -26,28 +25,19 @@ class MNIST(OneClassDataset):
         """
         super(MNIST, self).__init__()
 
+        self.name = 'mnist'
         self.path = path
 
         self.normal_class = None
 
-        self.n_class = n_class
-        self.select = select
-        self.name ='mnist'
-
-      # Get train and test split
+        # Get train and test split
         self.train_split = datasets.MNIST(self.path, train=True, download=True, transform=None)
-        
         self.test_split = datasets.MNIST(self.path, train=False, download=True, transform=None)
 
         # Shuffle training indexes to build a validation set (see val())
-        self.train_idx = np.arange(len(self.train_split))
-        np.random.shuffle(self.train_idx)
-        self.shuffled_train_idx = self.train_idx
-
-        # Shuffle testing indexes to build  a test set (see test())
-        self.test_idx = np.arange(len(self.test_split))
-        # np.random.shuffle(test_idx)
-        # self.shuffled_test_idx = test_idx
+        train_idx = np.arange(len(self.train_split))
+        np.random.shuffle(train_idx)
+        self.shuffled_train_idx = train_idx
 
         # Transform zone
         self.val_transform = transforms.Compose([ToFloatTensor2D()])
@@ -57,19 +47,29 @@ class MNIST(OneClassDataset):
         # Other utilities
         self.mode = None
         self.length = None
-
-        # val idx in normal class (all possible classes)
         self.val_idxs = None
-        # train idx in normal class
         self.train_idxs = None
-        # test idx with 50%->90% normal class(50% -> 10% novelty)
-        self.test_idxs = None 
+
+    def val(self, normal_class):
+        # type: (int) -> None
+        """
+        Sets MNIST in validation mode.
+
+        :param normal_class: the class to be considered normal.
+        """
+        self.normal_class = int(normal_class)
+
+        # Update mode, indexes, length and transform
+        self.mode = 'val'
+        self.transform = self.val_transform
+        self.val_idxs = self.shuffled_train_idx[int(0.9 * len(self.shuffled_train_idx)):]
+        self.val_idxs = [idx for idx in self.val_idxs if self.train_split[idx][1] == self.normal_class]
+        self.length = len(self.val_idxs)
 
     def train(self, normal_class):
         # type: (int) -> None
         """
-        By JingJing
-        Sets MNIST in training mode.
+        Sets MNIST in validation mode.
 
         :param normal_class: the class to be considered normal.
         """
@@ -78,15 +78,9 @@ class MNIST(OneClassDataset):
         # Update mode, indexes, length and transform
         self.mode = 'train'
         self.transform = self.val_transform
-        # training examples are all normal
-        self.train_idxs = [idx for idx in self.shuffled_train_idx if self.train_split[idx][1] == self.normal_class]
-
+        self.train_idxs = self.shuffled_train_idx[0:int(0.9 * len(self.shuffled_train_idx)):]
+        self.train_idxs = [idx for idx in self.train_idxs if self.train_split[idx][1] == self.normal_class]
         self.length = len(self.train_idxs)
-        
-        print(f"Training Set prepared, Num:{self.length}")
-
-
-
 
     def test(self, normal_class):
         # type: (int) -> None
@@ -94,25 +88,13 @@ class MNIST(OneClassDataset):
         Sets MNIST in test mode.
 
         :param normal_class: the class to be considered normal.
-        :param norvel_ratio: the ratio of novel examples
         """
         self.normal_class = int(normal_class)
 
         # Update mode, length and transform
         self.mode = 'test'
         self.transform = self.test_transform
-
-        # testing examples (norm)
         self.length = len(self.test_split)
-        
-        normal_idxs = [idx for idx in self.test_idx if self.test_split[idx][1] == self.normal_class]
-        normal_num = len(normal_idxs)
-        novel_num = self.length - normal_num
-    
-        print(f"Test Set prepared, Num:{self.length},Novel_num:{novel_num},Normal_num:{normal_num}")
-
-
-    
 
     def __len__(self):
         # type: () -> int
@@ -131,15 +113,19 @@ class MNIST(OneClassDataset):
         # Load the i-th example
         if self.mode == 'test':
             x, y = self.test_split[i]
-            x = misc.imresize(x, (32,32), interp='bilinear')
             x = np.uint8(x)[..., np.newaxis]
             sample = x, int(y == self.normal_class)
 
-        elif self.mode == 'train':
-            x, _ = self.train_split[self.train_idxs[i]]
-            x = misc.imresize(x, (32,32), interp='bilinear')
+        elif self.mode == 'val':
+            x, _ = self.train_split[self.val_idxs[i]]
             x = np.uint8(x)[..., np.newaxis]
             sample = x, x
+
+        elif self.mode == 'train':
+            x, _ = self.train_split[self.train_idxs[i]]
+            x = np.uint8(x)[..., np.newaxis]
+            sample = x, x
+        
         else:
             raise ValueError
 
@@ -155,23 +141,14 @@ class MNIST(OneClassDataset):
         """
         Returns all test possible test sets (the 10 classes).
         """
-        if self.select ==None:
-            classes = np.arange(0,self.n_class)
-        else:
-            classes = [self.select] # select one class to train
-        return classes
+        return np.arange(0, 10)
 
-    @property
     def train_classes(self):
         # type: () -> np.ndarray
         """
         Returns all test possible test sets (the 10 classes).
         """
-        if self.select == None:
-            classes = np.arange(0,self.n_class)
-        else:
-            classes = [self.select]
-        return classes
+        return np.arange(0, 10)
 
     @property
     def shape(self):
@@ -182,4 +159,4 @@ class MNIST(OneClassDataset):
         return 1, 28, 28
 
     def __repr__(self):
-        return ("ONE-CLASS MNIST (normal class =  {} )").format(self.normal_class)
+        return f'ONE-CLASS MNIST (normal class = {self.normal_class})'

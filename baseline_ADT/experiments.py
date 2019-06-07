@@ -59,6 +59,7 @@ def _transformations_experiment(dataset_load_fn, dataset_name, single_class_ind,
     # simplified normality score
     #################################################################################################
     # preds = np.zeros((len(x_test), transformer.n_transforms))
+    
     # for t in range(transformer.n_transforms):
     #     preds[:, t] = mdl.predict(transformer.transform_batch(x_test, [t] * len(x_test)),
     #                               batch_size=batch_size)[:, t]
@@ -318,6 +319,7 @@ def _adgan_experiment(dataset_load_fn, dataset_name, single_class_ind, gpu_q):
     input_side = x_train.shape[2]  # image side will always be at shape[2]
     critic = conv_encoder(input_side, n_channels, representation_dim=1,
                           representation_activation='linear')
+    
     noise_size = 256
     generator = conv_decoder(input_side, n_channels=n_channels, representation_dim=noise_size)
 
@@ -356,30 +358,46 @@ def run_experiments(load_dataset_fn, dataset_name, q, n_classes):
     #     _raw_ocsvm_experiment(load_dataset_fn, dataset_name, c)
 
     # CAE OC-SVM
-    processes = [Process(target=_cae_ocsvm_experiment,
-                         args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
-    for p in processes:
-        p.start()
-        p.join()
+    # processes = [Process(target=_cae_ocsvm_experiment,
+    #                      args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
+    # for p in processes:
+    #     p.start()
+    #     p.join()
 
 
-    # DSEBM
-    for _ in range(n_runs):
-        processes = [Process(target=_dsebm_experiment,
-                             args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
-        for p in processes:
-            p.start()
-        for p in processes:
-            p.join()
+    # # DSEBM
+    # for _ in range(n_runs):
+    #     processes = [Process(target=_dsebm_experiment,
+    #                          args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
+    #     for p in processes:
+    #         p.start()
+    #     for p in processes:
+    #         p.join()
 
-    # DAGMM
-    for _ in range(n_runs):
-        processes = [Process(target=_dagmm_experiment,
-                             args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
-        for p in processes:
-            p.start()
-        for p in processes:
-            p.join()
+    # # DAGMM
+    # for _ in range(n_runs):
+    #     processes = [Process(target=_dagmm_experiment,
+    #                          args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
+    #     for p in processes:
+    #         p.start()
+    #     for p in processes:
+    #         p.join()
+    
+
+    # Transformations
+    # for _ in range(n_runs):
+    #     processes = [Process(target=_transformations_experiment,
+    #                          args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
+    #     if dataset_name in ['cats-vs-dogs']:  # Self-labeled set is memory consuming
+    #         for p in processes:
+    #             p.start()
+    #             p.join()
+    #     else:
+    #         for p in processes:
+    #             p.start()
+    #         for p in processes:
+    #             p.join()
+
 
     # ADGAN
     processes = [Process(target=_adgan_experiment,
@@ -389,20 +407,7 @@ def run_experiments(load_dataset_fn, dataset_name, q, n_classes):
     for p in processes:
         p.join()
 
-    # Transformations
-    for _ in range(n_runs):
-        processes = [Process(target=_transformations_experiment,
-                             args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
-        if dataset_name in ['cats-vs-dogs']:  # Self-labeled set is memory consuming
-            for p in processes:
-                p.start()
-                p.join()
-        else:
-            for p in processes:
-                p.start()
-            for p in processes:
-                p.join()
-
+    
     
 
 def create_auc_table(metric='roc_auc'):
@@ -457,4 +462,7 @@ if __name__ == '__main__':
 
     for data_load_fn, dataset_name, n_classes in experiments_list:
         run_experiments(data_load_fn, dataset_name, q, n_classes)
+    create_auc_table()
+    
+
 

@@ -212,8 +212,13 @@ class OneClassTestHelper(object):
 
         elif self.name in ['LSA_ET_EN']:
             z, z_dist = self.model(x)
-            tot_loss = self.loss(z, z_dist) 
-
+            tot_loss = self.loss(z, z_dist)
+        
+        elif self.name == 'VAE':
+            (mean, logvar), x_reconstructed = self.model(x)
+            recloss = self.reconstruction_loss(x_reconstructed,x)
+            klloss =  self.kl_divergence_loss(mean,logvar)
+            tot_loss = recloss + klloss
         return tot_loss
 
     def load_pretrained_model(self, model_name,cl):
@@ -579,10 +584,11 @@ class OneClassTestHelper(object):
             
             self.model.eval()
 
-                # normalizing coefficient of the Novelty Score (Eq.9 in LSA)
+            # normalizing coefficient of the Novelty Score (Eq.9 in LSA)
             min_llk, max_llk, min_rec, max_rec,min_q1,max_q1,min_q2,max_q2,min_qinf,max_qinf = self.compute_normalizing_coefficients(cl)
             
             # Test sets
+            
             self.dataset.test(cl,self.novel_ratio)
             data_num = self.dataset.length
             print(data_num)
@@ -615,6 +621,12 @@ class OneClassTestHelper(object):
                 'EN','SOS','MAF',
                 'LSA_ET_QT','LSA_ET_EN','LSA_ET_MAF','LSA_ET_SOS']:    
                     sample_llk[i*bs:i*bs+bs] = - self.loss.autoregression_loss.cpu().numpy()
+                
+
+                if self.name  == 'VAE':
+
+                    sample_nrec[i*bs:i*bs+bs] = - self.reconstruction_loss.cpu().numpy()
+                    sample_llk[i*bs:i*bs+bs] = - self.autoregression_loss.cpu().numpy()
                 
                 if quantile_flag:
                     sample_q1[i*bs:i*bs+bs] = q1

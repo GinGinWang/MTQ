@@ -3,9 +3,10 @@ from argparse import Namespace
 
 from datasets.mnist import MNIST
 from datasets.cifar10 import CIFAR10
-from datasets.FMNIST import FMNIST
+from datasets.fmnist import FMNIST
 from datasets.thyroid import THYROID
 from datasets.KDDCUP import KDDCUP
+
 # LSA
 from models import LSA_MNIST
 from models import LSA_CIFAR10
@@ -13,6 +14,7 @@ from models import LSAET_CIFAR10
 from models import LSAET_MNIST
 from models import AAE_CIFAR10
 from models import LSA_KDDCUP
+from models import VAE
 # Estimator
 from models.estimator_1D import Estimator1D
 from models.transform_maf import TinvMAF
@@ -64,7 +66,7 @@ def main():
     args = parse_arguments()
     device = torch.device("cuda:0")
     # Lock seeds
-    set_random_seed(11111111)
+    set_random_seed(30101990)
 
     # prepare dataset in train mode
     if args.dataset == 'mnist':
@@ -149,7 +151,16 @@ def main():
             # elif args.dataset == 'mnist':
             # elfi args.dataset == 'fmmnist':
             else:
-                ValueError ('Unknown Dataset') 
+                ValueError ('Unknown Dataset')
+
+        elif args.autoencoder == 'VAE':
+
+            model = VAE(
+            label=args.dataset,
+            input_shape = dataset.shape,
+            kernel_num= 128,
+            z_size= 64,
+            ).cuda()
         else:
             raise ValueError('Unknown Autoencoder')
     
@@ -200,17 +211,7 @@ def main():
             
     #         plt.savefig(f'history_image/{cl}{model.name}_{args.dataset}_cd{args.cd}_ptr{args.pretrained}_fix{args.fixed}_nml{args.score_normed}_nlration{args.novel_ratio}_b{args.num_blocks}_h{args.hidden_size}_lam{args.lam}.png')
     #         plt.close('all')
-
-
-
-
-
-
-
-
-
-
-
+    
 
 def parse_arguments():
     # type: () -> Namespace

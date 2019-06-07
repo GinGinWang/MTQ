@@ -1,17 +1,24 @@
 import torch
 from torch.autograd import Variable
 from torch import nn
+from models.base import BaseModule
 
-
-class VAE(nn.Module):
-    def __init__(self, label, image_size, channel_num, kernel_num, z_size):
+class VAE(BaseModule):
+    def __init__(self, label, input_shape, kernel_num, z_size):
         # configurations
-        super().__init__()
+        super(VAE,self).__init__()
         self.label = label
-        self.image_size = image_size
-        self.channel_num = channel_num
+        c,w,h = input_shape
+        self.image_size = w
+        self.channel_num = c
         self.kernel_num = kernel_num
         self.z_size = z_size
+
+        self.name = 'VAE'
+        self.reconstruction_loss = 0
+        self.autoregression_loss = 0
+
+
 
         # encoder
         self.encoder = nn.Sequential(
@@ -54,7 +61,7 @@ class VAE(nn.Module):
 
         # reconstruct x from z
         x_reconstructed = self.decoder(z_projected)
-        
+
         # return the parameters of distribution of q given x and the
         # reconstructed image.
         return (mean, logvar), x_reconstructed
@@ -76,11 +83,14 @@ class VAE(nn.Module):
         return eps.mul(std).add_(mean)
 
     def reconstruction_loss(self, x_reconstructed, x):
-        return nn.BCELoss(size_average=False)(x_reconstructed, x) / x.size(0)
 
+        recloss = nn.BCELoss(size_average=False)(x_reconstructed, x) / x.size(0)
+        self.reconstruction_loss = recloss
+        return recloss 
     def kl_divergence_loss(self, mean, logvar):
-        return ((mean**2 + logvar.exp() - 1 - logvar) / 2).sum() / mean.size(0)
-
+        klloss= ((mean**2 + logvar.exp() - 1 - logvar) / 2).sum() / mean.size(0)
+        self.kl_divergence_loss = klloss
+        return klloss
     # =====
     # Utils
     # =====
