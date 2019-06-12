@@ -5,7 +5,8 @@ import torchvision
 from model import VAE
 from data import TRAIN_DATASETS, DATASET_CONFIGS
 from train import train_model
-from test import test_model
+# from test import test_model
+from datasets import MNIST
 
 parser = argparse.ArgumentParser('VAE PyTorch implementation')
 parser.add_argument('--dataset', default='mnist',
@@ -37,16 +38,22 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     cuda = args.cuda and torch.cuda.is_available()
-    dataset_config = DATASET_CONFIGS[args.dataset]
-    dataset = TRAIN_DATASETS[args.dataset]
+    # dataset_config = DATASET_CONFIGS[args.dataset]
+    # dataset = TRAIN_DATASETS[args.dataset]
 
+    dataset = MNIST('./data')
+    c,w,h = dataset.shape
+    normal_class = 0
     vae = VAE(
 
         label=args.dataset,
         image_size=dataset_config['size'],
+        # image_size = w, 
         channel_num=dataset_config['channels'],
+        channel_num = h,
         kernel_num=args.kernel_num,
         z_size=args.z_size,
+        # cl = normal_class
     )
 
     # move the model parameters to the gpu if needed.
@@ -68,15 +75,15 @@ if __name__ == '__main__':
             resume=args.resume,
             cuda=cuda,
         )
-    else:
-        test_model(vae, dataset=dataset,
-            epochs=args.epochs,
-            batch_size=args.batch_size,
-            sample_size=args.sample_size,
-            lr=args.lr,
-            weight_decay=args.weight_decay,
-            checkpoint_dir=args.checkpoint_dir,
-            loss_log_interval=args.loss_log_interval,
-            image_log_interval=args.image_log_interval,
-            resume=args.resume,
-            cuda=cuda)
+    # else:
+    #     test_model(vae, dataset=dataset,
+    #         epochs=args.epochs,
+    #         batch_size=args.batch_size,
+    #         sample_size=args.sample_size,
+    #         lr=args.lr,
+    #         weight_decay=args.weight_decay,
+    #         checkpoint_dir=args.checkpoint_dir,
+    #         loss_log_interval=args.loss_log_interval,
+    #         image_log_interval=args.image_log_interval,
+    #         resume=args.resume,
+    #         cuda=cuda)

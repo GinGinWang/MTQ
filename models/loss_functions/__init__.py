@@ -11,5 +11,6 @@ from models.loss_functions.lsaetsosloss import LSAETSOSLoss
 from models.loss_functions.lsaetmafloss import LSAETMAFLoss
 from models.loss_functions.lsaetqtloss import LSAETQTLoss
 
+from models.loss_functions.vaeloss import VAELoss
 
 from models.loss_functions.sosloss import SOSLoss

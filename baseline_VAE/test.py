@@ -13,7 +13,22 @@ def test_model(model, dataset, epochs=10,
                 checkpoint_dir='./checkpoints',
                 resume=False,
                 cuda=False):
-    # prepare optimizer and model
+    #load model 
+    # Load the checkpoint
+    model.load_w(join(checkpoints_dir, f'{cl}.pkl'))
+    self.model.eval()
+    # First we need a run on validation, to compute
+    # normalizing coefficient of the Novelty Score (Eq.9)
+    min_llk, max_llk, min_rec, max_rec = self.compute_normalizing_coefficients(cl)
+
+    # Run the actual test
+    self.dataset.test(cl)
+    loader = DataLoader(self.dataset)
+
+    sample_llk = np.zeros(shape=(len(loader),))
+    sample_rec = np.zeros(shape=(len(loader),))
+    sample_y = np.zeros(shape=(len(loader),))
+    
     model.eval()
     
     if resume:
@@ -22,7 +37,7 @@ def test_model(model, dataset, epochs=10,
         epoch_start = 1
 
     for epoch in range(epoch_start, epochs+1):
-        data_loader = utils.get_data_loader(dataset, batch_size, cuda=cuda)
+        data_loader = utils.get_data_loader(dataset, 1, cuda=cuda)
         data_stream = tqdm(enumerate(data_loader, 1))
 
         for batch_index, (x, _) in data_stream:
@@ -40,29 +55,29 @@ def test_model(model, dataset, epochs=10,
             kl_divergence_loss = model.kl_divergence_loss(mean, logvar)
             total_loss = reconstruction_loss + kl_divergence_loss
 
-            # backprop gradients from the loss
-            total_loss.backward()
-            optimizer.step()
+            # # backprop gradients from the loss
+            # total_loss.backward()
+            # optimizer.step()
 
             # update progress
-            data_stream.set_description((
-                'epoch: {epoch} | '
-                'iteration: {iteration} | '
-                'progress: [{trained}/{total}] ({progress:.0f}%) | '
-                'loss => '
-                'total: {total_loss:.4f} / '
-                're: {reconstruction_loss:.3f} / '
-                'kl: {kl_divergence_loss:.3f}'
-            ).format(
-                epoch=epoch,
-                iteration=iteration,
-                trained=batch_index * len(x),
-                total=len(data_loader.dataset),
-                progress=(100. * batch_index / len(data_loader)),
-                total_loss=total_loss.data.item(),
-                reconstruction_loss=reconstruction_loss.data.item(),
-                kl_divergence_loss=kl_divergence_loss.data.item(),
-            ))
+            # data_stream.set_description((
+            #     'epoch: {epoch} | '
+            #     'iteration: {iteration} | '
+            #     'progress: [{trained}/{total}] ({progress:.0f}%) | '
+            #     'loss => '
+            #     'total: {total_loss:.4f} / '
+            #     're: {reconstruction_loss:.3f} / '
+            #     'kl: {kl_divergence_loss:.3f}'
+            # ).format(
+            #     epoch=epoch,
+            #     iteration=iteration,
+            #     trained=batch_index * len(x),
+            #     total=len(data_loader.dataset),
+            #     progress=(100. * batch_index / len(data_loader)),
+            #     total_loss=total_loss.data.item(),
+            #     reconstruction_loss=reconstruction_loss.data.item(),
+            #     kl_divergence_loss=kl_divergence_loss.data.item(),
+            # ))
 
             # if iteration % loss_log_interval == 0:
                 
@@ -86,13 +101,4 @@ def test_model(model, dataset, epochs=10,
             #     )
 
         # notify that we've reached to a new checkpoint.
-        print()
-        print()
-        print('#############')
-        print('# checkpoint!')
-        print('#############')
-        print()
-
-        # save the checkpoint.
-        utils.save_checkpoint(model, checkpoint_dir, epoch)
-        print()
+        

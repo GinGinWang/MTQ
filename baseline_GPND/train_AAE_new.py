@@ -75,18 +75,25 @@ def main(cl, total_classes, dataset_name):
     batch_size = 128
 
 
-    zsize = 64
     
     if dataset_name == 'cifar10':
         dataset = CIFAR10(path='data/')
         channels = 3
+        zsize = 64
+        lambda_e =10.0
+
     elif dataset_name == 'fmnist':
         dataset = FMNIST(path= 'data/')
         channels = 1 
+        zsize = 64
+        lambda_e = 2.0
+    
     elif dataset_name == 'mnist':
         dataset = MNIST(path = 'data/')
         channels = 1
-
+        zsize = 16 # 32
+        lambda_e = 2.0
+    
 
     dataset.train(cl)
     
@@ -225,7 +232,8 @@ def main(cl, total_classes, dataset_name):
             ZD_result = ZD(z.squeeze()).squeeze()
 
             y_real_z = torch.ones(1 if zd_merge else ZD_result.shape[0])
-            E_loss = BCE_loss(ZD_result, y_real_z) * 2.0
+            
+            E_loss = BCE_loss(ZD_result, y_real_z) * lambda_e
 
             Recon_loss = F.binary_cross_entropy(x_d, x)
 
@@ -258,6 +266,6 @@ def main(cl, total_classes, dataset_name):
 
 if __name__ == '__main__':
     
-    dataset_name = 'cifar10'
+    dataset_name = 'mnist'
     for i in range(10):
         main(i, 10, dataset_name)

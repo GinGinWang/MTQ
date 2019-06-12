@@ -16,6 +16,18 @@ from utils import normalize
 import torch.optim as optim
 from torch import save
 
+def load_checkpoint(model, model_dir):
+
+    # load the checkpoint.
+    checkpoint = torch.load(model_dir)
+    # print('=> loaded checkpoint of {name} from {path}'.format(
+    #     name=model.name, path=(path)
+    # ))
+
+    # load parameters and return the checkpoint's epoch and precision.
+    model.load_state_dict(checkpoint['state'])
+    epoch = checkpoint['epoch']
+    return epoch
 
 class OneClassResultHelper(object):
     """
@@ -45,10 +57,12 @@ class OneClassResultHelper(object):
         # type: () -> None
         """
         Actually performs tests.
+
         """
 
         # Prepare a table to show results
         oc_table = self.empty_table
+        resume = False
 
         # Set up container for metrics from all classes
         all_metrics = []
@@ -57,15 +71,20 @@ class OneClassResultHelper(object):
         for cl_idx, cl in enumerate(self.dataset.test_classes):
 
             # train model
-            loss = LSALoss(cpd_channels=100, lam=1)
-            optimizer = optim.Adam(self.model.parameters(), lr=10**-4)
+            loss = LSALoss(cpd_channels= 100, lam= 0.1)
+            optimizer = optim.Adam(self.model.parameters(), lr=10**-3)
 
             self.dataset.train(cl)
             trainloader = DataLoader(self.dataset, batch_size=256, shuffle=True, num_workers=1)
 
             print(f'Training {self.dataset.name}')
             
-            for epoch in range(200):  # loop over the dataset multiple times
+            if resume:
+                epoch_start = load_checkpoint(self.model, f"{checkpoint_dir}{cl}.pkl")
+            else:
+                epoch_start = 1
+
+            for epoch in range(epoch_start, 2000+1):  # loop over the dataset multiple times
                 for i, (x, y) in enumerate(trainloader):
                   # get the inputs
                   x = x.to('cuda')
@@ -81,13 +100,20 @@ class OneClassResultHelper(object):
                 # print statistics
                 print('[%d] loss: %.3f' % (epoch + 1, loss.total_loss))
 
-            save(self.model.state_dict(), f'checkpoints/{self.dataset.name}/{cl}.pkl')
+                if (epoch) % 100 == 0:
+                    save(self.model.state_dict(), f'checkpoints/{self.dataset.name}/{cl}_{epoch}.pkl')
+
+            # save(self.model.state_dict(), f'checkpoints/{self.dataset.name}/{cl}.pkl')
+            save({'state': self.model.state_dict(), 'epoch': epoch},f'checkpoints/{self.dataset.name}/{cl}.pkl')
+            
             print(f'Finished Training-{cl}')
 
 
 
             # Load the checkpoint
-            self.model.load_w(join(self.checkpoints_dir, f'{cl}.pkl'))
+            # self.model.load_w(join(self.checkpoints_dir, f'{cl}.pkl'))
+            load_checkpoint(self.model,join(self.checkpoints_dir, f'{cl}.pkl'))
+
             self.model.eval()
             # First we need a run on validation, to compute
             # normalizing coefficient of the Novelty Score (Eq.9)

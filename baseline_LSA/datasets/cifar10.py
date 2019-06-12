@@ -24,7 +24,7 @@ class CIFAR10(OneClassDataset):
         :param path: The folder in which to download CIFAR10.
         """
         super(CIFAR10, self).__init__()
-
+        self.name  = 'cifar10'
         self.path = path
 
         self.normal_class = None
@@ -47,6 +47,7 @@ class CIFAR10(OneClassDataset):
         self.mode = None
         self.length = None
         self.val_idxs = None
+        self.train_idxs = None
 
     def val(self, normal_class):
         # type: (int) -> None
@@ -63,6 +64,24 @@ class CIFAR10(OneClassDataset):
         self.val_idxs = self.shuffled_train_idx[int(0.9 * len(self.shuffled_train_idx)):]
         self.val_idxs = [idx for idx in self.val_idxs if self.train_split[idx][1] == self.normal_class]
         self.length = len(self.val_idxs)
+
+    def train(self, normal_class):
+        # type: (int) -> None
+        """
+        Sets CIFAR10 in validation mode.
+
+        :param normal_class: the class to be considered normal.
+        """
+        self.normal_class = int(normal_class)
+
+        # Update mode, indexes, length and transform
+        self.mode = 'train'
+        self.transform = self.val_transform
+        self.train_idxs = self.shuffled_train_idx[int(0.9 * len(self.shuffled_train_idx)):]
+        self.train_idxs = [idx for idx in self.train_idxs if self.train_split[idx][1] == self.normal_class]
+
+        self.length = len(self.train_idxs)
+
 
     def test(self, normal_class):
         # type: (int) -> None
@@ -99,6 +118,10 @@ class CIFAR10(OneClassDataset):
         elif self.mode == 'val':
             x, _ = self.train_split[self.val_idxs[i]]
             sample = x, x
+        elif self.mode == 'train':
+            x, _ = self.train_split[self.train_idxs[i]]
+            sample = x, x
+            
         else:
             raise ValueError
 

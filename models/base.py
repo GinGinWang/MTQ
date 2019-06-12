@@ -46,3 +46,4 @@ class BaseModule(nn.Module):
             else:
                 n_parameters += reduce(mul, p.shape)
         return int(n_parameters)
+    

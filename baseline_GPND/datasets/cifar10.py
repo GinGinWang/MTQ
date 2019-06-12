@@ -43,9 +43,9 @@ class CIFAR10(OneClassDataset):
         self.test_split = datasets.CIFAR10(self.path, train=False, download=True, transform=None)
 
         # Shuffle training indexes to build a training set (see train())
-        self.train_idx = np.arange(len(self.train_split))
-        np.random.shuffle(self.train_idx)
-        self.shuffled_train_idx = self.train_idx
+        train_idx = np.arange(len(self.train_split))
+        np.random.shuffle(train_idx)
+        self.shuffled_train_idx = train_idx
 
         # Shuffle testing indexes to build  a test set (see test())
         self.test_idx = np.arange(len(self.test_split))
@@ -70,41 +70,6 @@ class CIFAR10(OneClassDataset):
         self.test_idxs = None 
 
 
-    def val(self, normal_class):
-        # type: (int) -> None
-        """
-        Sets CIFAR10 in validation mode.
-
-        :param normal_class: the class to be considered normal.
-        """
-        self.normal_class = int(normal_class)
-
-        # Update mode, indexes, length and transform
-        self.mode = 'val'
-        self.transform = self.val_transform
-        # self.val_idxs = [idx for idx in self.train_idx if self.train_split[idx][1] == self.normal_class]
-        self.val_idxs = [idx for idx in self.train_idx if self.train_split[idx][1] == self.normal_class]
-        # self.val_idxs =self.val_idxs[int(0.9*len(self.val_idxs)):]
-        self.length = len(self.val_idxs)
-        print(f'Valset prepared, Num:{self.length}')
-
-
-    def val2(self, normal_class):
-        # type: (int) -> None
-        """
-        Sets CIFAR10 in validation mode.
-
-        :param normal_class: the class to be considered normal.
-        """
-        # Update mode, indexes, length and transform
-        self.normal_class = int(normal_class)
-        self.mode = 'val2'
-        self.transform = self.test_transform
-        self.val_idxs = self.shuffled_train_idx[int(0.9 * len(self.shuffled_train_idx)):]
-        
-        self.length = len(self.val_idxs)
-        print(f'Val2 Set prepared, Num:{self.length}')
-#--------------------------------------------------------------------
     def train(self, normal_class):
         # type: (int) -> None
         """
@@ -120,16 +85,16 @@ class CIFAR10(OneClassDataset):
         self.transform = self.val_transform
         
         # training examples are all normal
-        self.train_idxs = [idx for idx in self.train_idx if self.train_split[idx][1] == self.normal_class]
+        self.train_idxs = [idx for idx in self.shuffled_train_idx if self.train_split[idx][1] == self.normal_class]
 
-        self.train_idxs = self.train_idxs[0:int(0.9*len(self.train_idxs))]
+        # self.train_idxs = self.train_idxs[0:int(0.9*len(self.train_idxs))]
 
         self.length = len(self.train_idxs)
         # print 
         print(f"Training Set prepared, Num:{self.length}")
 #---------------------------------------------------------------------
 
-    def test(self, normal_class, novel_ratio = 1):
+    def test(self, normal_class):
         # type: (int) -> None
         """
         Sets MNIST in test mode.
@@ -142,31 +107,11 @@ class CIFAR10(OneClassDataset):
         # Update mode, length and transform
         self.mode = 'test'
         self.transform = self.test_transform
-
-        if novel_ratio == 1:
-            # testing examples (norm)
-            self.length = len(self.test_split)
-            normal_idxs = [idx for idx in self.test_idx if self.test_split[idx][1] == self.normal_class]
-            normal_num = len(normal_idxs)
-            novel_num = self.length - normal_num
-        else:
-            # create test examples (normal)
-            self.test_idxs = [idx for idx in self.test_idx if self.test_split[idx][1] == self.normal_class]
-
-            normal_num = len(self.test_idxs)
-
-            # add test examples (unnormal)
-            novel_num  = int(normal_num/(1-novel_ratio) - normal_num)
-            
-            novel_idxs = [idx for idx in self.test_idx if self.test_split[idx][1] != self.normal_class]
-
-            novel_idxs = novel_idxs[0:novel_num]
-
-            # combine normal and novel part
-            self.test_idxs = self.test_idxs+novel_idxs
-            
-            # testing examples (norm)
-            self.length = len(self.test_idxs)
+        # testing examples (norm)
+        self.length = len(self.test_split)
+        normal_idxs = [idx for idx in self.test_idx if self.test_split[idx][1] == self.normal_class]
+        normal_num = len(normal_idxs)
+        novel_num = self.length - normal_num
 
         print(f"Test Set prepared, Num:{self.length},Novel_num:{novel_num},Normal_num:{normal_num}")
 
@@ -190,13 +135,7 @@ class CIFAR10(OneClassDataset):
             x, y = self.test_split[i]
             sample = x, int(y == self.normal_class)
 
-        elif self.mode == 'val':
-            x, _ = self.train_split[self.val_idxs[i]]
-            sample = x, x
-        elif self.mode == 'val2':
-            x, y = self.train_split[i]
-            sample = x, int(y == self.normal_class)
-
+        
         elif self.mode == 'train':
             x, _ = self.train_split[self.train_idxs[i]]
             sample = x, x

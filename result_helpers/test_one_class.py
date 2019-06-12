@@ -15,6 +15,8 @@ from models.loss_functions import *
 from datasets.utils import novelty_score
 from datasets.utils import normalize
 
+from torch.autograd import Variable
+
 from result_helpers.utils import *
 
 from sklearn.metrics import roc_auc_score
@@ -76,6 +78,9 @@ class OneClassTestHelper(object):
         # encoder + decoder
         if self.name in ['LSA','AAE']:
             self.loss =LSALoss(cpd_channels=100)
+        
+        elif self.name =='VAE':
+            self.loss = VAELoss()
         # encoder + estimator+ decoder
         elif self.name == 'LSA_EN':
             self.loss = LSAENLoss(cpd_channels=100,lam=lam)
@@ -215,10 +220,9 @@ class OneClassTestHelper(object):
             tot_loss = self.loss(z, z_dist)
         
         elif self.name == 'VAE':
-            (mean, logvar), x_reconstructed = self.model(x)
-            recloss = self.reconstruction_loss(x_reconstructed,x)
-            klloss =  self.kl_divergence_loss(mean,logvar)
-            tot_loss = recloss + klloss
+            (mean, logvar), x_r = self.model(x)
+            tot_loss = self.loss(x, x_r, mean, logvar,average)
+
         return tot_loss
 
     def load_pretrained_model(self, model_name,cl):
@@ -301,7 +305,9 @@ class OneClassTestHelper(object):
 
             for batch_idx, (x , y) in enumerate(loader):
                 
+                x = Variable(x)
                 x = x.to(self.device)
+
                 # self.model.zero_grad()
                 self.optimizer.zero_grad()
                 
@@ -375,7 +381,7 @@ class OneClassTestHelper(object):
                 
                 epoch_loss +=  self.loss.total_loss.item()*x.shape[0]
 
-                if self.name in ['LSA_EN','LSA_SOS','LSA_MAF','AAE_SOS']:
+                if self.name in ['LSA_EN','LSA_SOS','LSA_MAF','AAE_SOS','VAE']:
                     epoch_recloss += self.loss.reconstruction_loss.item()*x.shape[0]
                     epoch_nllk +=  self.loss.autoregression_loss.item()*x.shape[0]
 
@@ -386,7 +392,7 @@ class OneClassTestHelper(object):
             pbar.close()
 
             # print epoch result
-            if self.name in ['LSA_EN','LSA_SOS','LSA_MAF','AAE_SOS']:
+            if self.name in ['LSA_EN','LSA_SOS','LSA_MAF','AAE_SOS','VAE']:
                 
                 print('{}Train Epoch-{}: {}\tLoss: {:.6f}\tRec: {:.6f}\tNllk: {:.6f}'.format(self.name,
                         self.dataset.normal_class, epoch, epoch_loss/epoch_size, epoch_recloss/epoch_size, epoch_nllk/epoch_size))
@@ -426,7 +432,7 @@ class OneClassTestHelper(object):
             with torch.no_grad():
                 loss =self. _eval(x,False)
 
-                if self.name in ['LSA_EN','LSA_MAF','LSA_SOS']:
+                if self.name in ['LSA_EN','LSA_MAF','LSA_SOS','VAE']:
                     val_nllk += self.loss.autoregression_loss.sum().item()
                     val_rec += self.loss.reconstruction_loss.sum().item()
                     # keep lambda = 1
@@ -434,7 +440,7 @@ class OneClassTestHelper(object):
                 else:
                      val_loss += self.loss.total_loss.sum().item() 
                                     
-        if self.name in ['LSA_EN','LSA_MAF','LSA_SOS']:
+        if self.name in ['LSA_EN','LSA_MAF','LSA_SOS','VAE']:
             print('Val_loss:{:.6f}\t Rec: {:.6f}\t Nllk: {:.6f}'.format(val_loss/epoch_size, val_rec/epoch_size, val_nllk/epoch_size))
         else:
             print('Val_loss:{:.6f}\t'.format(val_loss/epoch_size))
@@ -619,14 +625,8 @@ class OneClassTestHelper(object):
                     
                 if self.name in ['LSA_MAF','LSA_SOS','LSA_EN','LSA_QT',
                 'EN','SOS','MAF',
-                'LSA_ET_QT','LSA_ET_EN','LSA_ET_MAF','LSA_ET_SOS']:    
+                'LSA_ET_QT','LSA_ET_EN','LSA_ET_MAF','LSA_ET_SOS','VAE']:    
                     sample_llk[i*bs:i*bs+bs] = - self.loss.autoregression_loss.cpu().numpy()
-                
-
-                if self.name  == 'VAE':
-
-                    sample_nrec[i*bs:i*bs+bs] = - self.reconstruction_loss.cpu().numpy()
-                    sample_llk[i*bs:i*bs+bs] = - self.autoregression_loss.cpu().numpy()
                 
                 if quantile_flag:
                     sample_q1[i*bs:i*bs+bs] = q1
@@ -692,7 +692,7 @@ class OneClassTestHelper(object):
             roc_auc_score(sample_y, sample_ns)    #
             ]
 
-            if self.name in ['LSA_EN','LSA_SOS','LSA_MAF','LSA_QT']:
+            if self.name in ['LSA_EN','LSA_SOS','LSA_MAF','LSA_QT','VAE']:
                 this_class_metrics.append(
                 roc_auc_score(sample_y, sample_llk))
                 
@@ -708,7 +708,7 @@ class OneClassTestHelper(object):
 
 
             if self.name in ['LSA_EN','LSA_SOS','LSA_MAF','LSA_QT',
-            'LSA_ET_EN','LSA_ET_SOS','LSA_ET_MAF','LSA_ET_QT','SOS']:
+            'LSA_ET_EN','LSA_ET_SOS','LSA_ET_MAF','LSA_ET_QT','SOS','VAE']:
 
                 this_class_metrics.append(llk1)
                 this_class_metrics.append(llk2)
@@ -770,12 +770,12 @@ class OneClassTestHelper(object):
                     tot_loss = self._eval(x,average = False,quantile_flag = quantile_flag)
                 
             # score larger-->normal data
-            if self.name in ['LSA','LSA_MAF','LSA_SOS','LSA_EN','LSA_QT']:
+            if self.name in ['LSA','LSA_MAF','LSA_SOS','LSA_EN','LSA_QT','VAE']:
                 sample_nrec[i*bs:i*bs+bs] = - self.loss.reconstruction_loss.cpu().numpy()
             
             if self.name in ['LSA_MAF','LSA_SOS','LSA_EN','LSA_QT',
             'LSA_ET_EN','LSA_ET_MAF','LSA_ET_SOS','LSA_ET_QT',
-            'EN','SOS','MAF']:    
+            'EN','SOS','MAF','VAE']:    
                 sample_llk[i*bs:i*bs+bs] = - self.loss.autoregression_loss.cpu().numpy()
 
             sample_llk = modify_inf(sample_llk)
@@ -792,7 +792,7 @@ class OneClassTestHelper(object):
         :return: table to be filled with auroc metrics.
         """
         table = PrettyTable()
-        if self.name in ['LSA_MAF','LSA_SOS','LSA_EN']:
+        if self.name in ['LSA_MAF','LSA_SOS','LSA_EN','VAE']:
 
             if self.quantile_flag:
                 table.field_names = ['Class', 'AUROC-NS', 'AUROC-LLK', 'AUROC-REC','PRCISION','F1','RECALL','llk1','llk2'
@@ -818,80 +818,5 @@ class OneClassTestHelper(object):
         
 
         # format
-        table.float_format = '0.4'
+        table.float_format = '0.3'
         return table
-
-
-
-# compute best threshold 
-    def compute_threshold(self, cl):
-
-        dataset = self.dataset
-        dataset.val2(cl)
-
-        loader = DataLoader(dataset)
-
-        sample_score = np.zeros(shape=(len(loader),))
-        ytrue = np.zeros(shape=(len(loader),))
-        for i, (x, y) in enumerate(loader):
-            x = x.to(self.device)
-
-            if self.name == 'LSA':
-                x_r = self.model(x)
-                self.loss.lsa(x, x_r)
-
-            elif self.name == 'LSA_EN':
-                
-                x_r, z, z_dist = self.model(x)
-                self.loss.lsa_en(x, x_r, z, z_dist)
-            
-            elif self.name in ['LSA_SOS', 'LSA_MAF']:
-                x_r, z, s, log_jacob_T_inverse = self.model(x)
-                self.loss.lsa_flow(x,x_r,s,log_jacob_T_inverse)
-            
-            elif self.name in ['SOS', 'MAF']:
-                s, log_jacob_T_inverse = self.model(x)
-                self.loss.flow(s,log_jacob_T_inverse)
-            
-            elif self.name == 'EN':
-                z_dist = model(x)
-                self.loss.en(z_dist)
-
-            sample_score[i] = - self.loss.total_loss # large score -- normal
-            ytrue[i] =y.numpy()
-
-        best_e = 0
-        best_f = 0
-        best_e_ = 0
-        best_f_ = 0
-
-        # real label y  normal 0,  novel 1
-
-        # predict score  sample_score 
-        # predict label y_hat
-        minS = sample_score.min() - 0.1
-        maxS = sample_score.max() + 0.1
-
-        for e in np.arange(minS, maxS, 0.1):
-
-            y_hat = np.less(sample_score, e) #  normal 0  novel1
-            # # TP Predict novel as novel y =1, y_hat =1
-            true_positive = np.sum(np.logical_and(y_hat, ytrue))
-            # # FP Predict normal as novel y = 0, y_hat = 1
-            # false_positive = np.sum(np.logical_and(y_hat, logical_not(y)))
-            # # PN Predict novel as normal y =1, y_hat = 0
-            # false_negative = np.sum(np.logical_and(np.logical_not(y_hat),y))
-            if true_positive > 0:
-
-                f1 = f1_score(ytrue, y_hat)
-                if f1 > best_f:
-                    best_f = f1
-                    best_e = e
-                if f1 >= best_f_:
-                    best_f_ = f1
-                    best_e_ = e
-
-        best_e = (best_e + best_e_) / 2.0
-
-        print("Best e: ", best_e)
-        return best_e

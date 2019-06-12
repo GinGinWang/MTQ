@@ -159,7 +159,7 @@ def main():
             label=args.dataset,
             input_shape = dataset.shape,
             kernel_num= 128,
-            z_size= 64,
+            z_size = 64,
             ).cuda()
         else:
             raise ValueError('Unknown Autoencoder')

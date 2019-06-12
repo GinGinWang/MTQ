@@ -1,18 +1,42 @@
+from functools import reduce
+from operator import mul
+from typing import Tuple
+
 import torch
+import torch.nn as nn
+
+from models.base import BaseModule
+from models.blocks_2d import DownsampleBlock
+from models.blocks_2d import ResidualBlock
+from models.blocks_2d import UpsampleBlock
 from torch.autograd import Variable
-from torch import nn
+
+import torch.nn.functional as F
 
 
-class VAE(nn.Module):
-    def __init__(self, label, image_size, channel_num, kernel_num, z_size, cl =0):
-        # configurations
-        super().__init__()
+class VAE(BaseModule):
+    """
+    LSA model for MNIST one-class classification.
+    """
+ 
+    def __init__(self, label, input_shape, kernel_num, z_size):
+        
+        super(VAE, self).__init__()
+
+
         self.label = label
-        self.image_size = image_size
-        self.channel_num = channel_num
+        c,w,h = input_shape
+        image_size = w
+        channel_num = c
         self.kernel_num = kernel_num
-        self.z_size = z_size
-        self.cl = cl
+
+        # print(f"image_size:{image_size}")
+        
+        self.name = 'VAE'
+        self.recloss = 0
+        self.klloss = 0
+
+
 
         # encoder
         self.encoder = nn.Sequential(
@@ -24,6 +48,7 @@ class VAE(nn.Module):
         # encoded feature's size and volume
         self.feature_size = image_size // 8
         self.feature_volume = kernel_num * (self.feature_size ** 2)
+        # print (f"volume{self.feature_volume}")
 
         # q
         self.q_mean = self._linear(self.feature_volume, z_size, relu=False)
@@ -40,10 +65,12 @@ class VAE(nn.Module):
             nn.Sigmoid()
         )
 
+
+
     def forward(self, x):
         # encode x
         encoded = self.encoder(x)
-
+        # print(encoded.shape)
         # sample latent code z from q given x.
         mean, logvar = self.q(encoded)
         z = self.z(mean, logvar)
@@ -55,16 +82,18 @@ class VAE(nn.Module):
 
         # reconstruct x from z
         x_reconstructed = self.decoder(z_projected)
-        
+
         # return the parameters of distribution of q given x and the
         # reconstructed image.
         return (mean, logvar), x_reconstructed
 
-    # ==============
+    
+    #    
     # VAE components
     # ==============
 
     def q(self, encoded):
+
         unrolled = encoded.view(-1, self.feature_volume)
         return self.q_mean(unrolled), self.q_logvar(unrolled)
 
@@ -75,32 +104,23 @@ class VAE(nn.Module):
             Variable(torch.randn(std.size()))
         )
         return eps.mul(std).add_(mean)
-
-    def reconstruction_loss(self, x_reconstructed, x):
-        return nn.BCELoss(size_average=False)(x_reconstructed, x) / x.size(0)
-
-    def kl_divergence_loss(self, mean, logvar):
-        return ((mean**2 + logvar.exp() - 1 - logvar) / 2).sum() / mean.size(0)
-
     # =====
     # Utils
     # =====
 
-    @property
-    def name(self):
-        return (
-            'VAE'
-            '-{cl}c'
-            '-{kernel_num}k'
-            '-{label}'
-            '-{channel_num}x{image_size}x{image_size}'
-        ).format(
-            label=self.label,
-            cl= self.cl,
-            kernel_num=self.kernel_num,
-            image_size=self.image_size,
-            channel_num=self.channel_num,
-        )
+    # @property
+    # def name(self):
+    #     return (
+    #         'VAE'
+    #         '-{kernel_num}k'
+    #         '-{label}'
+    #         '-{channel_num}x{image_size}x{image_size}'
+    #     ).format(
+    #         label=self.label,
+    #         kernel_num=self.kernel_num,
+    #         image_size=self.image_size,
+    #         channel_num=self.channel_num,
+    #     )
 
     def sample(self, size):
         z = Variable(

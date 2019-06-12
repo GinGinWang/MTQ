@@ -3,6 +3,8 @@ from torch.autograd import Variable
 from tqdm import tqdm
 import utils
 import visual
+from torch.utils.data import DataLoader
+
 
 
 def train_model(model, dataset, epochs=10,
@@ -19,6 +21,7 @@ def train_model(model, dataset, epochs=10,
         model.parameters(), lr=lr,
         weight_decay=weight_decay,
     )
+    dataset.train(0)
 
     if resume:
         epoch_start = utils.load_checkpoint(model, checkpoint_dir)
@@ -26,11 +29,12 @@ def train_model(model, dataset, epochs=10,
         epoch_start = 1
 
     for epoch in range(epoch_start, epochs+1):
-        data_loader = utils.get_data_loader(dataset, batch_size, cuda=cuda)
+        # data_loader = utils.get_data_loader(dataset, batch_size, cuda=cuda)
+        data_loader = DataLoader(dataset, batch_size = batch_size,shuffle=True)
+        
         data_stream = tqdm(enumerate(data_loader, 1))
 
-        for batch_index, (x, _) in data_stream:
-            
+        for batch_index, (x, _) in data_stream:            
             # where are we?
             iteration = (epoch-1)*(len(dataset)//batch_size) + batch_index
 
@@ -90,13 +94,16 @@ def train_model(model, dataset, epochs=10,
             #     )
 
         # notify that we've reached to a new checkpoint.
-        print()
-        print()
-        print('#############')
-        print('# checkpoint!')
-        print('#############')
-        print()
+        if (epoch + 1) % 20 ==0:
+            print()
+            print()
+            print('#############')
+            print('# checkpoint!')
+            print('#############')
+            print()
+            # save the checkpoint.
+            utils.save_checkpoint(model, checkpoint_dir, epoch)
+            print()
 
-        # save the checkpoint.
-        utils.save_checkpoint(model, checkpoint_dir, epoch)
-        print()
+
+    

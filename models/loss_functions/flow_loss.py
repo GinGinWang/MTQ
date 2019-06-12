@@ -13,7 +13,7 @@ class FlowLoss(BaseModule):
     def __init__(self):
         super(FlowLoss, self).__init__()
 
-    def forward(self, s, log_jacob,size_average=True):
+    def forward(self, s, log_jacob,size_average=True, quantile_flag = False):
         '''
         Args:
             s, source data s~ N(0,1) T(s) = z
@@ -28,6 +28,11 @@ class FlowLoss(BaseModule):
         log_jacob_d = log_jacob
         log_probs = (-0.5 * s_d.pow(2) - 0.5 * math.log(2 * math.pi)).sum(
             -1, keepdim=True)
+        
+        if quantile_flag:
+            log_probs = (-0.5 * log_probs.pow(2) - 0.5 * math.log(2 * math.pi)).sum(
+            -1, keepdim=True)
+            
         # formula (3)
         loss = -(log_probs + log_jacob_d).sum(-1,keepdim=True)
         

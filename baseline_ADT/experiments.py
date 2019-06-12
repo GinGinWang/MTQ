@@ -22,10 +22,15 @@ from models.encoders_decoders import conv_encoder, conv_decoder
 from models import dsebm, dagmm, adgan
 import keras.backend as K
 
+
+import argparse
+from argparse import Namespace
+
 RESULTS_DIR = '/home/jj27wang/novelty-detection/NovelDect_SoS/SoSLSA/baseline_ADT/results/'
 
 
 def _transformations_experiment(dataset_load_fn, dataset_name, single_class_ind, gpu_q):
+    print("Transformations Experiments")
     gpu_to_use = gpu_q.get()
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_to_use
 
@@ -37,6 +42,7 @@ def _transformations_experiment(dataset_load_fn, dataset_name, single_class_ind,
     else:
         transformer = Transformer(8, 8)
         n, k = (10, 4)
+
     mdl = create_wide_residual_network(x_train.shape[1:], transformer.n_transforms, n, k)
     mdl.compile('adam',
                 'categorical_crossentropy',
@@ -353,19 +359,20 @@ def _adgan_experiment(dataset_load_fn, dataset_name, single_class_ind, gpu_q):
 def run_experiments(load_dataset_fn, dataset_name, q, n_classes):
     n_runs = 1
     
+    # if alg_name =='raw-oc-svm':
     # Raw OC-SVM
     # for c in range(n_classes):
     #     _raw_ocsvm_experiment(load_dataset_fn, dataset_name, c)
 
+    # elif alg_name == 'cae-oc-svm':
     # CAE OC-SVM
-    # processes = [Process(target=_cae_ocsvm_experiment,
-    #                      args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
-    # for p in processes:
-    #     p.start()
-    #     p.join()
-
-
-    # # DSEBM
+    processes = [Process(target=_cae_ocsvm_experiment,
+                         args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
+    for p in processes:
+        p.start()
+        p.join()
+    # # elif alg_name == 'dsebm':
+    #     # DSEBM
     # for _ in range(n_runs):
     #     processes = [Process(target=_dsebm_experiment,
     #                          args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
@@ -374,7 +381,8 @@ def run_experiments(load_dataset_fn, dataset_name, q, n_classes):
     #     for p in processes:
     #         p.join()
 
-    # # DAGMM
+    # # elif alg_name == 'dagmm':
+    #     # DAGMM
     # for _ in range(n_runs):
     #     processes = [Process(target=_dagmm_experiment,
     #                          args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
@@ -382,9 +390,10 @@ def run_experiments(load_dataset_fn, dataset_name, q, n_classes):
     #         p.start()
     #     for p in processes:
     #         p.join()
+    # # elif alg_name == 'gt':
+    #     # Transformations
     
-
-    # Transformations
+    # print("gt")
     # for _ in range(n_runs):
     #     processes = [Process(target=_transformations_experiment,
     #                          args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
@@ -397,17 +406,16 @@ def run_experiments(load_dataset_fn, dataset_name, q, n_classes):
     #             p.start()
     #         for p in processes:
     #             p.join()
+        
+    # # elif alg_name == 'adgan':
+    #     # ADGAN
 
-
-    # ADGAN
-    processes = [Process(target=_adgan_experiment,
-                         args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
-    for p in processes:
-        p.start()
-    for p in processes:
-        p.join()
-
-    
+    # processes = [Process(target=_adgan_experiment,
+    #                      args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
+    # for p in processes:
+    #     p.start()
+    # for p in processes:
+    #     p.join()
     
 
 def create_auc_table(metric='roc_auc'):
@@ -442,8 +450,31 @@ def create_auc_table(metric='roc_auc'):
                                  for method_name in results[ds_name][sc_name]})
                 writer.writerow(row_dict)
 
+def parse_arguments():
+    # type: () -> Namespace
+    """
+    Argument parser.
 
-if __name__ == '__main__':
+    :return: the command line arguments.
+    """
+    parser = argparse.ArgumentParser(description = 'GT experiments_list',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    
+    # autoencoder name 
+    parser.add_argument('--alg_name', type=str,
+                        help='algorithm for novelty-detection'
+                        'Choose among `cae-oc-svm`,`raw-oc-svm`,`gt`,`dagmm`,`adgan`,`dsebm`', metavar='')
+
+    return parser.parse_args()
+
+
+
+
+def main():
+
+    # args = parse_arguments()
+    # print (args)
 
     freeze_support()
     N_GPUS = 1
@@ -454,15 +485,19 @@ if __name__ == '__main__':
 
     experiments_list = [
         # (load_cifar100, 'cifar100', 20),
-        # (load_fashion_mnist, 'fashion-mnist', 10),
-        # (load_mnist, 'fashion-mnist', 10),
-        (load_cifar10, 'cifar10', 10)
+        (load_fashion_mnist, 'fashion-mnist', 10),
+        # (load_mnist, 'mnist', 10),
+        # (load_cifar10, 'cifar10', 10)
         # (load_cats_vs_dogs, 'cats-vs-dogs', 2),
     ]
 
     for data_load_fn, dataset_name, n_classes in experiments_list:
         run_experiments(data_load_fn, dataset_name, q, n_classes)
-    create_auc_table()
     
+    create_auc_table()
 
+
+if __name__ == '__main__':
+    main() 
+    
 

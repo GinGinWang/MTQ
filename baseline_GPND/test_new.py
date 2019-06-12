@@ -104,6 +104,7 @@ def main( cl, dataset_name):
     if dataset_name == 'cifar10':
         dataset = CIFAR10(path='data/')
         channels = 3
+        z_size = 256
     elif dataset_name == 'fmnist':
         dataset = FMNIST(path= 'data/')
         channels = 1 
@@ -271,7 +272,7 @@ def main( cl, dataset_name):
         print("AUC ", auc)
 
 
-        with open(os.path.join(f"results_{dataset.name}.txt"), "a") as file:
+        with open(os.path.join(f"results_{dataset.name}_z{z_size}.txt"), "a") as file:
             file.write(
                 "Class: %d\n AUC: %f\n " %
                 (cl, auc))
@@ -284,7 +285,7 @@ def main( cl, dataset_name):
 if __name__ == '__main__':
     
     result = []
-    dataset_name = 'mnist'
+    dataset_name = 'cifar10'
     for i in range(0,10):
         print(f"Class{i}")
         result.append(main(i,dataset_name))
