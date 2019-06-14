@@ -71,6 +71,9 @@ def load_cifar100(label_mode='coarse'):
     X_test = normalize_minus1_1(cast_to_floatx(X_test))
     return (X_train, y_train), (X_test, y_test)
 
+def save_transformation(tffeatures, file_path):
+    
+    np.save(file_path, tffeatures)
 
 def save_roc_pr_curve_data(scores, labels, file_path):
     scores = scores.flatten()

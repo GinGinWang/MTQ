@@ -33,8 +33,10 @@ def create_dir(dataset, cd, pretrained, fixed, num_blocks,hidden_size, estimator
         dirName = f'checkpoints/{dataset}/combined{cd}/Ptr{pretrained}/Fix{fixed}/'
     else:
         dirName = f'checkpoints/{dataset}/combined{cd}/Ptr{pretrained}/'
+    
     if estimator == 'SOS':
         dirName = f'{dirName}b{num_blocks}h{hidden_size}/'
+    
     if noise >0:
         dirName = f'checkpoints/noise_{noise}/'
     if not os.path.exists(dirName):
@@ -43,12 +45,13 @@ def create_dir(dataset, cd, pretrained, fixed, num_blocks,hidden_size, estimator
 
     return dirName
 
-def create_file_dir(mulobj,model_name,dataset,cd,pretrained,fixed,score_normed,novel_ratio,num_blocks,hidden_size,lam, add,checkpoint):
+def create_file_dir(mulobj,model_name,dataset,cd,pretrained,fixed,score_normed,novel_ratio,num_blocks,hidden_size,lam, quantile_flag,checkpoint):
 
     if mulobj:
-        dirName = f"results/Mul_{model_name}_{dataset}_cd{cd}_ptr{pretrained}_fix{fixed}_nml{score_normed}_nlr{novel_ratio}_b{num_blocks}_h{hidden_size}_lam{lam}_add{add}"
+        dirName = f"results/Mul_{model_name}_{dataset}_cd{cd}_ptr{pretrained}_fix{fixed}_nml{score_normed}_nlr{novel_ratio}_b{num_blocks}_h{hidden_size}_lam{lam}_q{quantile_flag}"
     else:
-       dirName = f"results/{model_name}_{dataset}_cd{cd}_ptr{pretrained}_fix{fixed}_nml{score_normed}_nlr{novel_ratio}_b{num_blocks}_h{hidden_size}_lam{lam}_add{add}"
+       dirName = f"results/{model_name}_{dataset}_cd{cd}_ptr{pretrained}_fix{fixed}_nml{score_normed}_nlr{novel_ratio}_b{num_blocks}_h{hidden_size}_lam{lam}_q{quantile_flag}"
+
     if (checkpoint == None):
         dirName= f"{dirName}.txt"
     else:
@@ -71,6 +74,7 @@ def main():
     # prepare dataset in train mode
     if args.dataset == 'mnist':
         dataset = MNIST(path='data/MNIST', n_class = args.n_class, select = args.select)
+    
     elif args.dataset == 'fmnist':
         dataset = FMNIST(path='data/FMNIST', n_class = args.n_class, select = args.select)
 
@@ -165,7 +169,7 @@ def main():
             raise ValueError('Unknown Autoencoder')
     
     # # set to Test mode
-    file_dirName = create_file_dir(args.mulobj,model.name,args.dataset,args.cd,args.pretrained,args.fixed,args.score_normed,args.novel_ratio,args.num_blocks,args.hidden_size,args.lam, args.add, args.checkpoint)
+    file_dirName = create_file_dir(args.mulobj,model.name,args.dataset,args.cd,args.pretrained,args.fixed,args.score_normed,args.novel_ratio,args.num_blocks,args.hidden_size,args.lam, args.qt, args.checkpoint)
 
     helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, lam = args.lam, checkpoints_dir= dirName, output_file= file_dirName,device = device, batch_size = args.batch_size, pretrained= args.pretrained, trainflag= args.trainflag, lr = args.lr, epochs=args.epochs, before_log_epochs = args.before_log_epochs,pretrained_model= args.premodel,fixed=args.fixed, mulobj=args.mulobj, add = args.add, quantile_flag= args.qt,checkpoint = args.checkpoint, noise= args.noise)
 

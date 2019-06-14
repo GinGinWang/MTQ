@@ -61,14 +61,14 @@ class OneClassTestHelper(object):
         self.batch_size = batch_size
         self.lam = lam
 
-        self.noise = noise 
-
-
+        self.noise = noise
+        self.mode = 'train'
         # control novel ratio in test sets.
         self.novel_ratio = novel_ratio
 
         self.trainflag = trainflag # whether need train
-        self.quantile_flag = quantile_flag # whether use quantile
+
+        self.quantile_flag = quantile_flag # whether use quantile loss 
         self.add = add # whether directly use two pretrained model
         self.mulobj= mulobj# whether use mul-gradient
         self.score_normed = score_normed # normalized novelty score
@@ -84,10 +84,13 @@ class OneClassTestHelper(object):
         # encoder + estimator+ decoder
         elif self.name == 'LSA_EN':
             self.loss = LSAENLoss(cpd_channels=100,lam=lam)
+        
         elif self.name == 'LSA_SOS':
-            self.loss =LSASOSLoss(lam)
+            self.loss =LSASOSLoss(lam= self.lam, quantile_flag = self.quantile_flag)
+        
         elif self.name == 'AAE_SOS':
             self.loss =LSASOSLoss(lam)
+        
         elif self.name == 'LSA_MAF':
             self.loss =LSAMAFLoss(lam)
         elif self.name == 'LSA_QT':
@@ -104,7 +107,7 @@ class OneClassTestHelper(object):
             self.loss =LSAETQTLoss() 
         # only estimator
         elif self.name == 'SOS':
-            self.loss =SOSLoss()
+            self.loss = SOSLoss(quantile_flag = self.quantile_flag)
         else:
             ValueError("Wrong Model Name")
         
@@ -138,24 +141,16 @@ class OneClassTestHelper(object):
         checkpoint = self.checkpoint 
         lam     = self.lam 
         
-        if self.mulobj:
-            self.model_dir = join(checkpoints_dir,f'{cl}{name}_mul.pkl')
-            self.best_model_dir = join(checkpoints_dir,f'{cl}{name}_mul_b.pkl')
-            self.double_best_model_dir = join(checkpoints_dir,f'{cl}{name}_mul_bb.pkl')
-            self.result_dir = join(checkpoints_dir,f'{cl}{name}_mul_history.npy')
-        else:
-            self.model_dir = join(checkpoints_dir,f'{cl}{name}_{lam}.pkl')
-            self.best_model_dir = join(checkpoints_dir,f'{cl}{name}_{lam}_b.pkl')
-            self.double_best_model_dir = join(checkpoints_dir,f'{cl}{name}_{lam}_bb.pkl')
-            self.result_dir = join(checkpoints_dir,f'{cl}{name}_{lam}_history.npy')
+        self.model_dir = join(checkpoints_dir,f'{cl}{name}_mul{self.mulobj}_q{self.quantile_flag}.pkl')
+        self.best_model_dir = join(checkpoints_dir,f'{cl}{name}_mul{self.mulobj}_q{self.quantile_flag}_b.pkl')
+        self.rec_best_model_dir = join(checkpoints_dir,f'{cl}{name}_mul{self.mulobj}_q{self.quantile_flag}_bb.pkl')
+        self.result_dir = join(checkpoints_dir,f'{cl}{name}_mul{self.mulobj}_q{self.quantile_flag}_history.npy')
     
         if (not (self.checkpoint ==None)) and (not self.trainflag):
                 # select one epoch to test
-                if self.mulobj:
-                    self.model_dir = join(checkpoints_dir,f'{cl}{self.name}_mul_{checkpoint}.pkl')
-                else:
-                    self.model_dir = join(checkpoints_dir,f'{cl}{self.name}_{lam}_{checkpoint}.pkl')
-        
+            self.model_dir = join(checkpoints_dir,f'{cl}{self.name}_mul{self.mulobj}_q{self.quantile_flag}_{checkpoint}.pkl')
+                
+    
     def _eval_quantile(self, s, method_name='n_cdf'):
     #  from s~N(R^d) to u~(0,1)^d
     #  u_i = phi(s_i), where phi is the cdf of N(0,1)
@@ -188,7 +183,7 @@ class OneClassTestHelper(object):
 
         return q1, q2, qinf
     
-    def _eval(self, x, average = True, quantile_flag = False):
+    def _eval(self, x, average = True):
 
         if self.name in ['LSA','AAE']:
             # ok
@@ -197,24 +192,19 @@ class OneClassTestHelper(object):
 
         elif self.name == 'LSA_EN':
             x_r, z, z_dist = self.model(x)
-            tot_loss = self.loss(x, x_r, z, z_dist,average)
+            tot_loss = self.loss(x, x_r, z, z_dist, average)
 
 
         elif self.name in ['LSA_SOS', 'LSA_MAF','AAE_SOS']:
             x_r, z, s, log_jacob_T_inverse = self.model(x)
-            tot_loss = self.loss(x, x_r, s, log_jacob_T_inverse,average)
-            # compute quantiles
-            if quantile_flag:
-                q1,q2,qinf = self._eval_quantile(s)
-                return tot_loss, q1, q2,qinf
+            tot_loss = self.loss(x, x_r, s, z, log_jacob_T_inverse, average)
 
+            # compute quantiles
+            
         elif self.name in ['SOS', 'MAF','LSA_ET_MAF','LSA_ET_SOS']:
             s, log_jacob_T_inverse = self.model(x)
-            tot_loss = self.loss(s, log_jacob_T_inverse,average)
-            if quantile_flag:
-                q1,q2,qinf = self._eval_quantile(s)
-                return tot_loss, q1,q2,qinf
-
+            tot_loss = self.loss(s, x, log_jacob_T_inverse, average)
+            
         elif self.name in ['LSA_ET_EN']:
             z, z_dist = self.model(x)
             tot_loss = self.loss(z, z_dist)
@@ -223,7 +213,11 @@ class OneClassTestHelper(object):
             (mean, logvar), x_r = self.model(x)
             tot_loss = self.loss(x, x_r, mean, logvar,average)
 
-        return tot_loss
+        if self.mode == 'test':
+            q1, q2, qinf = self._eval_quantile(s)
+            return tot_loss ,q1, q2, qinf 
+        else:
+            return tot_loss
 
     def load_pretrained_model(self, model_name,cl):
         print(f"load pretraind")
@@ -316,7 +310,7 @@ class OneClassTestHelper(object):
                 # Multi-objective Optimization
                     self._eval(x)
 
-                    torch.autograd.backward(self.loss.total_loss,self.model.parameters(),retain_graph =True)
+                    torch.autograd.backward(self.loss.total_loss, self.model.parameters(), retain_graph =True)
                     #g1+g2
                     g1_list= [pi.grad.data.clone() for pi in list(self.model.encoder.parameters())]    
                     
@@ -430,7 +424,7 @@ class OneClassTestHelper(object):
             # pbar.update(x.size(0))
 
             with torch.no_grad():
-                loss =self. _eval(x,False)
+                loss =self. _eval(x, False)
 
                 if self.name in ['LSA_EN','LSA_MAF','LSA_SOS','VAE']:
                     val_nllk += self.loss.autoregression_loss.sum().item()
@@ -520,24 +514,22 @@ class OneClassTestHelper(object):
                     torch.save(best_model.state_dict(), self.best_model_dir)
                 print(f'Best_epoch at :{epoch} with valid_loss:{best_validation_loss}' )
                 
-                if (validation_rec< best_validation_rec) and (validation_nllk<best_validation_nllk):
-                    torch.save(self.model.state_dict(),self.double_best_model_dir)
-                    double_best_validation_epoch = epoch
+                if (validation_rec< best_validation_rec) :
+                    torch.save(self.model.state_dict(),self.rec_best_model_dir)
+                    rec_best_validation_epoch = epoch
                     best_validation_rec = validation_rec
                     best_validation_nllk = validation_nllk
-                    print(f'Double_Best_epoch at :{epoch} with valid_loss:{best_validation_loss}')
+                    print(f'rec_best_epoch at :{epoch} with valid_loss:{best_validation_loss}')
 
 
             if (epoch % 50 == 0 ) :
                     torch.save(self.model.state_dict(), model_dir_epoch)
                     np.save(self.result_dir,history)
             
-            
-
-            # if (self.dataset.name =='cifar10') and (self.name=='LSA_SOS') and (epoch - double_best_validation_epoch)> 200:
-            #     print (f"Break at Epoch:{epoch}")
-            #     break
-            
+            # (self.dataset.name =='cifar10') and (self.name=='SOS') and 
+            if (epoch - best_validation_epoch)> 30:
+                print (f"Break at Epoch:{epoch}")
+                break
 
             # record loss history
             history['val_loss'].append(validation_loss)
@@ -588,8 +580,9 @@ class OneClassTestHelper(object):
                 self.model.load_w(self.model_dir)
                 print(f"Load Model from {self.model_dir}")
             
+            
             self.model.eval()
-
+            self.mode = 'Test'
             # normalizing coefficient of the Novelty Score (Eq.9 in LSA)
             min_llk, max_llk, min_rec, max_rec,min_q1,max_q1,min_q2,max_q2,min_qinf,max_qinf = self.compute_normalizing_coefficients(cl)
             
@@ -602,6 +595,7 @@ class OneClassTestHelper(object):
 
             sample_llk = np.zeros(shape=(len(self.dataset),))
             sample_nrec = np.zeros(shape=(len(self.dataset),))
+            
             sample_q1 = np.zeros(shape=(len(self.dataset),))
             sample_q2 = np.zeros(shape=(len(self.dataset),))
             sample_qinf = np.zeros(shape=(len(self.dataset),))
@@ -613,10 +607,10 @@ class OneClassTestHelper(object):
                 x = x.to(self.device)
 
                 with torch.no_grad():
-                    if quantile_flag:
-                       tot_loss, q1, q2, qinf = self._eval(x, average = False, quantile_flag =quantile_flag)
+                    if self.mode =='train':
+                        tot_loss = self._eval(x, average = False)
                     else:
-                        tot_loss = self._eval(x,average = False,quantile_flag = quantile_flag)
+                        tot_loss, q1, q2, qinf = self._eval(x, average = False)
                 
                 sample_y[i*bs:i*bs+bs] = y
                 # score larger-->normal data
@@ -708,7 +702,7 @@ class OneClassTestHelper(object):
 
 
             if self.name in ['LSA_EN','LSA_SOS','LSA_MAF','LSA_QT',
-            'LSA_ET_EN','LSA_ET_SOS','LSA_ET_MAF','LSA_ET_QT','SOS','VAE']:
+            'LSA_ET_EN','LSA_ET_SOS','LSA_ET_MAF','LSA_ET_QT','SOS','VAE','SOS']:
 
                 this_class_metrics.append(llk1)
                 this_class_metrics.append(llk2)
@@ -761,7 +755,7 @@ class OneClassTestHelper(object):
             x = x.to(self.device)
             with torch.no_grad():
                 if quantile_flag:
-                    tot_loss, q1, q2, qinf = self._eval(x, average = False, quantile_flag =quantile_flag)
+                    tot_loss, q1, q2, qinf = self._eval(x, average = False)
                     sample_q1[i*bs:i*bs+bs] = q1
                     sample_q2[i*bs:i*bs+bs] = q2
                     sample_qinf[i*bs:i*bs+bs] = qinf
@@ -792,6 +786,7 @@ class OneClassTestHelper(object):
         :return: table to be filled with auroc metrics.
         """
         table = PrettyTable()
+
         if self.name in ['LSA_MAF','LSA_SOS','LSA_EN','VAE']:
 
             if self.quantile_flag:
@@ -809,8 +804,9 @@ class OneClassTestHelper(object):
                 table.field_names = ['Class', 'AUROC-NS','PRCISION','F1','RECALL','llk1','llk2','AUROC-q1','AUROC-q2','AUROC-qinf']
 
             else:
-                 table.field_names = ['Class', 'AUROC-NS','PRCISION','F1','RECALL',
+                 table.field_names = ['Class', 'AUROC-NS','PRCISION','F1','RECALL', 'llk1','llk2'
                 ]
+                 print("Here")
 
         elif self.name in ['LSA_ET_QT','LSA_ET_EN','LSA_ET_MAF','LSA_ET_SOS']:
             table.field_names = ['Class', 'AUROC-NS','PRCISION','F1','RECALL','llk1','llk2']

@@ -15,7 +15,7 @@ from keras.models import Model, Input, Sequential
 from keras.layers import Dense, Dropout
 from keras.utils import to_categorical
 from utils import load_cifar10, load_cats_vs_dogs, load_fashion_mnist, load_cifar100, load_mnist
-from utils import save_roc_pr_curve_data, get_class_name_from_index, get_channels_axis
+from utils import save_roc_pr_curve_data, get_class_name_from_index, get_channels_axis, save_transformation
 from transformations import Transformer
 from models.wide_residual_network import create_wide_residual_network
 from models.encoders_decoders import conv_encoder, conv_decoder
@@ -27,6 +27,38 @@ import argparse
 from argparse import Namespace
 
 RESULTS_DIR = '/home/jj27wang/novelty-detection/NovelDect_SoS/SoSLSA/baseline_ADT/results/'
+FT_DIR = '/home/jj27wang/novelty-detection/NovelDect_SoS/SoSLSA/baseline_ADT/gtfeatures/'
+
+def _get_transformations(dataset_load_fn, dataset_name,single_class_ind):
+    print("Got Transformations")
+    # gpu_to_use = gpu_q.get()
+    # os.environ["CUDA_VISIBLE_DEVICES"] = gpu_to_use
+
+    (x_train, y_train), (x_test, y_test) = dataset_load_fn()
+
+    transformer = Transformer(8, 8)
+    n, k = (10, 4)
+    x_train_task = x_train[y_train.flatten() == single_class_ind]
+    transformations_inds = np.tile(np.arange(transformer.n_transforms), len(x_train_task))
+    x_train_task_transformed = transformer.transform_batch(np.repeat(x_train_task, transformer.n_transforms, axis=0),
+                                                       transformations_inds)
+
+    ft_file_name = '{}_transformations_train_{}.npz'.format(dataset_name,
+                                                 single_class_ind)
+    ft_file_path = os.path.join(FT_DIR, dataset_name,ft_file_name)
+    save_transformation(x_train_task_transformed, ft_file_path)
+
+    x_test_task = x_test[y_test.flatten() == single_class_ind]
+    transformations_inds = np.tile(np.arange(transformer.n_transforms), len(x_test_task))
+    x_test_task_transformed = transformer.transform_batch(np.repeat(x_test_task, transformer.n_transforms, axis=0),
+                                                       transformations_inds)
+
+    ft_file_name = '{}_transformations_test_{}'.format(dataset_name,
+                                                 single_class_ind)
+
+    ft_file_path = os.path.join(FT_DIR, dataset_name, ft_file_name)
+    save_transformation(x_test_task_transformed, ft_file_path)
+
 
 
 def _transformations_experiment(dataset_load_fn, dataset_name, single_class_ind, gpu_q):
@@ -60,6 +92,7 @@ def _transformations_experiment(dataset_load_fn, dataset_name, single_class_ind,
     mdl.fit(x=x_train_task_transformed, y=to_categorical(transformations_inds),
             batch_size=batch_size, epochs=int(np.ceil(200/transformer.n_transforms))
             )
+
 
     #################################################################################################
     # simplified normality score
@@ -366,11 +399,11 @@ def run_experiments(load_dataset_fn, dataset_name, q, n_classes):
 
     # elif alg_name == 'cae-oc-svm':
     # CAE OC-SVM
-    processes = [Process(target=_cae_ocsvm_experiment,
-                         args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
-    for p in processes:
-        p.start()
-        p.join()
+    # processes = [Process(target=_cae_ocsvm_experiment,
+    #                      args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
+    # for p in processes:
+    #     p.start()
+    #     p.join()
     # # elif alg_name == 'dsebm':
     #     # DSEBM
     # for _ in range(n_runs):
@@ -397,6 +430,7 @@ def run_experiments(load_dataset_fn, dataset_name, q, n_classes):
     # for _ in range(n_runs):
     #     processes = [Process(target=_transformations_experiment,
     #                          args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
+        
     #     if dataset_name in ['cats-vs-dogs']:  # Self-labeled set is memory consuming
     #         for p in processes:
     #             p.start()
@@ -416,7 +450,10 @@ def run_experiments(load_dataset_fn, dataset_name, q, n_classes):
     #     p.start()
     # for p in processes:
     #     p.join()
-    
+
+
+        
+
 
 def create_auc_table(metric='roc_auc'):
     file_path = glob(os.path.join(RESULTS_DIR, '*', '*.npz'))
@@ -485,16 +522,21 @@ def main():
 
     experiments_list = [
         # (load_cifar100, 'cifar100', 20),
-        (load_fashion_mnist, 'fashion-mnist', 10),
+        # (load_fashion_mnist, 'fashion-mnist', 10),
         # (load_mnist, 'mnist', 10),
-        # (load_cifar10, 'cifar10', 10)
+        (load_cifar10, 'cifar10', 10)
         # (load_cats_vs_dogs, 'cats-vs-dogs', 2),
     ]
 
-    for data_load_fn, dataset_name, n_classes in experiments_list:
-        run_experiments(data_load_fn, dataset_name, q, n_classes)
+    # for data_load_fn, dataset_name, n_classes in experiments_list:
+    #     run_experiments(data_load_fn, dataset_name, q, n_classes)
+
+    for idx in range(10):
+        print(f'{idx}')
+        _get_transformations(load_cifar10, 'cifar10', idx)
     
-    create_auc_table()
+
+    # create_auc_table()
 
 
 if __name__ == '__main__':

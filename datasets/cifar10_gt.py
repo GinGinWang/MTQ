@@ -5,15 +5,15 @@ import numpy as np
 import torch
 from torchvision import datasets
 from torchvision import transforms
-
 from datasets.base import OneClassDataset
 
 from datasets.transforms import OCToFloatTensor2D
 from datasets.transforms import ToFloat32
 from datasets.transforms import ToFloatTensor2D
 
+FT_DIR = '/home/jj27wang/novelty-detection/NovelDect_SoS/SoSLSA/baseline_ADT/gtfeatures/'
 
-class CIFAR10(OneClassDataset):
+class CIFAR10_GT(OneClassDataset):
     """
     Models CIFAR10 dataset for one class classification.
     """
@@ -36,11 +36,21 @@ class CIFAR10(OneClassDataset):
         self.name ='cifar10'
         self.normal_class = None
 
+        test_ft_file_name = '{}_transformations_test_{}'.format(dataset_name,
+                                                 single_class_ind)
+
+        test_ft_file_path = os.path.join(FT_DIR, dataset_name, test_ft_file_name)
+
+        train_ft_file_name = '{}_transformations_train_{}'.format(dataset_name,
+                                                 single_class_ind)
+
+        test_ft_file_path = os.path.join(FT_DIR, dataset_name, train_ft_file_name)
+
 
         # Get train and test split
-        self.train_split = datasets.CIFAR10(self.path, train=True, download=True, transform=None)
+        self.train_split = np.load(os.join.(self.path)
 
-        self.test_split = datasets.CIFAR10(self.path, train=False, download=True, transform=None)
+        self.test_split = datasets.CIFAR10_GT(self.path,  train=False, download=True, transform=None)
 
         # Shuffle training indexes to build a training set (see train())
         self.train_idx = np.arange(len(self.train_split))
@@ -111,11 +121,11 @@ class CIFAR10(OneClassDataset):
 
         print(f'Val2 Set prepared, Num:{self.length}')
 #--------------------------------------------------------------------
-    def train(self, normal_class, noise_ratio=0):
+    def train(self, normal_class):
         # type: (int) -> None
         """
         By JingJing
-        Sets MNIST in training mode.
+        Sets CIFAR10 in training mode.
 
         :param normal_class: the class to be considered normal.
         """
@@ -124,24 +134,20 @@ class CIFAR10(OneClassDataset):
         # Update mode, indexes, length and transform
         self.mode = 'train'
         self.transform = self.val_transform
-        # training examples are all normal
-        self.train_idxs = [idx for idx in self.train_idx if self.train_split[idx][1] == self.normal_class]
-
-        self.train_idxs = self.train_idxs[0:int(0.9*len(self.train_idxs))]
         
-        noise_idxs = [idx for idx in self.train_idx if self.train_split[idx][1] == 3] # for noise to class 8
+        # training examples are all normal
+        # self.train_idxs = [idx for idx in self.train_idx if self.train_split[idx][1] == self.normal_class]
+        # self.train_idxs = self.train_idxs[0:int(0.9*len(self.train_idxs))]
 
-        if noise_ratio >0:
-            noise_num = int(len(self.train_idxs)/(1-noise_ratio)*noise_ratio)
-            print(f"Clean Num {len(self.train_idxs)}")
-            print(f"Noise Num {noise_num}")
-            noise_idxs = noise_idxs[0:noise_num]
-            # add noise to train
-            self.train_idxs = np.append(self.train_idxs, noise_idxs)
+
+        self.train_idxs = self.shuffled_train_idx[0:int(0.9 * len(self.shuffled_train_idx))]
+        self.train_idxs = [idx for idx in self.train_idxs if self.train_split[idx][1] == self.normal_class]
+        
+        
         self.length = len(self.train_idxs)
         # print 
         print(f"Training Set prepared, Num:{self.length}")
-
+#---------------------------------------------------------------------
 
     def test(self, normal_class, novel_ratio):
         # type: (int) -> None

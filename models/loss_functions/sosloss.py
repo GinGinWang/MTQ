@@ -4,13 +4,14 @@ import torch.nn as nn
 from models.loss_functions.autoregression_loss import AutoregressionLoss
 
 from models.loss_functions.flow_loss import FlowLoss
+from models.loss_functions.qtloss import QTLoss
 
 class SOSLoss(nn.Module):
     """
     Implements the loss of a LSA model.
     It is a sum of the reconstruction loss and the autoregression loss.
     """
-    def __init__(self):
+    def __init__(self, quantile_flag = False):
         # type: (int, float) -> None
         """
         Class constructor.
@@ -20,17 +21,25 @@ class SOSLoss(nn.Module):
         """
         super(SOSLoss, self).__init__()
         # Set up loss modules
-        self.autoregression_loss_fn = FlowLoss()
+        if quantile_flag:
+            self.autoregression_loss_fn = QTLoss()
+        else:
+            self.autoregression_loss_fn = FlowLoss()
 
         # Numerical variables
         self.reconstruction_loss = None
         self.autoregression_loss = None
+        self.quantile_flag = quantile_flag
 
         self.total_loss = None
 
-    def forward(self,s,nagtive_log_jacob,average = True):
+    def forward(self,s,z,nagtive_log_jacob,average = True):
         # Compute pytorch loss
-        arg_loss = self.autoregression_loss_fn(s,nagtive_log_jacob ,average)
+        if self.quantile_flag:
+            arg_loss = self.autoregression_loss_fn(z, nagtive_log_jacob, average)
+        else:
+            arg_loss = self.autoregression_loss_fn(s,nagtive_log_jacob, average)
+
         tot_loss = arg_loss  
 
         # Store numerical
