@@ -22,7 +22,6 @@ from models.encoders_decoders import conv_encoder, conv_decoder
 from models import dsebm, dagmm, adgan
 import keras.backend as K
 
-
 import argparse
 from argparse import Namespace
 
@@ -38,15 +37,19 @@ def _get_transformations(dataset_load_fn, dataset_name,single_class_ind):
 
     transformer = Transformer(8, 8)
     n, k = (10, 4)
+
     x_train_task = x_train[y_train.flatten() == single_class_ind]
+
     transformations_inds = np.tile(np.arange(transformer.n_transforms), len(x_train_task))
+        
     x_train_task_transformed = transformer.transform_batch(np.repeat(x_train_task, transformer.n_transforms, axis=0),
                                                        transformations_inds)
 
-    ft_file_name = '{}_transformations_train_{}.npz'.format(dataset_name,
+    ft_file_name = '{}_transformations_train_{}'.format(dataset_name,
                                                  single_class_ind)
-    ft_file_path = os.path.join(FT_DIR, dataset_name,ft_file_name)
-    save_transformation(x_train_task_transformed, ft_file_path)
+    
+    ft_file_path = os.path.join(FT_DIR, dataset_name, ft_file_name)
+    save_transformation(x_train_task_transformed, 72, single_class_ind, ft_file_path)
 
     x_test_task = x_test[y_test.flatten() == single_class_ind]
     transformations_inds = np.tile(np.arange(transformer.n_transforms), len(x_test_task))
@@ -74,6 +77,7 @@ def _transformations_experiment(dataset_load_fn, dataset_name, single_class_ind,
     else:
         transformer = Transformer(8, 8)
         n, k = (10, 4)
+        # 72* imagesize features for every image
 
     mdl = create_wide_residual_network(x_train.shape[1:], transformer.n_transforms, n, k)
     mdl.compile('adam',

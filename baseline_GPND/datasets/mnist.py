@@ -65,7 +65,7 @@ class MNIST(OneClassDataset):
         # test idx with 50%->90% normal class(50% -> 10% novelty)
         self.test_idxs = None 
 
-    def train(self, normal_class):
+    def train(self, normal_class, noise_ratio=0):
         # type: (int) -> None
         """
         By JingJing
@@ -79,12 +79,21 @@ class MNIST(OneClassDataset):
         self.mode = 'train'
         self.transform = self.val_transform
         # training examples are all normal
-        self.train_idxs = [idx for idx in self.shuffled_train_idx if self.train_split[idx][1] == self.normal_class]
+        self.train_idxs = [idx for idx in self.train_idx if self.train_split[idx][1] == self.normal_class]
 
+        self.train_idxs = self.train_idxs[0:int(0.9*len(self.train_idxs))]
+        noise_idxs = [idx for idx in self.train_idx if self.train_split[idx][1] == 3] # for noise to class 8
+
+        if noise_ratio >0:
+            noise_num = int(len(self.train_idxs)/(1-noise_ratio)*noise_ratio)
+            print(f"Clean Num {len(self.train_idxs)}")
+            print(f"Noise Num {noise_num}")
+            noise_idxs = noise_idxs[0:noise_num]
+            # add noise to train
+            self.train_idxs = np.append(self.train_idxs,noise_idxs)
         self.length = len(self.train_idxs)
-        
+        # print 
         print(f"Training Set prepared, Num:{self.length}")
-
 
 
 

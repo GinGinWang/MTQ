@@ -39,7 +39,6 @@ class CIFAR10(OneClassDataset):
 
         # Get train and test split
         self.train_split = datasets.CIFAR10(self.path, train=True, download=True, transform=None)
-
         self.test_split = datasets.CIFAR10(self.path, train=False, download=True, transform=None)
 
         # Shuffle training indexes to build a training set (see train())
@@ -218,7 +217,7 @@ class CIFAR10(OneClassDataset):
         else:
             raise ValueError
 
-        # Apply transform
+        # Apply transform for every item
         if self.transform:
             sample = self.transform(sample)
 

@@ -53,6 +53,7 @@ class Transformer(AbstractTransformer):
         super().__init__()
 
     def _create_transformation_list(self):
+        # when x =8, y = 8 
         transformation_list = []
         for is_flip, tx, ty, k_rotate in itertools.product((False, True),
                                                            (0, -self.max_tx, self.max_tx),

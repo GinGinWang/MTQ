@@ -1,5 +1,5 @@
 
-python test.py  --autoencoder LSA --estimator SOS  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000    --lr 0.0001 --MulObj  --num_blocks 1 --hidden_size 2048
+# python test.py  --autoencoder LSA --estimator SOS  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000    --lr 0.0001 --MulObj  --num_blocks 1 --hidden_size 2048 
 
 # +-------+----------+-----------+-----------+---------+----------+-----------+----------+
 # | Class | AUROC-NS | AUROC-LLK | AUROC-REC |   llk1  |   llk2   | AUROC-NSQ | AUROC-QT |
@@ -17,5 +17,7 @@ python test.py  --autoencoder LSA --estimator SOS  --dataset mnist --batch_size 
 # |  avg  |  0.985   |   0.985   |   0.939   | 182.185 | -47.931  |   0.951   |  0.983   |
 # +-------+----------+-----------+-----------+---------+----------+-----------+----------+
 
+
+python test.py  --autoencoder LSA --estimator SOS  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000    --lr 0.0001 --MulObj  --num_blocks 1 --hidden_size 2048 --Qt
 
 # python test.py  --autoencoder LSA --estimator SOS  --dataset mnist --batch_size 256 --code_length 64    --epochs 1000    --lr 0.0001 --MulObj  --num_blocks 1 --hidden_size 4096   --select 0 

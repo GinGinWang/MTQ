@@ -26,20 +26,28 @@ class QTLoss(BaseModule):
         '''
         # s_d = s.detach()
         # log_jacob_d = log_jacob.detach()
-        z = z.detach()
-        log_jacob = log_jacob.detach()
+        # z_d = z.detach()
+        # log_jacob_d = log_jacob.detach()
         
-        m = normal.Normal(torch.tensor([1.0]).to('cuda'), torch.tensor([1.0]).to('cuda'))
+        z = z.view(-1,z.shape[1]*z.shape[2]*z.shape[3])
+        print(z.max())
+        print(z.min())
+        
+        
+        m = normal.Normal(torch.zeros(z.shape[0],z.shape[1]).to('cuda'), torch.ones(z.shape[0],z.shape[1]).to('cuda'))
         qz = m.icdf(z)
-        qz = m.icdf(qz)
-        qz = qz/2.0
+        qz.clamp(max = 1, min = -1)
+        # print(qz)
+        # qz = qz.pow(2)
+        # print(qz)
+        # print(qz.shape)
         qz = qz.sum(dim = 1)
+        # print(qz.shape)
+        # print(qz)
         
-        
-        log_jacob_d = log_jacob
-                  
+        qz = qz / 2.0                  
         # formula (3)
-        loss = (- log_jacob_d).sum(-1,keepdim=True)
+        loss = (- log_jacob - qz).sum(-1,keepdim=True)
 
         
         if size_average:

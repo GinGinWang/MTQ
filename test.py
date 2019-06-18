@@ -6,6 +6,7 @@ from datasets.cifar10 import CIFAR10
 from datasets.fmnist import FMNIST
 from datasets.thyroid import THYROID
 from datasets.KDDCUP import KDDCUP
+from datasets.cifar10_gt import CIFAR10_GT
 
 # LSA
 from models import LSA_MNIST
@@ -15,6 +16,7 @@ from models import LSAET_MNIST
 from models import AAE_CIFAR10
 from models import LSA_KDDCUP
 from models import VAE
+
 # Estimator
 from models.estimator_1D import Estimator1D
 from models.transform_maf import TinvMAF
@@ -27,7 +29,7 @@ import os
 import torch
 import numpy as np
 
-def create_dir(dataset, cd, pretrained, fixed, num_blocks,hidden_size, estimator,noise = 0):
+def create_dir(dataset, cd, pretrained, fixed, num_blocks,hidden_size, estimator, noise = 0):
     
     if pretrained:
         dirName = f'checkpoints/{dataset}/combined{cd}/Ptr{pretrained}/Fix{fixed}/'
@@ -45,18 +47,21 @@ def create_dir(dataset, cd, pretrained, fixed, num_blocks,hidden_size, estimator
 
     return dirName
 
-def create_file_dir(mulobj,model_name,dataset,cd,pretrained,fixed,score_normed,novel_ratio,num_blocks,hidden_size,lam, quantile_flag,checkpoint):
+def create_file_dir(mulobj,model_name,dataset,cd,pretrained,fixed,score_normed,novel_ratio,num_blocks,hidden_size,lam, noise, checkpoint):
 
     if mulobj:
-        dirName = f"results/Mul_{model_name}_{dataset}_cd{cd}_ptr{pretrained}_fix{fixed}_nml{score_normed}_nlr{novel_ratio}_b{num_blocks}_h{hidden_size}_lam{lam}_q{quantile_flag}"
+        dirName = f"results/Mul_{model_name}_{dataset}_cd{cd}_ptr{pretrained}_fix{fixed}_nml{score_normed}_nlr{novel_ratio}_b{num_blocks}_h{hidden_size}_lam{lam}"
     else:
-       dirName = f"results/{model_name}_{dataset}_cd{cd}_ptr{pretrained}_fix{fixed}_nml{score_normed}_nlr{novel_ratio}_b{num_blocks}_h{hidden_size}_lam{lam}_q{quantile_flag}"
+       dirName = f"results/{model_name}_{dataset}_cd{cd}_ptr{pretrained}_fix{fixed}_nml{score_normed}_nlr{novel_ratio}_b{num_blocks}_h{hidden_size}_lam{lam}"
 
-    if (checkpoint == None):
-        dirName= f"{dirName}.txt"
-    else:
-        dirName = f"{dirName}_at{checkpoint}.txt"
-        
+    
+    if (noise > 0):
+        dirName = f"{dirName}_ns{noise}"
+    if (checkpoint!=None):
+        dirName = f"{dirName}_at{checkpoint}"
+
+    dirName = f"{dirName}.txt"
+
     return dirName 
 
 def main():
@@ -80,6 +85,9 @@ def main():
 
     elif args.dataset == 'cifar10':
         dataset = CIFAR10(path='data/CIFAR', n_class = args.n_class, select= args.select)
+
+    elif args.dataset == 'cifar10_gt':
+        dataset = CIFAR10_GT(path='data/CIFAR', n_class = args.n_class, select= args.select)
 
     elif args.dataset == 'thyroid':
         dataset = THYROID(path ='data/UCI/thyroid.mat')
@@ -132,10 +140,14 @@ def main():
             
 
             elif args.dataset in ['kddcup']:
-                model =LSA_KDDCUP(num_blocks=args.num_blocks, hidden_size= args.hidden_size).cuda()
+                model =LSA_KDDCUP(num_blocks=args.num_blocks, hidden_size= args.hidden_size, code_length = args.code_length).cuda()
 
             elif args.dataset == 'cifar10':
-                model =LSA_CIFAR10(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.cd,hidden_size= args.hidden_size).cuda()
+                model =LSA_CIFAR10(input_shape=dataset.shape, code_length = args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.cd,hidden_size= args.hidden_size).cuda()
+            
+            elif args.dataset == 'cifar10_gt':
+                model =LSA_CIFAR10( input_shape = dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.cd,hidden_size= args.hidden_size).cuda()
+
             else:
                 ValueError("Unknown Dataset")
         
@@ -169,9 +181,11 @@ def main():
             raise ValueError('Unknown Autoencoder')
     
     # # set to Test mode
-    file_dirName = create_file_dir(args.mulobj,model.name,args.dataset,args.cd,args.pretrained,args.fixed,args.score_normed,args.novel_ratio,args.num_blocks,args.hidden_size,args.lam, args.qt, args.checkpoint)
+    file_dirName = create_file_dir(args.mulobj,model.name,args.dataset,args.cd,args.pretrained,args.fixed,args.score_normed,args.novel_ratio,args.num_blocks,args.hidden_size,args.lam, args.noise, args.checkpoint)
 
-    helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, lam = args.lam, checkpoints_dir= dirName, output_file= file_dirName,device = device, batch_size = args.batch_size, pretrained= args.pretrained, trainflag= args.trainflag, lr = args.lr, epochs=args.epochs, before_log_epochs = args.before_log_epochs,pretrained_model= args.premodel,fixed=args.fixed, mulobj=args.mulobj, add = args.add, quantile_flag= args.qt,checkpoint = args.checkpoint, noise= args.noise)
+    if args.noise >0:
+        dirName = f'/home/jj27wang/novelty-detection/NovelDect_SoS/SoSLSA/checkpoints/noise_{args.noise}/'
+    helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, lam = args.lam, checkpoints_dir= dirName, output_file= file_dirName,device = device, batch_size = args.batch_size, pretrained= args.pretrained, trainflag= args.trainflag, lr = args.lr, epochs=args.epochs, before_log_epochs = args.before_log_epochs,pretrained_model= args.premodel,fixed=args.fixed, mulobj=args.mulobj, add = args.add,checkpoint = args.checkpoint, noise= args.noise)
 
     helper.test_one_class_classification()
     
@@ -242,8 +256,7 @@ def parse_arguments():
     parser.add_argument('--Combine_density', dest='cd',action = 'store_true',default = False, help = 'Use reconstruction loss as one dimension of latent vector')
     parser.add_argument('--PreTrained', dest='pretrained',action = 'store_true',default = False, help = 'Use Pretrained Model')
     parser.add_argument('--Add', dest='add',action = 'store_true',default = False)
-    parser.add_argument('--Qt', dest='qt',action = 'store_true',default = False, help ='Output Quantile-based novelty score')
-
+    
 
     parser.add_argument('--premodel',type= str, default='LSA',help = 'Pretrained autoencoder')
     parser.add_argument('--Fixed', dest='fixed',action = 'store_true', default = False, help = 'Fix the autoencoder while training')

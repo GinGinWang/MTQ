@@ -96,6 +96,7 @@ class Decoder(BaseModule):
         self.deepest_shape = deepest_shape
         self.output_shape = output_shape
 
+        c, h, w = output_shape
         activation_fn = nn.LeakyReLU()
 
         # FC network
@@ -114,7 +115,7 @@ class Decoder(BaseModule):
             UpsampleBlock(channel_in=128, channel_out=64, activation_fn=activation_fn),
             UpsampleBlock(channel_in=64, channel_out=32, activation_fn=activation_fn),
             ResidualBlock(channel_in=32, channel_out=32, activation_fn=activation_fn),
-            nn.Conv2d(in_channels=32, out_channels=3, kernel_size=1, bias=False)
+            nn.Conv2d(in_channels=32, out_channels=c, kernel_size=1, bias=False)
         )
 
     def forward(self, x):
@@ -244,7 +245,6 @@ class LSA_CIFAR10(BaseModule):
         # Reconstruct x
         x_r = self.decoder(z)
         x_r = x_r.view(-1, *self.input_shape)
-        
 
 
 

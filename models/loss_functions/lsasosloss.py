@@ -5,14 +5,13 @@ from models.loss_functions.autoregression_loss import AutoregressionLoss
 from models.loss_functions.reconstruction_loss import ReconstructionLoss
 
 from models.loss_functions.flow_loss import FlowLoss
-from models.loss_functions.qtloss import QTLoss
 
 class LSASOSLoss(nn.Module):
     """
     Implements the loss of a LSA model.
     It is a sum of the reconstruction loss and the autoregression loss.
     """
-    def __init__(self, quantile_flag = False, lam=1):
+    def __init__(self, quantile_flag = False, lam = 1):
         # type: (int, float) -> None
         """
         Class constructor.
@@ -27,10 +26,7 @@ class LSASOSLoss(nn.Module):
         # Set up loss modules
         self.reconstruction_loss_fn = ReconstructionLoss()
         
-        if quantile_flag:
-            self.autoregression_loss_fn = QTLoss()
-        else:
-            self.autoregression_loss_fn = FlowLoss()
+        self.autoregression_loss_fn = FlowLoss()
 
         # Numerical variables
         self.reconstruction_loss = None
@@ -39,7 +35,7 @@ class LSASOSLoss(nn.Module):
         self.total_loss = None
         self.quantile_flag = quantile_flag
 
-    def forward(self, x, x_r, s, z, nagtive_log_jacob, average = True):
+    def forward(self, x, x_r, s, nagtive_log_jacob, average = True):
         # type: (torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor) -> torch.Tensor
         """
         Forward propagation.
@@ -51,12 +47,9 @@ class LSASOSLoss(nn.Module):
         :return: the loss of the model (averaged along the batch axis).
         """
         # Compute pytorch loss
-        rec_loss = self.reconstruction_loss_fn(x, x_r,average)
+        rec_loss = self.reconstruction_loss_fn(x, x_r, average)
         
-        if self.quantile_flag:
-            arg_loss = self.autoregression_loss_fn(z, nagtive_log_jacob, average)
-        else:
-            arg_loss = self.autoregression_loss_fn(s,nagtive_log_jacob,average)
+        arg_loss = self.autoregression_loss_fn(s,nagtive_log_jacob, average)
         
         tot_loss = rec_loss + self.lam * arg_loss
 

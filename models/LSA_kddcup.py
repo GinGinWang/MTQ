@@ -28,7 +28,7 @@ class Encoder(BaseModule):
     MNIST model encoder.
     same as LSA
     """
-    def __init__(self):
+    def __init__(self, code_length):
         # type: (Tuple[int, int, int], int) -> None
         """
         Class constructor:
@@ -49,7 +49,7 @@ class Encoder(BaseModule):
             activation_fn,
             nn.Linear(in_features=30, out_features=10),
             activation_fn,
-            nn.Linear(in_features=10, out_features=5),
+            nn.Linear(in_features=10, out_features=code_length),
             nn.Sigmoid()
         )
 
@@ -74,7 +74,7 @@ class Decoder(BaseModule):
     """
     MNIST model decoder.
     """
-    def __init__(self):
+    def __init__(self, code_length):
         # type: (int, Tuple[int, int, int], Tuple[int, int, int]) -> None
         """
         Class constructor.
@@ -90,7 +90,7 @@ class Decoder(BaseModule):
 
         # FC network
         self.fc = nn.Sequential(
-            nn.Linear(in_features=5, out_features=10),
+            nn.Linear(in_features= code_length, out_features=10),
             # nn.BatchNorm1d(num_features=64),
             activation_fn,
             nn.Linear(in_features=10, out_features=30),
@@ -125,7 +125,7 @@ class LSA_KDDCUP(BaseModule):
     """
  
 
-    def __init__(self,num_blocks,hidden_size):
+    def __init__(self,num_blocks,hidden_size, code_length):
         # type: (Tuple[int, int, int], int, int) -> None
         """
         Class constructor.
@@ -144,18 +144,18 @@ class LSA_KDDCUP(BaseModule):
 
         
         self.coder_name = 'LSA'
-
+        
         self.name = f'LSA_SOS'
         
         # Build encoder
         self.encoder = Encoder(
-             )
+            code_length )
 
         # Build decoder
-        self.decoder = Decoder(
+        self.decoder = Decoder( code_length
         )
 
-        self.estimator = TinvSOS(num_blocks, 5, hidden_size)      
+        self.estimator = TinvSOS(num_blocks, code_length, hidden_size)      
             
 
     def forward(self, x):

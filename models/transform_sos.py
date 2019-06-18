@@ -67,4 +67,4 @@ class TinvSOS(BaseModule):
         h = z.view(-1, self.input_size)
         s,log_jacob_T_inv = self.T_inverse(h)
 
-        return s,log_jacob_T_inv
+        return s, log_jacob_T_inv
