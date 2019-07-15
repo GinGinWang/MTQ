@@ -173,8 +173,8 @@ class OneClassTestHelper(object):
             for i in range(bs):
                 # for every sample
                 # cdf 
-                u = norm.cdf(s_numpy[i,:]).squeeze()
-                
+                u = norm.cdf(s_numpy[i,:]).squeeze() ## Source point in the source uniform distribution
+
                 u = abs(np.ones((1,s_dim))*0.5-u).squeeze()
                 # norm 1 
                 uq_1 = np.linalg.norm(u,1)
@@ -190,8 +190,8 @@ class OneClassTestHelper(object):
                 qinf.append(-uq_inf)
         else:
             ValueError("Unknown Mapping")
-        # print(max(qinf))
-        return q1, q2, qinf
+
+        return q1, q2, qinf, u
     
     def _eval(self, x, average = True):
 
@@ -499,15 +499,17 @@ class OneClassTestHelper(object):
                 print(data_num)
                 loader = DataLoader(self.dataset, batch_size = bs)
 
+                # density related 
                 sample_llk = np.zeros(shape=(len(self.dataset),))
                 sample_nrec = np.zeros(shape=(len(self.dataset),))
-                
+                # quantile related 
                 sample_q1 = np.zeros(shape=(len(self.dataset),))
                 sample_q2 = np.zeros(shape=(len(self.dataset),))
                 sample_qinf = np.zeros(shape=(len(self.dataset),))
-                
+                # source point u (64)
+                sample_u = np.zeros(shape=(len(self.dataset),))
+                # true label
                 sample_y = np.zeros(shape=(len(self.dataset),))
-
                 
                 for i, (x, y) in tqdm(enumerate(loader), desc=f'Computing scores for {self.dataset}'):
                     
@@ -516,10 +518,15 @@ class OneClassTestHelper(object):
                     with torch.no_grad():
                         tot_loss = self._eval(x, average = False)
                         if self.name in ['LSA_SOS','SOS']:
-                            q1,q2,qinf = self._eval_quantile(x)
+                            q1,q2,qinf, u = self._eval_quantile(x)
+
+                            # quantile 
                             sample_q1[i*bs:i*bs+bs] = q1
                             sample_q2[i*bs:i*bs+bs] = q2
                             sample_qinf[i*bs:i*bs+bs] = qinf
+                            
+                            # source point 
+                            sample_u[i*bs:i*bs+bs] = u
                     
                     sample_y[i*bs:i*bs+bs] = y
                     # score larger-->normal data
@@ -582,32 +589,9 @@ class OneClassTestHelper(object):
                 wrong_predict1 = np.where(sample_y!= y_hat1)
                 print(f"Wrongly Predict on {len(wrong_predict1)}")                
                 ####################################################
-                precision_den, recall_den, f1_den, _ = precision_recall_fscore_support((sample_y==0),(y_hat1==0), average="binary")
+                precision_den, recall_den, f1_den, _ =  precision_recall_fscore_support((sample_y==0),(y_hat1==0), average= "binary")
                 acc_den = accuracy_score((sample_y==0),(y_hat1==0))
                 ###################################################
-
-                # # # based on quantile-norm1
-                # threshold_q1 = -pow((1-real_nr),1/self.code_length)*0.5*self.code_length
-                # # threshold_q1 = -pow((1-real_nr),1/self.code_length)*0.5
-                # print(f"threshold_q1:{threshold_q1},vs {np.percentile(sample_q1,real_nr*100)}")
-                # y_hat_q1 = np.where(sample_q1 >= threshold_q1, 1, 0)
-                # print(f"Quantile-based, Predicted Novelty_Num: {sum(y_hat_q1==0)} in {len(y_hat_q1)} samples")
-                # ####################################################
-                # precision_q1, recall_q1, f1_q1, _ = precision_recall_fscore_support((sample_y==0),(y_hat_q1==0), average="binary")
-                # ###################################################
-            
-
-                # # based on quantile-norm2
-                # threshold_q2 = -math.sqrt(pow((pow((1-real_nr),1/self.code_length)*0.5),2)*self.code_length)
-                # # threshold_q2 = -pow((1-real_nr),1/self.code_length)*0.5
-                # print(f"threshold_q2:{threshold_q2},vs{np.percentile(sample_q2,real_nr*100)}")
-                # y_hat_q2 = np.where(sample_q2 >= threshold_q2, 1, 0)
-                # print(f"Quantile-based, Predicted Novelty_Num: {sum(y_hat_q2==0)} in {len(y_hat_q2)} samples")
-                # ####################################################
-                # precision_q2, recall_q2, f1_q2, _ = precision_recall_fscore_support((sample_y==0),(y_hat_q2==0), average="binary")
-                ###################################################
-
-
 
                 # based on quantile-norm-inf
                 threshold_qinf = -pow((1-real_nr),1/self.code_length)*0.5
@@ -619,7 +603,6 @@ class OneClassTestHelper(object):
                 y_hat_qinf = np.where((sample_qinf)>=(threshold_qinf), 1, 0)
 
                 print(f"Quantile-based, Predicted Novelty_Num: {sum(y_hat_qinf==0)} in {len(y_hat_qinf)} samples")
-                
                 ####################################################
                 precision_qinf, recall_qinf, f1_qinf, _ = precision_recall_fscore_support((sample_y==0),(y_hat_qinf==0), average="binary")
                 acc_qinf = accuracy_score((sample_y==0),(y_hat_qinf==0))
@@ -628,9 +611,16 @@ class OneClassTestHelper(object):
 
 
                 # save test-historty
-                np.savez(self.test_result_dir, sample_y = sample_y, sample_rec = sample_nrec, sample_llk = sample_llk)
+                np.savez(self.test_result_dir, 
+                    sample_y = sample_y, 
+                    y_hat = y_hat_qinf,
+                    sample_nrec = sample_nrec, 
+                    sample_llk = sample_llk,
+                    sample_qinf = sample_qinf,
+                    sample_u = smaple_u)
+                # images
+                plot_source_dist_by_dimensions(sample_u,sample_y) 
                 
-
                 #auroc-table
                 # every row
                 this_class_metrics = [
@@ -718,7 +708,7 @@ class OneClassTestHelper(object):
 
                 tot_loss = self._eval( x, average = False)
                 if self.name in ['LSA_SOS','SOS']:
-                    q1,q2,qinf = self._eval_quantile(x)
+                    q1,q2,qinf,_ = self._eval_quantile(x)
                     sample_q1[i*bs:i*bs+bs] = q1
                     sample_q2[i*bs:i*bs+bs] = q2
                     sample_qinf[i*bs:i*bs+bs] = qinf

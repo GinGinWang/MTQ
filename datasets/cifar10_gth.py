@@ -23,7 +23,7 @@ class CIFAR10_GTH(OneClassDataset):
     Models CIFAR10 dataset for one class classification.
     """
 
-    def __init__(self, path, n_class = 10, select= None):
+    def __init__(self, path, epoch, n_class = 10, select= None):
 
         # type: (str) -> None
         """
@@ -186,7 +186,7 @@ class CIFAR10_GTH(OneClassDataset):
         elif self.mode == 'val':
             x, _ = self.train_split[self.val_idxs[i]]
             sample = x, x
-
+              
         elif self.mode == 'train':
             x, _ = self.train_split[self.train_idxs[i]]
             sample = x, x

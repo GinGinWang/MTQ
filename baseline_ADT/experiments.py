@@ -29,7 +29,13 @@ from keras.callbacks import ModelCheckpoint
 import argparse
 from argparse import Namespace
 
-RESULTS_DIR = 'results/' # saved weights
+
+import fnmatch
+import os
+
+
+
+RESULTS_DIR = './results/' # saved weights
 FT_DIR = 'gtfeatures/' # extracted gt features which is the output of the last hidden layer
 
 
@@ -37,6 +43,20 @@ def _transformations_extract (dataset_load_fn, dataset_name, single_class_ind, e
     #for weights saved for class c
     # extract training gt features of class c 
     # extract testing gt features of the whole dataset
+
+    weights_list = []
+
+    classname = get_class_name_from_index(single_class_ind, dataset_name)
+    print(classname)
+    for file in os.listdir(os.path.join(RESULTS_DIR,dataset_name)):
+        if fnmatch.fnmatch(file, f'{dataset_name}_transformations_{classname}*.h5'):
+            print(file)
+            weights_list.append(file)
+            mdl_weights_epoch_name = file
+
+    print (weights_list)
+
+    
 
     print("Transformations Experiments")
     gpu_to_use = gpu_q.get()
@@ -48,49 +68,44 @@ def _transformations_extract (dataset_load_fn, dataset_name, single_class_ind, e
     n, k = (10, 4)
 
     mdl = create_wide_residual_network(x_train.shape[1:], transformer.n_transforms, n, k)
-    
-    mdl_weights_epoch_name = '{}_transformations_{}_'.format(dataset_name,
-                                                           get_class_name_from_index(single_class_ind, dataset_name))
-    
-    mdl_weights_epoch_name = mdl_weights_epoch_name+f'{epoch:02d}_weights.hdf5'
-
     mdl_weights_path = os.path.join(RESULTS_DIR, dataset_name, mdl_weights_epoch_name)
-
+    
+    
+    # load trained model
     mdl.load_weights(mdl_weights_path)
     layerlist = [layer.name for layer in mdl.layers]
     print(f"All layers of the model:{layerlist} ")
-    print(layerlist[-7])   
-    layer_name = layerlist[-7]
+    print(layerlist[-3])   
+    layer_name = layerlist[-3]
 
     intermediate_layer_model = Model(inputs=mdl.input, outputs=mdl.get_layer(layer_name).output)
-
-
 
     # extract training gt features of class c with the model trained by class c 
     x_train_task = x_train[y_train.flatten() == single_class_ind]
     batch_size = 1024
     train_observed_data  = x_train_task
 
-    train_wanted_feature = []
+    train_wanted_feature_list = []
     for t_ind in range(transformer.n_transforms):
         train_wanted_feature = intermediate_layer_model.predict(transformer.transform_batch(train_observed_data, [t_ind] * len(train_observed_data)),
                                          batch_size=batch_size)
-        np.savez(f'gtfeatures/train_e{epoch:02d}_{dataset_name}_m{single_class_ind}_d{single_class_ind}_t{t_ind}',train_wanted_feature)
-        # train_epoch_dataset_modelclass_dataclass_transformations
-
+        train_wanted_feature_list.append(train_wanted_feature)
     
+        
+    np.savez(f'gtfeatures/train_e{epoch:02d}_{dataset_name}_m{single_class_ind}_d{single_class_ind}',train_wanted_feature_list)
 
 
-    # extract test gt features of all classes with the model trained by class c 
+    # extract test gt features of all classes with the model trained by class c
+    test_wanted_feature_list =[]
     for test_single_class_ind in range(10):
         x_test_task = x_test[y_test.flatten() == test_single_class_ind]
         test_observed_data = x_test_task
         
-        test_wanted_feature =[]
         for t_ind in range(transformer.n_transforms):
-            test_wanted_feature  =intermediate_layer_model.predict(transformer.transform_batch(test_observed_data, [t_ind] * len(test_observed_data)),
-                                         batch_size=batch_size)
-            np.savez(f'gtfeatures/test_e{epoch:02d}_{dataset_name}_m{single_class_ind}_d{test_single_class_ind}_t{t_ind}',test_wanted_feature)
+            test_wanted_feature  =intermediate_layer_model.predict(transformer.transform_batch(test_observed_data, [t_ind] * len(test_observed_data)), batch_size=batch_size)
+            test_wanted_feature_list.append(test_wanted_feature)
+    
+    np.savez(f'gtfeatures/test_e{epoch:02d}_{dataset_name}_m{single_class_ind}',test_wanted_feature_list)
             # train_epoch_dataset_modelclass_dataclass_transformations
 
     gpu_q.put(gpu_to_use)
@@ -123,9 +138,7 @@ def _transformations_experiment(dataset_load_fn, dataset_name, single_class_ind,
                                                            get_class_name_from_index(single_class_ind, dataset_name))
     mdl_weights_epoch_name = mdl_weights_epoch_name+'{epoch:02d}_weights.hdf5'
     
-    # classname = get_class_name_from_index(single_class_ind, dataset_name)
-    # mdl_weights_epoch_name ="weights-improvement-{classname}-{epoch:02d}.hdf5"
-
+    
     mdl_weights_epoch_path = os.path.join(RESULTS_DIR, dataset_name, mdl_weights_epoch_name)
     
     checkpoint = ModelCheckpoint(mdl_weights_epoch_path)
@@ -546,7 +559,7 @@ def main():
     #     run_experiments(data_load_fn, dataset_name, q, n_classes)
 
     for idx in range(1):
-        for epoch in[1,2,3]:
+        for epoch in[0]:
             print(f'{idx}')
             _transformations_extract(load_cifar10, 'cifar10', idx, epoch, q)
     
