@@ -1,0 +1,14 @@
+(1) write the cloud version for training model
+(2) set up robustness experiment for the rest 8 classes in noise3 and noise4
+(4) write quantile code and generate new table for compare quantile and density --dataset --novel_ratio
+
+(3) use extracted gt features for cifar10 to training model
+(4) plot graph for cifar-gth, analyze every epoch
+(5) extract gt features for fmnist (doing local)
+(6) fmnist-gth training
+(7) fmnist-gth plot
+(9) extract gt features for mnist(doing cloud)
+
+(8) select an experiment to plot the histgrams of llk in the training set
+
+Finally, summarize all the results 

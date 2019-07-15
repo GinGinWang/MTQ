@@ -20,10 +20,7 @@ class SOSLoss(nn.Module):
         """
         super(SOSLoss, self).__init__()
         # Set up loss modules
-        if quantile_flag:
-            self.autoregression_loss_fn = QTLoss()
-        else:
-            self.autoregression_loss_fn = FlowLoss()
+        self.autoregression_loss_fn = FlowLoss()
 
         # Numerical variables
         self.reconstruction_loss = None
@@ -31,10 +28,10 @@ class SOSLoss(nn.Module):
         
         self.total_loss = None
 
-    def forward(self, s, nagtive_log_jacob,average = True):
+    def forward(self, s, nagtive_log_jacob, average = True):
         # Compute pytorch loss
         
-        arg_loss = self.autoregression_loss_fn(s,nagtive_log_jacob, average)
+        arg_loss,_ , _ = self.autoregression_loss_fn(s,nagtive_log_jacob, average)
 
         tot_loss = arg_loss  
 

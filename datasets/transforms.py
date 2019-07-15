@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from scipy.ndimage.morphology import binary_dilation
-from datasets.gt_transforms import Transformer
+# from datasets.gt_transforms import Transformer
 
 class ToFloatTensor1D(object):
     """ Convert vectors to FloatTensors """
@@ -31,58 +31,59 @@ class ToFloatTensor2D(object):
         Y = np.float32(Y)
         return torch.from_numpy(X), torch.from_numpy(Y)
 
+# class ToFloatTensor2D_GT(object):
+#     """ Convert images to FloatTensors """
 
-class ToFloatTensor2D_GT(object):
-    """ Convert images to FloatTensors """
+#     def __call__(self, sample):
+#         X, Y = sample
 
-    def __call__(self, sample):
-        X, Y = sample
+#         X = np.array(X)
+#         Y = np.array(Y)
 
-        X = np.array(X)
-        Y = np.array(Y)
+#         # swap color axis because
+#         # numpy image: B x H x W x C
+#         # X = X / 255.
+#         # Y = Y / 255.
 
-        # swap color axis because
-        # numpy image: B x H x W x C
-        X = X / 255.
-        Y = Y / 255.
-
-        X = np.float32(X)
-        Y = np.float32(Y)
+#         X = np.float32(X)
+#         Y = np.float32(Y)
         
-        # expand for GT features
-        transformer = Transformer(8, 8)
+#         # expand for GT features
+#         transformer = Transformer(8, 8)
         
-        # transformations_inds =  np.tile(np.arange(transformer.n_transforms),1)
-        transformations_inds = np.arange(transformer.n_transforms)
+#         # transformations_inds =  np.tile(np.arange(transformer.n_transforms),1)
+#         transformations_inds = np.arange(transformer.n_transforms)
         
-        X = np.expand_dims(X, axis = 0)
-        Y = np.expand_dims(Y, axis = 0)
+#         X = np.expand_dims(X, axis = 0)
+#         Y = np.expand_dims(Y, axis = 0)
 
-        x_train_task_transformed = transformer.transform_batch(np.repeat(X, transformer.n_transforms, axis=0),
-                                                       transformations_inds)
+#         x_train_task_transformed = transformer.transform_batch(np.repeat(X, transformer.n_transforms, axis=0),
+#                                                        transformations_inds)
 
-        y_train_task_transformed = transformer.transform_batch(np.repeat(Y, transformer.n_transforms, axis=0),
-                                                       transformations_inds)
+#         y_train_task_transformed = transformer.transform_batch(np.repeat(Y, transformer.n_transforms, axis=0),
+#                                                        transformations_inds)
         
-        # x_train_task_transformed = x_train_task_transformed[0:3,:,:,:]
-        # y_train_task_transformed = y_train_task_transformed[0:3,:,:,:]
-        # # gtfeature, w, h, c 
-        X = x_train_task_transformed.transpose(1,2,3,0)
-        Y = y_train_task_transformed.transpose(1,2,3,0)
+#         x_train_task_transformed = x_train_task_transformed[0:2,:,:,:]
+#         y_train_task_transformed = y_train_task_transformed[0:2,:,:,:]
         
-        # use every gtfeature as one channel
-        # 32,32,216
-        c = X.shape[3]*X.shape[2]
-        h = X.shape[0]
-        w = X.shape[1]
 
-        X = X.reshape(h,w,c)
-        Y = Y.reshape(h,w,c)
+#         # # gtfeature, w, h, c 
+#         X = x_train_task_transformed.transpose(1,2,3,0)
+#         Y = y_train_task_transformed.transpose(1,2,3,0)
+        
+#         # use every gtfeature as one channel
+#         # 32,32,216
+#         c = X.shape[3]*X.shape[2]
+#         h = X.shape[0]
+#         w = X.shape[1]
 
-        X = X.transpose(2, 0, 1)
-        Y = Y.transpose(2, 0, 1)
+#         X = X.reshape(h,w,c)
+#         Y = Y.reshape(h,w,c)
 
-        return torch.from_numpy(X), torch.from_numpy(Y)
+#         X = X.transpose(2, 0, 1)
+#         Y = Y.transpose(2, 0, 1)
+
+#         return torch.from_numpy(X), torch.from_numpy(Y)
 
 
 
@@ -264,46 +265,48 @@ class OCToFloatTensor2D(object):
 
         return torch.from_numpy(X), Y
 
-class OCToFloatTensor2D_GT(object):
-    """ 
-    Convert images to FloatTensors.
-    Differently from ToFloatTensor2D, this transform
-    is used on testing samples for one-class classification.
-    Only applied on X
+# class OCToFloatTensor2D_GT(object):
+#     """ 
+#     Convert images to FloatTensors.
+#     Differently from ToFloatTensor2D, this transform
+#     is used on testing samples for one-class classification.
+#     Only applied on X
      
-    """
+#     """
 
-    def __call__(self, sample):
-        X, Y = sample
+#     def __call__(self, sample):
+#         X, Y = sample
 
-        # swap color axis because
-        # numpy image: B x H x W x C
+#         # swap color axis because
+#         # numpy image: B x H x W x C
         
-        X = X / 255.
-        X = np.float32(X)
+#         # X = X / 255.
+#         X = np.float32(X)
 
-         # expand for GT features
+#          # expand for GT features
 
-        transformer = Transformer(8, 8)
+#         transformer = Transformer(8, 8)
         
-        transformations_inds = np.arange(transformer.n_transforms)
+#         transformations_inds = np.arange(transformer.n_transforms)
         
-        X = np.expand_dims(X, axis = 0)
+#         X = np.expand_dims(X, axis = 0)
 
-        x_train_task_transformed = transformer.transform_batch(np.repeat(X, transformer.n_transforms, axis=0),
-                                                       transformations_inds)
-
-        # gtfeature, w, h, c 
-        X = x_train_task_transformed.transpose(1,2,3,0)
-
-        c = X.shape[3]*X.shape[2]
-        h = X.shape[0]
-        w = X.shape[1]
-
-        X = X.reshape(h,w,c)        
-        X = X.transpose(2, 0, 1)
+#         x_train_task_transformed = transformer.transform_batch(np.repeat(X, transformer.n_transforms, axis=0),
+#                                                        transformations_inds)
         
-        return torch.from_numpy(X), Y
+#         x_train_task_transformed = x_train_task_transformed[0:2,:,:,:]
+
+#         # gtfeature, w, h, c 
+#         X = x_train_task_transformed.transpose(1,2,3,0)
+
+#         c = X.shape[3]*X.shape[2]
+#         h = X.shape[0]
+#         w = X.shape[1]
+
+#         X = X.reshape(h,w,c)        
+#         X = X.transpose(2, 0, 1)
+        
+#         return torch.from_numpy(X), Y
 
 
 

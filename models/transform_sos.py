@@ -5,7 +5,7 @@ import torch.nn as nn
 
 from models.base import BaseModule
 
-from flow_sos_models import *
+from models.flow_sos_models import *
 
 
 class TinvSOS(BaseModule):

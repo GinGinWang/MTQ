@@ -5,7 +5,8 @@ import cv2
 from sklearn.metrics import roc_curve, precision_recall_curve, auc
 from keras.datasets import mnist, fashion_mnist, cifar100, cifar10
 from keras.backend import cast_to_floatx
-
+import sys
+import pickle as pk
 
 def resize_and_crop_image(input_file, output_side_length, greyscale=False):
     img = cv2.imread(input_file)
@@ -50,7 +51,18 @@ def load_fashion_mnist():
 
 
 def load_mnist():
+    # import gzip
+    # f = gzip.open('mnist.pkl.gz', 'rb')
+    
+    # if sys.version_info < (3,):
+    #     data = pk.load(f)
+    # else:
+    #     data = pk.load(f, encoding='bytes')
+    # f.close()
+    
+    # (X_train, y_train), (X_test, y_test) = data
     (X_train, y_train), (X_test, y_test) = mnist.load_data()
+
     X_train = normalize_minus1_1(cast_to_floatx(np.pad(X_train, ((0, 0), (2, 2), (2, 2)), 'constant')))
     X_train = np.expand_dims(X_train, axis=get_channels_axis())
     X_test = normalize_minus1_1(cast_to_floatx(np.pad(X_test, ((0, 0), (2, 2), (2, 2)), 'constant')))
@@ -147,6 +159,7 @@ def get_class_name_from_index(index, dataset_name):
         'fashion-mnist': ('t-shirt', 'trouser', 'pullover', 'dress', 'coat', 'sandal', 'shirt', 'sneaker', 'bag',
                           'ankle-boot'),
         'cats-vs-dogs': ('cat', 'dog'),
+        'mnist':('0','1','2','3','4','5','6','7','8','9')
     }
 
     return ind_to_name[dataset_name][index]

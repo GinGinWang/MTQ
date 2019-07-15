@@ -93,23 +93,7 @@ class CIFAR10(OneClassDataset):
         print(f'Valset prepared, Num:{self.length}')
 
 
-    def val2(self, normal_class):
-        # type: (int) -> None
-        """
-        Sets CIFAR10 in validation mode.
-
-        :param normal_class: the class to be considered normal.
-        """
-        # Update mode, indexes, length and transform
-        self.normal_class = int(normal_class)
-        self.mode = 'val2'
-        self.transform = self.test_transform
-        self.val_idxs = self.shuffled_train_idx[int(0.9 * len(self.shuffled_train_idx)):]
-        
-        self.length = len(self.val_idxs)
-
-        print(f'Val2 Set prepared, Num:{self.length}')
-#--------------------------------------------------------------------
+    
     def train(self, normal_class, noise_ratio=0):
         # type: (int) -> None
         """
@@ -128,7 +112,7 @@ class CIFAR10(OneClassDataset):
 
         self.train_idxs = self.train_idxs[0:int(0.9*len(self.train_idxs))]
         
-        noise_idxs = [idx for idx in self.train_idx if self.train_split[idx][1] == 3] # for noise to class 8
+        noise_idxs = [idx for idx in self.train_idx if self.train_split[idx][1] !=self.normal_class] # for noise to class 8
 
         if noise_ratio >0:
             noise_num = int(len(self.train_idxs)/(1-noise_ratio)*noise_ratio)
@@ -206,9 +190,6 @@ class CIFAR10(OneClassDataset):
         elif self.mode == 'val':
             x, _ = self.train_split[self.val_idxs[i]]
             sample = x, x
-        elif self.mode == 'val2':
-            x, y = self.train_split[i]
-            sample = x, int(y == self.normal_class)
 
         elif self.mode == 'train':
             x, _ = self.train_split[self.train_idxs[i]]

@@ -14,7 +14,7 @@ from models.blocks_2d import UpsampleBlock
 
 # flows
 from models.transform_sos import TinvSOS
-from models.transform_maf import TinvMAF
+# from models.transform_maf import TinvMAF
 
 # estimator
 from models.estimator_1D import Estimator1D
@@ -26,6 +26,7 @@ import torch.nn.functional as F
 class Encoder(BaseModule):
     """
     MNIST model encoder.
+    same as LSA
     """
     def __init__(self, input_shape, code_length):
         # type: (Tuple[int, int, int], int) -> None
@@ -41,7 +42,7 @@ class Encoder(BaseModule):
         self.code_length = code_length
 
         c, h, w = input_shape
-
+        
         activation_fn = nn.LeakyReLU()
 
         # Convolutional network
@@ -49,6 +50,7 @@ class Encoder(BaseModule):
             DownsampleBlock(channel_in=c, channel_out=32, activation_fn=activation_fn),
             DownsampleBlock(channel_in=32, channel_out=64, activation_fn=activation_fn),
         )
+
         self.deepest_shape = (64, h // 4, w // 4)
 
         # FC network
@@ -69,7 +71,7 @@ class Encoder(BaseModule):
         :return: the batch of latent vectors.
         """
 
-        h = x
+        h = x  
         h = self.conv(h)
         h = h.view(len(h), -1)
         o = self.fc(h)
@@ -85,6 +87,7 @@ class Decoder(BaseModule):
         # type: (int, Tuple[int, int, int], Tuple[int, int, int]) -> None
         """
         Class constructor.
+        same as LSA
 
         :param code_length: the dimensionality of latent vectors.
         :param deepest_shape: the dimensionality of the encoder's deepest convolutional map.
@@ -115,6 +118,8 @@ class Decoder(BaseModule):
             nn.Conv2d(in_channels=16, out_channels=1, kernel_size=1, bias=False)
         )
 
+
+
     def forward(self, x):
         # types: (torch.Tensor) -> torch.Tensor
         """
@@ -128,9 +133,7 @@ class Decoder(BaseModule):
         h = h.view(len(h), *self.deepest_shape)
         h = self.conv(h)
         o = h
-
         return o
-
 
 
 class LSA_MNIST(BaseModule):

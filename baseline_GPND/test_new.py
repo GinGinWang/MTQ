@@ -99,7 +99,7 @@ def compute_jacobian(inputs, output):
 
     return torch.transpose(jacobian, dim0=0, dim1=1)
 
-def main( cl, dataset_name):
+def main( cl, dataset_name, noise, run):
 
     if dataset_name == 'cifar10':
         dataset = CIFAR10(path='data/')
@@ -113,7 +113,7 @@ def main( cl, dataset_name):
     elif dataset_name == 'mnist':
         dataset = MNIST(path = 'data/')
         channels = 1
-        z_size = 64
+        z_size = 16
  
     
     batch_size = 128
@@ -127,15 +127,19 @@ def main( cl, dataset_name):
     G.eval()
     E.eval()
 
-    G.load_state_dict(torch.load(f"{dataset_name}_c{cl}_z{z_size}_G.pkl"))
-    E.load_state_dict(torch.load(f"{dataset_name}_c{cl}_z{z_size}_E.pkl"))
-
+    if noise == 0:
+        G.load_state_dict(torch.load(f"{dataset_name}_c{cl}_z{z_size}_G.pkl"))
+        E.load_state_dict(torch.load(f"{dataset_name}_c{cl}_z{z_size}_E.pkl"))
+    else:
+        G.load_state_dict(torch.load(f"{dataset_name}_n{noise}_z{z_size}_G_run{run}.pkl"))
+        E.load_state_dict(torch.load(f"{dataset_name}_n{noise}_z{z_size}_E_run{run}.pkl"))
+        
     if True:
         zlist = []
         rlist = []
 
 
-        dataset.train(cl)
+        dataset.train(normal_class = cl, noise_ratio= noise)
 
         loader = DataLoader(dataset, batch_size = batch_size)
         
@@ -271,12 +275,11 @@ def main( cl, dataset_name):
 
         print("AUC ", auc)
 
-
-        with open(os.path.join(f"results_{dataset.name}_z{z_size}.txt"), "a") as file:
+        result_path = f"results_{dataset.name}_z{z_size}_n{noise}_run{run}.txt"
+        with open(os.path.join(result_path), "a") as file:
             file.write(
                 "Class: %d\n AUC: %f\n " %
                 (cl, auc))
-
         return auc
 
     results = test()
@@ -284,9 +287,18 @@ def main( cl, dataset_name):
 
 if __name__ == '__main__':
     
+    noNoise = False
+    noise_list = [0.01,0.02,0.03,0.04,0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5]
     result = []
-    dataset_name = 'cifar10'
-    for i in range(0,10):
-        print(f"Class{i}")
-        result.append(main(i,dataset_name))
-    print (result) 
+    dataset_name = 'mnist'
+    if noNoise:
+        for i in range(0,10):
+            print(f"Class{i}")
+            result.append(main(i,dataset_name))
+    else: 
+        # only have two class
+        for run in range(5):
+            for noise in noise_list:
+                print(f"test for noise:{noise}")
+                main(8, dataset_name, noise, run)
+                print (result) 

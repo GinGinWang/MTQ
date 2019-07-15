@@ -6,57 +6,67 @@ from datasets.cifar10 import CIFAR10
 from datasets.fmnist import FMNIST
 from datasets.thyroid import THYROID
 from datasets.KDDCUP import KDDCUP
-from datasets.cifar10_gt import CIFAR10_GT
+from datasets.cifar10_gth import CIFAR10_GTH
+from datasets.fmnist_gth import FMNIST_GTH
 
-# LSA
+# models
 from models import LSA_MNIST
 from models import LSA_CIFAR10
-from models import LSAET_CIFAR10
-from models import LSAET_MNIST
-from models import AAE_CIFAR10
 from models import LSA_KDDCUP
-from models import VAE
 
 # Estimator
 from models.estimator_1D import Estimator1D
-from models.transform_maf import TinvMAF
+# from models.transform_maf import TinvMAF
 from models.transform_sos import TinvSOS
 
 from datasets.utils import set_random_seed
 from result_helpers import OneClassTestHelper
+
 import os
 
 import torch
 import numpy as np
 
-def create_dir(dataset, cd, pretrained, fixed, num_blocks,hidden_size, estimator, noise = 0):
+def create_dir(dataset, num_blocks, hidden_size, estimator, noise = 0, noise2=0,noise3=0, noise4=0):
     
-    if pretrained:
-        dirName = f'checkpoints/{dataset}/combined{cd}/Ptr{pretrained}/Fix{fixed}/'
-    else:
-        dirName = f'checkpoints/{dataset}/combined{cd}/Ptr{pretrained}/'
+    dirName = f'checkpoints/{dataset}/'
     
     if estimator == 'SOS':
         dirName = f'{dirName}b{num_blocks}h{hidden_size}/'
     
     if noise >0:
         dirName = f'checkpoints/noise_{noise}/'
+    elif noise2 >0:
+        dirName = f'checkpoints/noise2_{noise2}/'
+    elif noise3 >0:
+        dirName = f'checkpoints/noise3_{noise3}/'
+    elif noise4 >0:
+        dirName = f'checkpoints/noise4_{noise4}/'
+
     if not os.path.exists(dirName):
         os.makedirs(dirName)
         print(f'Make Dir:{dirName}')
 
     return dirName
 
-def create_file_dir(mulobj,model_name,dataset,cd,pretrained,fixed,score_normed,novel_ratio,num_blocks,hidden_size,lam, noise, checkpoint):
+def create_file_dir(mulobj,model_name,dataset,score_normed,novel_ratio,num_blocks,hidden_size,lam, noise, noise2, noise3, noise4, checkpoint):
 
     if mulobj:
-        dirName = f"results/Mul_{model_name}_{dataset}_cd{cd}_ptr{pretrained}_fix{fixed}_nml{score_normed}_nlr{novel_ratio}_b{num_blocks}_h{hidden_size}_lam{lam}"
+        dirName = f"results/Mul_{model_name}_{dataset}_nml{score_normed}_nlr{novel_ratio}_b{num_blocks}_h{hidden_size}_lam{lam}"
     else:
-       dirName = f"results/{model_name}_{dataset}_cd{cd}_ptr{pretrained}_fix{fixed}_nml{score_normed}_nlr{novel_ratio}_b{num_blocks}_h{hidden_size}_lam{lam}"
+       dirName = f"results/{model_name}_{dataset}_nml{score_normed}_nlr{novel_ratio}_b{num_blocks}_h{hidden_size}_lam{lam}"
 
     
     if (noise > 0):
         dirName = f"{dirName}_ns{noise}"
+    elif (noise2 > 0):
+        dirName = f"{dirName}_ns2{noise2}"
+    elif(noise3>0):
+        dirName = f"{dirName}_ns3{noise3}"
+
+    elif(noise4>0):
+        dirName = f"{dirName}_ns4{noise4}"
+    
     if (checkpoint!=None):
         dirName = f"{dirName}_at{checkpoint}"
 
@@ -70,52 +80,52 @@ def main():
     Performs One-class classification tests on one dataset
     """
 
+    
     ## Parse command line arguments
     args = parse_arguments()
-    device = torch.device("cuda:0")
+
+    # device = torch.device("cuda:0")
+
     # Lock seeds
-    set_random_seed(30101990)
+    # set_random_seed(123456789)
+    set_random_seed(111111111)
+    # set_random_seed(123456789)
 
     # prepare dataset in train mode
     if args.dataset == 'mnist':
         dataset = MNIST(path='data/MNIST', n_class = args.n_class, select = args.select)
-    
+
     elif args.dataset == 'fmnist':
         dataset = FMNIST(path='data/FMNIST', n_class = args.n_class, select = args.select)
 
     elif args.dataset == 'cifar10':
         dataset = CIFAR10(path='data/CIFAR', n_class = args.n_class, select= args.select)
 
-    elif args.dataset == 'cifar10_gt':
-        dataset = CIFAR10_GT(path='data/CIFAR', n_class = args.n_class, select= args.select)
-
+    elif args.dataset == 'cifar10_gth':
+        dataset = CIFAR10_GTH(path='data/CIFAR', n_class = args.n_class, select= args.select)
+    elif args.dataset == 'fmnist_gth':
+        dataset = FMNIST_GTH(n_class = args.n_class, select= args.select)
     elif args.dataset == 'thyroid':
         dataset = THYROID(path ='data/UCI/thyroid.mat')
+
     elif args.dataset == 'kddcup':
         dataset = KDDCUP()
     else:
         raise ValueError('Unknown dataset')
-    
-    
+
+
     print ("dataset shape: ",dataset.shape)
-
-    dirName = create_dir(args.dataset, args.cd,args.pretrained, args.fixed,args.num_blocks,args.hidden_size,args.estimator,args.noise)
     
-    # c,h,w = dataset.shape
 
-    # Build Model
-    # Build Model
-
+    dirName = create_dir(args.dataset, args.num_blocks,args.hidden_size,args.estimator,args.noise, args.noise2,args.noise3,args.noise4)
+    
     if (args.autoencoder == None):
         # directly estimate density by estimator
         print (f'No Autoencoder, only use Density Estimator: {args.estimator}')
         c,h,w = dataset.shape
 
         # build Density Estimator
-        if args.estimator == 'MAF':
-            model = TinvMAF(args.num_blocks, c*h*w,args.hidden_size).cuda()
-
-        elif args.estimator == 'SOS':
+        if args.estimator == 'SOS':
             model = TinvSOS(args.num_blocks, c*h*w,args.hidden_size).cuda()
 
         # 1-D estimator from LSA
@@ -128,7 +138,6 @@ def main():
         else:
             raise ValueError('Unknown Estimator')
         
-
     else:
         if args.autoencoder == "LSA":
             print(f'Autoencoder:{args.autoencoder}')
@@ -136,100 +145,51 @@ def main():
             
             if args.dataset in ['mnist','fmnist']: 
 
-                model =LSA_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator, combine_density = args.cd,hidden_size= args.hidden_size).cuda()
-            
-
+                model =LSA_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator,hidden_size= args.hidden_size).cuda()
             elif args.dataset in ['kddcup']:
                 model =LSA_KDDCUP(num_blocks=args.num_blocks, hidden_size= args.hidden_size, code_length = args.code_length).cuda()
 
-            elif args.dataset == 'cifar10':
-                model =LSA_CIFAR10(input_shape=dataset.shape, code_length = args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.cd,hidden_size= args.hidden_size).cuda()
-            
-            elif args.dataset == 'cifar10_gt':
-                model =LSA_CIFAR10( input_shape = dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.cd,hidden_size= args.hidden_size).cuda()
-
+            elif args.dataset =='cifar10':
+                model =LSA_CIFAR10(input_shape=dataset.shape, code_length = args.code_length, num_blocks=args.num_blocks, est_name= args.estimator,hidden_size= args.hidden_size).cuda()
             else:
-                ValueError("Unknown Dataset")
-        
-        # elif args.autoencoder == 'LSA_ET':
-
-        #     if args.dataset == 'mnist': 
-
-        #         model =LSAET_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator,hidden_size= args.hidden_size).cuda()
-            
-        #     elif args.dataset == 'cifar10':
-            
-        #         model =LSAET_CIFAR10(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator,hidden_size= args.hidden_size).cuda()
-            
-        elif args.autoencoder == 'AAE':
-            if args.dataset == 'cifar10':
-                model =AAE_CIFAR10(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name= args.estimator, combine_density = args.cd,hidden_size= args.hidden_size).cuda()
-            # elif args.dataset == 'mnist':
-            # elfi args.dataset == 'fmmnist':
-            else:
-                ValueError ('Unknown Dataset')
-
-        elif args.autoencoder == 'VAE':
-
-            model = VAE(
-            label=args.dataset,
-            input_shape = dataset.shape,
-            kernel_num= 128,
-            z_size = 64,
-            ).cuda()
+                ValueError("Unknown Dataset")        
         else:
             raise ValueError('Unknown Autoencoder')
     
+    
     # # set to Test mode
-    file_dirName = create_file_dir(args.mulobj,model.name,args.dataset,args.cd,args.pretrained,args.fixed,args.score_normed,args.novel_ratio,args.num_blocks,args.hidden_size,args.lam, args.noise, args.checkpoint)
+    file_dirName = create_file_dir(args.mulobj,model.name,args.dataset,args.score_normed,args.novel_ratio,args.num_blocks,args.hidden_size,args.lam, args.noise, args.noise2, args.noise3, args.noise4, args.checkpoint)
 
-    if args.noise >0:
-        dirName = f'/home/jj27wang/novelty-detection/NovelDect_SoS/SoSLSA/checkpoints/noise_{args.noise}/'
-    helper = OneClassTestHelper(dataset, model, args.score_normed, args.novel_ratio, lam = args.lam, checkpoints_dir= dirName, output_file= file_dirName,device = device, batch_size = args.batch_size, pretrained= args.pretrained, trainflag= args.trainflag, lr = args.lr, epochs=args.epochs, before_log_epochs = args.before_log_epochs,pretrained_model= args.premodel,fixed=args.fixed, mulobj=args.mulobj, add = args.add,checkpoint = args.checkpoint, noise= args.noise)
+    
+    
+    helper = OneClassTestHelper(
+        dataset, 
+        model, 
+        args.score_normed, 
+        args.novel_ratio, 
+        args.lam, 
+        dirName, 
+        file_dirName, 
+        args.batch_size, 
+        args.trainflag, 
+        args.testflag, 
+        args.lr, 
+        args.epochs, 
+        args.before_log_epochs, 
+        args.noise, 
+        args.noise2, 
+        args.noise3,
+        args.noise4, 
+        args.code_length,
+        args.mulobj, 
+        args.checkpoint, 
+        args.epoch_start
+        )
 
     helper.test_one_class_classification()
-    
-    
-    # if model.name in ['LSA_MAF','LSA_EN','LSA_SOS']:
-    #     from matplotlib import pyplot as plt
-    #     if args.select == None:
-    #         classes = range(0,args.n_class)
-    #     else:
-    #         classes = [args.select]
         
-    #     for cl in classes:
-    #     # load result
-    #         history_dir = f'{dirName}{cl}{model.name}_history.npy'
-    #         history_data = np.load(history_dir).item()
-    #         # plot result
-    #         epoch_num = len(history_data['val_loss'])
-    #         epoch = np.arange(0,epoch_num,1)
-            
-    #         ax1 = plt.subplot(611)
-    #         ax1.plot(epoch, history_data['val_rec'],label = 'val_rec')
-    #         ax1.legend(loc = 1)
-            
-    #         ax2 = plt.subplot(612)
-    #         ax2.plot(epoch, history_data['val_nllk'],label = 'val_nllk')
-    #         ax2.legend(loc = 1)
-            
-    #         ax3 = plt.subplot(613)
-    #         ax3.plot(epoch, history_data['trn_rec'],label = 'trn_rec')
-    #         ax3.legend(loc = 1)
 
-    #         ax4 = plt.subplot(614)
-    #         ax4.plot(epoch, history_data['trn_nllk'],label = 'trn_nllk')
-    #         ax4.legend(loc = 1)
-            
-    #         ax5 = plt.subplot(615)
-    #         ax5.plot(epoch, history_data['val_loss'],label = 'val_loss')
 
-    #         ax6 = plt.subplot(616)
-    #         ax6.plot(epoch, history_data['trn_loss'],label = 'trn_loss')
-            
-    #         plt.savefig(f'history_image/{cl}{model.name}_{args.dataset}_cd{args.cd}_ptr{args.pretrained}_fix{args.fixed}_nml{args.score_normed}_nlration{args.novel_ratio}_b{args.num_blocks}_h{args.hidden_size}_lam{args.lam}.png')
-    #         plt.close('all')
-    
 
 def parse_arguments():
     # type: () -> Namespace
@@ -262,6 +222,7 @@ def parse_arguments():
     parser.add_argument('--Fixed', dest='fixed',action = 'store_true', default = False, help = 'Fix the autoencoder while training')
     # parser.add_argument('--from_pretrained', dest= 'from_pretrained',action='store_true', default=False)
     parser.add_argument('--NoTrain', dest= 'trainflag',action='store_false', default=True, help = 'Test Mode')
+    parser.add_argument('--NoTest',  dest= 'testflag',action='store_false', default=True, help = 'Train Mode')
 
     parser.add_argument('--MulObj', dest= 'mulobj',action='store_true', default=False)
     
@@ -296,6 +257,13 @@ def parse_arguments():
     default=None,
     help='number of epochs to check when testing (default: Use the last one)')
     
+
+    parser.add_argument(
+    '--epoch_start',
+    type=str,
+    default=None,
+    help='number of epochs to start when training (default: Use the last one)')
+
     # learning rate 
     parser.add_argument(
     '--lr', type=float, default=0.0001, help='learning rate (default: 0.0001)')
@@ -320,13 +288,13 @@ def parse_arguments():
     '--code_length',
     type=int,
     default=64,
-    help='length of hidden vector (default: 32)')
+    help='length of hidden vector (default: 64)')
 
     # number of blocks
     parser.add_argument(
     '--hidden_size',
     type=int,
-    default=1024,
+    default=2048,
     help='length of hidden vector (default: 32)')
 
 
@@ -367,6 +335,27 @@ def parse_arguments():
     
     parser.add_argument(
     '--noise',
+    type=float,
+    default=0,
+    help='noise in training data')
+
+
+    parser.add_argument(
+    '--noise2',
+    type=float,
+    default=0,
+    help='noise in training data')
+    
+
+    parser.add_argument(
+    '--noise3',
+    type=float,
+    default=0,
+    help='noise in training data')
+    
+
+    parser.add_argument(
+    '--noise4',
     type=float,
     default=0,
     help='noise in training data')

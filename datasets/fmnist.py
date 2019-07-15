@@ -32,11 +32,11 @@ class FMNIST(OneClassDataset):
 
         self.n_class = n_class
         self.select = select
+
         self.name ='fmnist'
 
       # Get train and test split
         self.train_split = datasets.FashionMNIST(self.path, train=True, download=True, transform=None)
-        
         self.test_split = datasets.FashionMNIST(self.path, train=False, download=True, transform=None)
 
         # Shuffle training indexes to build a validation set (see val())
@@ -46,8 +46,6 @@ class FMNIST(OneClassDataset):
 
         # Shuffle testing indexes to build  a test set (see test())
         self.test_idx = np.arange(len(self.test_split))
-        # np.random.shuffle(test_idx)
-        # self.shuffled_test_idx = test_idx
 
         # Transform zone
         self.val_transform = transforms.Compose([ToFloatTensor2D()])
@@ -64,26 +62,6 @@ class FMNIST(OneClassDataset):
         self.train_idxs = None
         # test idx with 50%->90% normal class(50% -> 10% novelty)
         self.test_idxs = None 
-
-    def min_size(self):
-
-        if self.mode == 'train' or self.mode == 'valid':
-
-            train_idx = [idx for idx in self.shuffled_train_idx if self.train_split[idx][1] == 0]
-            minsize = len(train_idx)
-            for normal_class in range(1,10):
-                train_idx = [idx for idx in self.shuffled_train_idx if self.train_split[idx][1] == self.normal_class]
-                minsize = min(len(train_idx),minsize)
-            return minsize
-        elif self.mode == 'test':
-
-            train_idx = [idx for idx in self.shuffled_train_idx if self.train_split[idx][1] == 0]
-            minsize = len(train_idx)
-
-            for normal_class in range(1,10):
-                train_idx = [idx for idx in self.shuffled_train_idx if self.train_split[idx][1] == self.normal_class]
-                minsize = min(len(train_idx),minsize)
-            return minsize
 
     def val(self, normal_class):
         # type: (int) -> None
@@ -107,23 +85,6 @@ class FMNIST(OneClassDataset):
         
 
         self.length = len(self.val_idxs)
-#--------------------------------------------------------------------
-    def val2(self, normal_class):
-        # type: (int) -> None
-        """
-        Sets CIFAR10 in validation mode.
-
-        :param normal_class: the class to be considered normal.
-        """
-        # Update mode, indexes, length and transform
-        self.normal_class = int(normal_class)
-        self.mode = 'val2'
-        self.transform = self.test_transform
-        self.val_idxs = self.shuffled_train_idx[int(0.9 * len(self.shuffled_train_idx)):]
-        
-        self.length = len(self.val_idxs)
-        print(f'Val2 Set prepared, Num:{self.length}')
-#---
 
     def train(self, normal_class, noise_ratio=0):
         # type: (int) -> None
@@ -136,7 +97,7 @@ class FMNIST(OneClassDataset):
         self.normal_class = int(normal_class)
         
         if noise_ratio>0:
-            ValueError()
+            ValueError("Not Implemented")
         # Update mode, indexes, length and transform
         self.mode = 'train'
         self.transform = self.val_transform
@@ -150,7 +111,7 @@ class FMNIST(OneClassDataset):
         print(f"Training Set prepared, Num:{self.length}")
 #---------------------------------------------------------------------
 
-    def test(self, normal_class):
+    def test(self, normal_class, novel_ratio =1):
         # type: (int) -> None
         """
         Sets MNIST in test mode.
@@ -171,29 +132,30 @@ class FMNIST(OneClassDataset):
             normal_idxs = [idx for idx in self.test_idx if self.test_split[idx][1] == self.normal_class]
             normal_num = len(normal_idxs)
             novel_num = self.length - normal_num
+            self.test_idxs = self.test_idx
         else:
             # create test examples (normal)
-            self.test_idxs = [idx for idx in self.test_idx if self.test_split[idx][1] == self.normal_class]
+            test_idxs = [idx for idx in self.test_idx if self.test_split[idx][1] == self.normal_class]
 
             
             # contral all test sets have same size 
             # minsize = self.min_size()
             # self.test_idxs = self.test_idxs[0:minsize]
 
-            normal_num = len(self.test_idxs)
-
+            normal_num = len(test_idxs)
             # add test examples (unnormal)
-            novel_num  = int(normal_num/(1-novel_ratio) - normal_num)
+            novel_num  = int(normal_num/(1-novel_ratio)) - normal_num
+            print(f"Test Set prepared, Novel_num:{novel_num},Normal_num:{normal_num}")
             
             novel_idxs = [idx for idx in self.test_idx if self.test_split[idx][1] != self.normal_class]
-
             novel_idxs = novel_idxs[0:novel_num]
 
             # combine normal and novel part
-            self.test_idxs = self.test_idxs+novel_idxs
+            self.test_idxs= test_idxs + novel_idxs
             
             # testing examples (norm)
             self.length = len(self.test_idxs)
+
 
         print(f"Test Set prepared, Num:{self.length},Novel_num:{novel_num},Normal_num:{normal_num}")
 
@@ -214,7 +176,7 @@ class FMNIST(OneClassDataset):
 
         # Load the i-th example
         if self.mode == 'test':
-            x, y = self.test_split[i]
+            x, y = self.test_split[self.test_idxs[i]]
             x = np.uint8(x)[..., np.newaxis]
             sample = x, int(y == self.normal_class)
 
@@ -222,10 +184,7 @@ class FMNIST(OneClassDataset):
             x, _ = self.train_split[self.val_idxs[i]]
             x = np.uint8(x)[..., np.newaxis]
             sample = x, x
-        elif self.mode == 'val2':
-            x, y =self.train_split[i]
-            x = np.uint8(x)[..., np.newaxis]
-            sample = x, int(y == self.normal_class)
+
         elif self.mode == 'train':
             x, _ = self.train_split[self.train_idxs[i]]
             x = np.uint8(x)[..., np.newaxis]

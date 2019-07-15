@@ -22,18 +22,24 @@ class FlowLoss(BaseModule):
          
         return: the mean negative log-likelihood (averaged along the batch axis)
         '''
-        # s_d = s.detach()
-        # log_jacob_d = log_jacob.detach()
         s_d = s
         log_jacob_d = log_jacob
+        
         log_probs = (-0.5 * s_d.pow(2) - 0.5 * math.log(2 * math.pi)).sum(
             -1, keepdim=True)
         
         # formula (3)
         loss = -(log_probs + log_jacob_d).sum(-1, keepdim=True)
-        
+        log_probs = log_probs.sum(-1,keepdim=True)
+        log_jacob_d = log_jacob_d.sum(-1,keepdim=True)
+
         if size_average:
             loss = loss.mean()
+            log_probs= log_probs.mean()
+            log_jacob_d = log_jacob_d.mean()
         else:
             loss = loss.squeeze(-1)
-        return loss
+            log_probs= log_probs.squeeze(-1)
+            log_jacob_d = log_jacob_d.squeeze(-1)
+
+        return loss, -log_probs,-log_jacob_d

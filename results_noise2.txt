@@ -1,0 +1,32 @@
+dataset shape:  (1, 28, 28)
+Autoencoder:LSA
+Density Estimator:SOS
+LSA_SOS_cd_False Model Initialization
+Testing on LSA_SOS
+Testinng on 8
+Load Model from checkpoints/noise2_0.05/8LSA_SOS_mulTrue_b.pkl
+Test Set prepared, Num:10000,Novel_num:9026,Normal_num:974
+10000
+Computing scores for ONE-CLASS MNIST (normal class =  8 ): 40it [00:02, 21.47it/s]
+min_llk:91.5606689453125,max_llk:202.649658203125
+min_rec:-12.229433059692383,max_rec:-0.6944994330406189
+Real Novelty_Num: 9026 in 10000 samples, Novel Ratio= 0.9026
+Predicted Novelty_Num: 9000 in 10000 samples
+Wrongly Predict on 1
+Class_AUC-8:0.8849064145514373
+dataset shape:  (1, 28, 28)
+Autoencoder:LSA
+Density Estimator:SOS
+LSA_SOS_cd_False Model Initialization
+Testing on LSA_SOS
+Testinng on 8
+Load Model from checkpoints/noise2_0.5/8LSA_SOS_mulTrue_b.pkl
+Test Set prepared, Num:10000,Novel_num:9026,Normal_num:974
+10000
+Computing scores for ONE-CLASS MNIST (normal class =  8 ): 40it [00:01, 20.32it/s]
+min_llk:490.8187255859375,max_llk:502.87213134765625
+min_rec:-70.30887603759766,max_rec:-10.314455032348633
+Real Novelty_Num: 9026 in 10000 samples, Novel Ratio= 0.9026
+Predicted Novelty_Num: 9000 in 10000 samples
+Wrongly Predict on 1
+Class_AUC-8:0.6600007006908175

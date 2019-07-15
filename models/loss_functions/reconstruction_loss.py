@@ -24,10 +24,12 @@ class ReconstructionLoss(BaseModule):
         :return: the mean reconstruction loss (averaged along the batch axis).
         """
 
+        
         L = torch.pow((x - x_r), 2)
 
         while L.dim() > 1:
             L = torch.sum(L, dim=-1)
+            
         if size_average: # whether got average in batch
             L = torch.mean(L)
         return L

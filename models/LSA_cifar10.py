@@ -12,7 +12,7 @@ from models.blocks_2d import UpsampleBlock
 
 # flows
 from models.transform_sos import TinvSOS
-from models.transform_maf import TinvMAF
+# from models.transform_maf import TinvMAF
 
 # estimator
 from models.estimator_1D import Estimator1D

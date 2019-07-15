@@ -69,7 +69,7 @@ def extract_batch(data, it, batch_size):
     return Variable(x)
 
 
-def main(cl, total_classes, dataset_name):
+def main(cl, total_classes, dataset_name, noise = 0, run = 0):
     
     print(f"Training for f{cl}")
     batch_size = 128
@@ -93,10 +93,14 @@ def main(cl, total_classes, dataset_name):
         channels = 1
         zsize = 16 # 32
         lambda_e = 2.0
+        if noise > 0:
+            dataset.train(normal_class = 8, noise_ratio = noise)
+
+
     
 
     dataset.train(cl)
-    
+
     G = Generator(z_size = zsize, channels = channels)
     setup(G)
     G.weight_init(mean=0, std=0.02)
@@ -259,13 +263,26 @@ def main(cl, total_classes, dataset_name):
         
 
     print("Training finish!... save training results")
-    torch.save(G.state_dict(),f"{dataset.name}_c{cl}_z{zsize}_G.pkl")
-    torch.save(E.state_dict(), f"{dataset.name}_c{cl}_z{zsize}_E.pkl")
-    torch.save(D.state_dict(), f"{dataset.name}_c{cl}_z{zsize}_D.pkl")
-    torch.save(ZD.state_dict(),f"{dataset.name}_c{cl}_z{zsize}_Z.pkl")
-
+    if noise ==0:
+        torch.save(G.state_dict(),f"{dataset.name}_c{cl}_z{zsize}_G.pkl")
+        torch.save(E.state_dict(), f"{dataset.name}_c{cl}_z{zsize}_E.pkl")
+        torch.save(D.state_dict(), f"{dataset.name}_c{cl}_z{zsize}_D.pkl")
+        torch.save(ZD.state_dict(),f"{dataset.name}_c{cl}_z{zsize}_Z.pkl")
+    else:
+        torch.save(G.state_dict(),f"{dataset.name}_n{noise}_z{zsize}_G_run{run}.pkl")
+        torch.save(E.state_dict(), f"{dataset.name}_n{noise}_z{zsize}_E_run{run}.pkl")
+        torch.save(D.state_dict(), f"{dataset.name}_n{noise}_z{zsize}_D_run{run}.pkl")
+        torch.save(ZD.state_dict(),f"{dataset.name}_n{noise}_z{zsize}_Z_run{run}.pkl")
+    
 if __name__ == '__main__':
     
+    noNoise = False
+    noise_list = [0.6,0.7,]
     dataset_name = 'mnist'
-    for i in range(10):
-        main(i, 10, dataset_name)
+    if noNoise:
+        for i in range(10):
+            main(i, 10, dataset_name)
+    else:
+        for run in range(1):
+            for noise in noise_list:
+                main(8, 2 ,dataset_name, noise, run)

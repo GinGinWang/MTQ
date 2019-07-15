@@ -1,9 +1,0 @@
-
-# data
-scipy
-scikit-learn
-numpy
-pillow
-
-# utils
-tqdm

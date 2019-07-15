@@ -191,7 +191,7 @@ class OneClassResultHelper(object):
         return sample_llk.min(), sample_llk.max(), sample_rec.min(), sample_rec.max()
 
     @property
-    def empty_table(self):
+    def empty_table(self,style):
         # type: () -> PrettyTable
         """
         Sets up a nice ascii-art table to hold results.

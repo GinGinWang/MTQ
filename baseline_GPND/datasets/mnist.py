@@ -81,8 +81,8 @@ class MNIST(OneClassDataset):
         # training examples are all normal
         self.train_idxs = [idx for idx in self.train_idx if self.train_split[idx][1] == self.normal_class]
 
-        self.train_idxs = self.train_idxs[0:int(0.9*len(self.train_idxs))]
-        noise_idxs = [idx for idx in self.train_idx if self.train_split[idx][1] == 3] # for noise to class 8
+        # self.train_idxs = self.train_idxs[0:int(0.9*len(self.train_idxs))]
+        noise_idxs = [idx for idx in self.shuffled_train_idx if self.train_split[idx][1] !=self.normal_class] # for noise to class 8
 
         if noise_ratio >0:
             noise_num = int(len(self.train_idxs)/(1-noise_ratio)*noise_ratio)
