@@ -19,6 +19,10 @@
     "checkpoints/",
     "history_image/",
     "baseline_ADT/results/",
+    "baseline_GPND",
+    "baseline_VAE",
+    "baseline_LSA",
+    "data",
     "\\.git/","\\.pkl","\\.pdf","\\.npz","\\.npy","\\.gz","\\.pyc"
     ],
     //"file_permissions": "664",

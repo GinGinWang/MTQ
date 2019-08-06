@@ -1,8 +1,15 @@
 import numpy as np
+#pip install https://github.com/anguswilliams91/CornerPlot/archive/master.zip
+# import corner_plot as cp
 
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+
+import pandas as pd
+from pandas.plotting import scatter_matrix
+
 
 
 def modify_inf(result):
@@ -22,11 +29,12 @@ def modify_inf(result):
 	return result
 
 
-def plot_source_dist_by_dimensions(sample, sample_y):
+def plot_source_dist_by_dimensions(sample, sample_y, filename):
+	# latent vector # m-dimension
+	# plot graphs for pairwise joint distribution/ marginal distribution
+	# 
 
-	print(sample.shape)
-	print(sample_y.shape)
-	points_num= len(sample)
+	points_num, dimension = sample.shape
 
 	idxs = range(points_num)
 	normal_idxs = [idx for idx in idxs if sample_y[idx] == 1]
@@ -37,41 +45,28 @@ def plot_source_dist_by_dimensions(sample, sample_y):
 	print("Normal_num:", len(normal_idxs))
 	print("Novel_num:", len(novel_idxs))
 
-	# normal points
-	x = range(64)
-	plt.figure(0)
-	# plt.savefig(f'distgraph/test_normal_distribution.png')
-
-	# plt.figure(1)
-	aver_normal = []
-	aver_novel = []
-	aver_diff = []
-	for i in range (64):
-		aver_normal.append(sum([sample[idx, i] for idx in normal_idxs]))
-		aver_novel.append( sum([sample[idx, i] for idx in novel_idxs]))
-		aver_diff.append(abs(aver_normal[i]-aver_novel[i]))
-
-    
-	print(aver_diff)
-
-	idxmax1 , idxmax2 = sorted(range(len(aver_diff)), key=lambda i: aver_diff[i])[-2:]
-
-	print(idxmax1)
-	print(idxmax2)
-
-	plt.plot(sample[novel_idxs, idxmax1], sample[novel_idxs, idxmax2], 'r+')
+	columns = ['z'+str(i) for i in range(dimension) ]
 	
-	plt.plot(sample[normal_idxs, idxmax1], sample[normal_idxs,idxmax2], 'b.')
 
-	plt.show()
+	# scatter_matrix
+	#first make some fake data with same layout as yours
+	data_normal = pd.DataFrame(sample[normal_idxs, :], columns=columns)
+	data_novel = pd.DataFrame(sample[novel_idxs, :], columns = columns)
+	# now plot using pandas
 
-	plt.savefig(f'distgraph/test_source_distribution.png')
+	scatter_matrix(data_normal, alpha=0.2, figsize=(50, 50), diagonal='hist', color = 'b',marker='o',hist_kwds={'bins':20})
+	plt.savefig(f'{filename}_normal.png')
+
+	scatter_matrix(data_novel, alpha=0.2, figsize=(50, 50), diagonal='hist', color = 'r', marker='o',hist_kwds={'bins':20})
+	plt.savefig(f'{filename}_novel.png')
 
 
 
-# def plot_1d_dist(sample, sample_y):
- 
-# def plot_2d_dist(sample, sample_y):
+	# use cornerplt
 
-# def plot_3d_dist(sample, sample_y):
+	# chains = (sample[normal_idxs, 0:5],sample[novel_idxs, 0:5])
 
+	# cp.multi_corner_plot(chains, axis_labels=columns, linewidth=2.,\
+ #                                            chain_labels=["normal","novel"], figsize= (20,20), )
+
+	# plt.savefig(f'distgraph/test.png')

@@ -49,10 +49,6 @@ class TinvSOS(BaseModule):
         if device is not None:
             model.to(device)
 
-        for module in model.modules():
-            if isinstance(module, nn.Linear):
-                nn.init.orthogonal_(module.weight)
-
         self.T_inverse = model
 
 

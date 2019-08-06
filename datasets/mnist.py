@@ -16,7 +16,7 @@ class MNIST(OneClassDataset):
     """
     Models MNIST dataset for one class classification.
     """
-    def __init__(self, path, n_class = 10, select = None):
+    def __init__(self, path, n_class = 10, select = None, select_novel_classes = None):
 
         # type: (str) -> None
         """
@@ -32,6 +32,12 @@ class MNIST(OneClassDataset):
 
         self.n_class = n_class
         self.select = select
+
+        if select_novel_classes != None:
+            self.select_novel_classes = [int(novel_class) for novel_class in select_novel_classes]
+        else:
+            self.select_novel_classes = None
+        
         self.name ='mnist'
 
       # Get train and test split
@@ -45,11 +51,7 @@ class MNIST(OneClassDataset):
 
 
 
-        # Shuffle testing indexes to build  a test set (see test())
-        self.test_idx = np.arange(len(self.test_split))
-        # np.random.shuffle(test_idx)
-        # self.shuffled_test_idx = test_idx
-
+        
         # Transform zone
         self.val_transform = transforms.Compose([ToFloatTensor2D()])
         self.test_transform = transforms.Compose([ToFloat32(), OCToFloatTensor2D()])
@@ -77,14 +79,10 @@ class MNIST(OneClassDataset):
 
         # Update mode, indexes, length and transform
         self.mode = 'val'
-        self.transform = self.val_transform
+        self.transform = self.test_transform
         
         self.val_idxs = [idx for idx in self.shuffled_train_idx if self.train_split[idx][1] == self.normal_class]
         self.val_idxs =self.val_idxs[int(0.9*len(self.val_idxs)):]
-        
-        # minsize = self.min_size()
-
-        # self.val_idxs = self.val_idxs[0:minsize]
         
 
         self.length = len(self.val_idxs)
@@ -101,9 +99,11 @@ class MNIST(OneClassDataset):
 
         # Update mode, indexes, length and transform
         self.mode = 'train'
-        self.transform = self.val_transform
+        self.transform = self.test_transform
+
         # training examples are all normal 
         self.train_idxs = [idx for idx in self.shuffled_train_idx if self.train_split[idx][1] == self.normal_class]
+
         self.train_idxs = self.train_idxs[0:int(0.9*len(self.train_idxs))]
 
        
@@ -178,6 +178,8 @@ class MNIST(OneClassDataset):
             #     noise_num_i =len([idx for idx in self.train_idxs if self.train_split[idx][1]==i])
             #     print(f"class {i}:{noise_num_i}")
             # add noise to train
+
+            
         # fix the size of training set, noise from other datasets
         self.length = len(self.train_idxs)
         # print 
@@ -185,7 +187,7 @@ class MNIST(OneClassDataset):
 #---------------------------------------------------------------------
 
 
-    def test(self, normal_class, novel_ratio):
+    def test(self, normal_class, novel_ratio = 1):
         # type: (int) -> None
         """
         Sets MNIST in test mode.
@@ -193,7 +195,23 @@ class MNIST(OneClassDataset):
         :param normal_class: the class to be considered normal.
         :param norvel_ratio: the ratio of novel examples
         """
+
+        # select all classes from dataset
         self.normal_class = int(normal_class)
+        print(f"Normal class :{normal_class}")
+
+        if self.select_novel_classes == None:
+            test_classes = range(10)
+        else:
+            test_classes = self.select_novel_classes
+        
+            test_classes.append(normal_class)
+        
+        print(f"Test set contains {test_classes}")
+
+        # filter testing indexes to build  a test set (see test())
+        test_idx = np.arange(len(self.test_split))
+        self.test_idx = [idx for idx in test_idx if self.test_split[idx][1] in test_classes]
 
         # Update mode, length and transform
         self.mode = 'test'
@@ -201,8 +219,6 @@ class MNIST(OneClassDataset):
 
         if novel_ratio == 1:
             # testing examples (norm)
-            self.length = len(self.test_split)
-            
             normal_idxs = [idx for idx in self.test_idx if self.test_split[idx][1] == self.normal_class]
             normal_num = len(normal_idxs)
             novel_num = self.length - normal_num
@@ -228,7 +244,7 @@ class MNIST(OneClassDataset):
             self.test_idxs= test_idxs + novel_idxs
             
             # testing examples (norm)
-            self.length = len(self.test_idxs)
+        self.length = len(self.test_idxs)
 
 
         print(f"Test Set prepared, Num:{self.length},Novel_num:{novel_num},Normal_num:{normal_num}")
@@ -249,19 +265,19 @@ class MNIST(OneClassDataset):
 
         # Load the i-th example
         if self.mode == 'test':
-            x, y = self.test_split[i]
+            x, y = self.test_split[self.test_idxs[i]]
             x = np.uint8(x)[..., np.newaxis]
             sample = x, int(y == self.normal_class)
 
         elif self.mode == 'val':
-            x, _ = self.train_split[self.val_idxs[i]]
+            x, y = self.train_split[self.val_idxs[i]]
             x = np.uint8(x)[..., np.newaxis]
-            sample = x, x
+            sample = x, int(y == self.normal_class)
        
         elif self.mode == 'train':
-            x, _ = self.train_split[self.train_idxs[i]]
+            x, y = self.train_split[self.train_idxs[i]]
             x = np.uint8(x)[..., np.newaxis]
-            sample = x, x
+            sample = x, int(y == self.normal_class)
         else:
             raise ValueError
 
@@ -278,9 +294,10 @@ class MNIST(OneClassDataset):
         Returns all test possible test sets (the 10 classes).
         """
         if self.select ==None:
-            classes = np.arange(0,self.n_class)
+            classes = np.arange(0, self.n_class)
         else:
             classes = [self.select] # select one class to train
+            
         return classes
 
     @property
@@ -290,7 +307,7 @@ class MNIST(OneClassDataset):
         Returns all test possible test sets (the 10 classes).
         """
         if self.select == None:
-            classes = np.arange(0,self.n_class)
+            classes = np.arange(0, self.n_class)
         else:
             classes = [self.select]
         return classes

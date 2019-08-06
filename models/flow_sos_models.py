@@ -195,39 +195,31 @@ class BatchNormFlow(nn.Module):
     Density estimation using Real NVP
     (https://arxiv.org/abs/1605.08803).
     """
-
     def __init__(self, num_inputs, momentum=0.0, eps=1e-5):
         super(BatchNormFlow, self).__init__()
-
         self.log_gamma = nn.Parameter(torch.zeros(num_inputs))
         self.beta = nn.Parameter(torch.zeros(num_inputs))
         self.momentum = momentum
         self.eps = eps
-
         self.register_buffer('running_mean', torch.zeros(num_inputs))
         self.register_buffer('running_var', torch.ones(num_inputs))
-
     def forward(self, inputs, mode='direct'):
         if mode == 'direct':
             if self.training:
                 self.batch_mean = inputs.mean(0)
                 self.batch_var = (
                     inputs - self.batch_mean).pow(2).mean(0) + self.eps
-
                 self.running_mean.mul_(self.momentum)
                 self.running_var.mul_(self.momentum)
-
                 self.running_mean.add_(self.batch_mean.data *
                                        (1 - self.momentum))
                 self.running_var.add_(self.batch_var.data *
                                       (1 - self.momentum))
-
                 mean = self.batch_mean
                 var = self.batch_var
             else:
                 mean = self.running_mean
                 var = self.running_var
-
             x_hat = (inputs - mean) / var.sqrt()
             y = torch.exp(self.log_gamma) * x_hat + self.beta
             return y, (self.log_gamma - 0.5 * torch.log(var)).sum(
@@ -239,32 +231,30 @@ class BatchNormFlow(nn.Module):
             else:
                 mean = self.running_mean
                 var = self.running_var
-
             x_hat = (inputs - self.beta) / torch.exp(self.log_gamma)
-
             y = x_hat * var.sqrt() + mean
-
             return y, (-self.log_gamma + 0.5 * torch.log(var)).sum(-1, keepdim=True)
+    def _jacob(self, X):
+        return None
+
 
 class Reverse(nn.Module):
     """ An implementation of a reversing layer from
     Density estimation using Real NVP
     (https://arxiv.org/abs/1605.08803).
     """
-
     def __init__(self, num_inputs):
         super(Reverse, self).__init__()
         self.perm = np.array(np.arange(0, num_inputs)[::-1])
         self.inv_perm = np.argsort(self.perm)
-
     def forward(self, inputs, mode='direct'):
         if mode == 'direct':
             return inputs[:, self.perm], torch.zeros(
                 inputs.size(0), 1, device=inputs.device)
         else:
-            return inputs[:, self.inv_perm], torch.zeros(
-inputs.size(0), 1, device=inputs.device)
-
+            return inputs[:, self.inv_perm], torch.zeros(inputs.size(0), 1, device=inputs.device)
+    def _jacob(self, X):
+        return None
 
 class FlowSequential(nn.Sequential):
     """ A sequential container for flows.
@@ -319,3 +309,17 @@ class FlowSequential(nn.Sequential):
             cond_inputs = cond_inputs.to(device)
         samples = self.forward(noise, cond_inputs, mode='inverse')[0]
         return samples
+
+    def jacobians(self, X):
+        assert len(X.size()) == 1
+        N = len(self._modules)
+        num_inputs = X.size(-1)
+        jacobians = torch.zeros(N, num_inputs, num_inputs)
+        n_jacob = 0
+        for i in range(N):
+            J_i = self._modules[str(i)]._jacob(X)
+            if J_i is not None:
+                jacobians[n_jacob,:,:] = J_i
+                n_jacob += 1
+            del J_i
+        return jacobians[:n_jacob,:,:]

@@ -35,7 +35,7 @@ class LSASOSLoss(nn.Module):
         self.nlog_probs = None
         self.nagtive_log_jacob = None
 
-    def forward(self, x, x_r, s,nagtive_log_jacob,average = True):
+    def forward(self, x, x_r, s,nagtive_log_jacob, average = True):
         # type: (torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor) -> torch.Tensor
         """
         Forward propagation.
@@ -47,16 +47,17 @@ class LSASOSLoss(nn.Module):
         :return: the loss of the model (averaged along the batch axis).
         """
         # Compute pytorch loss
-        rec_loss = self.reconstruction_loss_fn(x, x_r,average)
+        rec_loss = self.reconstruction_loss_fn(x, x_r, average)
         arg_loss, nlog_probs, nlog_jacob_d = self.autoregression_loss_fn(s,nagtive_log_jacob ,average)
 
         tot_loss = rec_loss + self.lam * arg_loss
 
         # Store numerical
         self.reconstruction_loss = rec_loss
-        self.autoregression_loss = arg_loss
-        self.nlog_probs = nlog_probs
-        self.nagtive_log_jacob = nlog_jacob_d
+        self.autoregression_loss = arg_loss* self.lam
+        
+        self.nlog_probs = nlog_probs * self.lam
+        self.nagtive_log_jacob = nlog_jacob_d * self.lam
         
         self.total_loss = tot_loss
 

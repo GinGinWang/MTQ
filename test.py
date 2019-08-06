@@ -1,7 +1,16 @@
 import argparse
 from argparse import Namespace
+import os
+import torch
+import numpy as np
+import torch.nn as nn
 
-from datasets.mnist import MNIST
+### model?? dataset??? training????
+##MODEL! Dataset! Training???
+
+# from datasets import *
+from old.datasets.mnist import MNIST
+
 from datasets.cifar10 import CIFAR10
 from datasets.fmnist import FMNIST
 from datasets.thyroid import THYROID
@@ -10,7 +19,7 @@ from datasets.cifar10_gth import CIFAR10_GTH
 from datasets.fmnist_gth import FMNIST_GTH
 
 # models
-from models import LSA_MNIST
+from models.LSA_mnist import LSA_MNIST
 from models import LSA_CIFAR10
 from models import LSA_KDDCUP
 
@@ -18,61 +27,14 @@ from models import LSA_KDDCUP
 from models.estimator_1D import Estimator1D
 # from models.transform_maf import TinvMAF
 from models.transform_sos import TinvSOS
+# random seed
+from utils import set_random_seed
+# Main Class
+from result_helpers.test_one_class import OneClassTestHelper
 
-from datasets.utils import set_random_seed
-from result_helpers import OneClassTestHelper
-
-import os
-
-import torch
-import numpy as np
-
-def create_dir(dataset, num_blocks, hidden_size, estimator, noise = 0, noise2=0,noise3=0, noise4=0):
-    
-    dirName = f'checkpoints/{dataset}/'
-    
-    if estimator == 'SOS':
-        dirName = f'{dirName}b{num_blocks}h{hidden_size}/'
-    
-    if noise >0:
-        dirName = f'checkpoints/noise_{noise}/'
-    elif noise2 >0:
-        dirName = f'checkpoints/noise2_{noise2}/'
-    elif noise3 >0:
-        dirName = f'checkpoints/noise3_{noise3}/'
-    elif noise4 >0:
-        dirName = f'checkpoints/noise4_{noise4}/'
-
-    if not os.path.exists(dirName):
-        os.makedirs(dirName)
-        print(f'Make Dir:{dirName}')
-
-    return dirName
-
-def create_file_dir(mulobj,model_name,dataset,score_normed,novel_ratio,num_blocks,hidden_size,lam, noise, noise2, noise3, noise4, checkpoint):
-
-    if mulobj:
-        dirName = f"results/Mul_{model_name}_{dataset}_nml{score_normed}_nlr{novel_ratio}_b{num_blocks}_h{hidden_size}_lam{lam}"
-    else:
-       dirName = f"results/{model_name}_{dataset}_nml{score_normed}_nlr{novel_ratio}_b{num_blocks}_h{hidden_size}_lam{lam}"
-
-    
-    if (noise > 0):
-        dirName = f"{dirName}_ns{noise}"
-    elif (noise2 > 0):
-        dirName = f"{dirName}_ns2{noise2}"
-    elif(noise3>0):
-        dirName = f"{dirName}_ns3{noise3}"
-
-    elif(noise4>0):
-        dirName = f"{dirName}_ns4{noise4}"
-    
-    if (checkpoint!=None):
-        dirName = f"{dirName}_at{checkpoint}"
-
-    dirName = f"{dirName}.txt"
-
-    return dirName 
+# dir/path 
+from utils import create_checkpoints_dir
+from utils import create_file_path
 
 def main():
     # type: () -> None
@@ -83,17 +45,27 @@ def main():
     
     ## Parse command line arguments
     args = parse_arguments()
-
-    # device = torch.device("cuda:0")
+    device = torch.device("cuda:0")
 
     # Lock seeds
-    # set_random_seed(123456789)
-    set_random_seed(111111111)
-    # set_random_seed(123456789)
+    # set_random_seed(123456789) 
+    set_random_seed(11111111) # good mnist
+    # set_random_seed(30101990) # 
+    # set_random_seed(987654321) # (good)
+    # set_random_seed(22222222) # good
+    # set_random_seed(33333333) # good
+    # set_random_seed(44444444)
+    # set_random_seed(55555555) # good
+    # set_random_seed(66666666) # (good)
+    # set_random_seed(77777777)
+    # set_random_seed(88888888)
+    # set_random_seed(99999999)
 
     # prepare dataset in train mode
     if args.dataset == 'mnist':
+        # dataset = MNIST(path='data/MNIST', n_class = args.n_class, select = args.select, select_novel_classes = args.select_novel_classes)
         dataset = MNIST(path='data/MNIST', n_class = args.n_class, select = args.select)
+        
 
     elif args.dataset == 'fmnist':
         dataset = FMNIST(path='data/FMNIST', n_class = args.n_class, select = args.select)
@@ -103,8 +75,10 @@ def main():
 
     elif args.dataset == 'cifar10_gth':
         dataset = CIFAR10_GTH(path='data/CIFAR', n_class = args.n_class, select= args.select)
+
     elif args.dataset == 'fmnist_gth':
         dataset = FMNIST_GTH(n_class = args.n_class, select= args.select)
+    
     elif args.dataset == 'thyroid':
         dataset = THYROID(path ='data/UCI/thyroid.mat')
 
@@ -117,8 +91,10 @@ def main():
     print ("dataset shape: ",dataset.shape)
     
 
-    dirName = create_dir(args.dataset, args.num_blocks,args.hidden_size,args.estimator,args.noise, args.noise2,args.noise3,args.noise4)
-    
+    checkpoints_dir = create_checkpoints_dir(args.dataset, args.num_blocks, args.hidden_size, args.code_length, args.estimator,args.noise, args.noise2,args.noise3,args.noise4)
+
+
+    # MODEL
     if (args.autoencoder == None):
         # directly estimate density by estimator
         print (f'No Autoencoder, only use Density Estimator: {args.estimator}')
@@ -146,6 +122,7 @@ def main():
             if args.dataset in ['mnist','fmnist']: 
 
                 model =LSA_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator,hidden_size= args.hidden_size).cuda()
+
             elif args.dataset in ['kddcup']:
                 model =LSA_KDDCUP(num_blocks=args.num_blocks, hidden_size= args.hidden_size, code_length = args.code_length).cuda()
 
@@ -157,34 +134,45 @@ def main():
             raise ValueError('Unknown Autoencoder')
     
     
-    # # set to Test mode
-    file_dirName = create_file_dir(args.mulobj,model.name,args.dataset,args.score_normed,args.novel_ratio,args.num_blocks,args.hidden_size,args.lam, args.noise, args.noise2, args.noise3, args.noise4, args.checkpoint)
+   
 
-    
-    
+    # # set to Test mode
+    result_file_path = create_file_path(args.mulobj,model.name,args.dataset,args.score_normed,args.novel_ratio,args.num_blocks,args.hidden_size,args.code_length, args.lam, args.noise, args.noise2, args.noise3, args.noise4, args.checkpoint)
+
+    nowdir=os.getcwd()
+    if args.fixed and args.mulobj:
+        checkpoints_dir = f'{nowdir}/checkpoints/{args.dataset}/fixed_mulobj/'
+    elif args.fixed:
+        checkpoints_dir = f'{nowdir}/checkpoints/{args.dataset}/fixed_fixed/'
+
+    print(checkpoints_dir)
+
     helper = OneClassTestHelper(
-        dataset, 
-        model, 
-        args.score_normed, 
-        args.novel_ratio, 
-        args.lam, 
-        dirName, 
-        file_dirName, 
-        args.batch_size, 
-        args.trainflag, 
-        args.testflag, 
-        args.lr, 
-        args.epochs, 
-        args.before_log_epochs, 
-        args.noise, 
-        args.noise2, 
-        args.noise3,
-        args.noise4, 
-        args.code_length,
-        args.mulobj, 
-        args.checkpoint, 
-        args.epoch_start
+        dataset = dataset, 
+        model = model, 
+        score_normed = args.score_normed, 
+        novel_ratio = args.novel_ratio, 
+        lam = args.lam, 
+        checkpoints_dir = checkpoints_dir, 
+        result_file_path = result_file_path, 
+        batch_size = args.batch_size, 
+        trainflag = args.trainflag, 
+        testflag = args.testflag, 
+        lr = args.lr, 
+        epochs = args.epochs, 
+        before_log_epochs = args.before_log_epochs, 
+        noise = args.noise, 
+        noise2 = args.noise2, 
+        noise3 = args.noise3,
+        noise4 = args.noise4, 
+        code_length = args.code_length,
+        mulobj = args.mulobj, 
+        test_checkpoint = args.checkpoint, 
+        epoch_start = args.epoch_start,
+        device = device,
+        fixed = args.fixed
         )
+
 
     helper.test_one_class_classification()
         
@@ -213,7 +201,8 @@ def parse_arguments():
                         help='The name of the dataset to perform tests on.'
                         'Choose among `mnist`, `cifar10`', metavar='')
     
-    parser.add_argument('--Combine_density', dest='cd',action = 'store_true',default = False, help = 'Use reconstruction loss as one dimension of latent vector')
+    # parser.add_argument('--Combine_density', dest='cd',action = 'store_true',default = False, help = 'Use reconstruction loss as one dimension of latent vector')
+
     parser.add_argument('--PreTrained', dest='pretrained',action = 'store_true',default = False, help = 'Use Pretrained Model')
     parser.add_argument('--Add', dest='add',action = 'store_true',default = False)
     
@@ -225,6 +214,8 @@ def parse_arguments():
     parser.add_argument('--NoTest',  dest= 'testflag',action='store_false', default=True, help = 'Train Mode')
 
     parser.add_argument('--MulObj', dest= 'mulobj',action='store_true', default=False)
+    parser.add_argument('--fixed', dest= 'fixed',action='store_true', default=False)
+
     
     # parser.add_argument('--NoDecoder', dest='decoder_flag',action='store_false', default = True)
     # parser.add_argument('--NoAutoencoder', dest='coder',action='store_false', default = True)
@@ -248,7 +239,7 @@ def parse_arguments():
     '--before_log_epochs',
     type=int,
     default=-1,
-    help='number of epochs before logging (default: 100)')
+    help='number of epochs before logging (default: -1)')
 
     # select checkpoint
     parser.add_argument(
@@ -260,8 +251,8 @@ def parse_arguments():
 
     parser.add_argument(
     '--epoch_start',
-    type=str,
-    default=None,
+    type=int,
+    default=0,
     help='number of epochs to start when training (default: Use the last one)')
 
     # learning rate 
@@ -328,10 +319,18 @@ def parse_arguments():
     help = 'Select one specific class for training')
 
     parser.add_argument(
+    '--select_novel_classes',
+    '--list',
+    nargs='+',
+    default = None,
+    help = 'Select specific classes as test dataset')
+
+
+    parser.add_argument(
     '--lam',
     type=float,
     default=1,
-    help='tradeoff between reconstruction loss and autoregression loss')
+    help='trade off between reconstruction loss and autoregression loss')
     
     parser.add_argument(
     '--noise',
@@ -361,6 +360,8 @@ def parse_arguments():
     help='noise in training data')
 
     return parser.parse_args()
+
+
 
 # Entry point
 if __name__ == '__main__':

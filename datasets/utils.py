@@ -7,17 +7,17 @@ import numpy as np
 import torch
 
 
-def set_random_seed(seed):
-    # type: (int) -> None
-    """
-    Sets random seeds.
-    :param seed: the seed to be set for all libraries.
-    """
-    random.seed(seed)
-    np.random.seed(seed)
-    # np.random.shuffle.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
+# def set_random_seed(seed):
+#     # type: (int) -> None
+#     """
+#     Sets random seeds.
+#     :param seed: the seed to be set for all libraries.
+#     """
+#     random.seed(seed)
+#     np.random.seed(seed)
+#     # np.random.shuffle.seed(seed)
+#     torch.manual_seed(seed)
+#     torch.cuda.manual_seed_all(seed)
 
 
 def normalize(samples, min, max):

@@ -90,9 +90,14 @@ def _transformations_extract (dataset_load_fn, dataset_name, single_class_ind, e
         train_wanted_feature = intermediate_layer_model.predict(transformer.transform_batch(train_observed_data, [t_ind] * len(train_observed_data)),
                                          batch_size=batch_size)
         train_wanted_feature_list.append(train_wanted_feature)
-    
+
+    train_wanted_feature_list = np.array(train_wanted_feature_list)
+    train_wanted_feature_list = train_wanted_feature_list.transpose(1,0,2)
+    train_n, train_c, train_fn = train_wanted_feature_list.shape
+    for i in range(train_n):
         
-    np.savez(f'gtfeatures/train_e{epoch:02d}_{dataset_name}_m{single_class_ind}_d{single_class_ind}',train_wanted_feature_list)
+        
+    np.savez(f'gtfeatures/train_e{epoch:02d}_{dataset_name}_m{single_class_ind}',train_wanted_feature_list)
 
 
     # extract test gt features of all classes with the model trained by class c
