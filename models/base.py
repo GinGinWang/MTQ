@@ -16,7 +16,25 @@ class BaseModule(nn.Module):
 
         :param checkpoint_path: the checkpoint file to be loaded.
         """
-        self.load_state_dict(torch.load(checkpoint_path))
+        self.load_state_dict(torch.load(checkpoint_path), strict= False)
+
+    
+    def load_checkpont(self,filename):
+        start_epoch = 0
+
+        if os.path.isfile(filename):
+            print("=> loading checkpoint '{}'".format(filename))
+            checkpoint = torch.load(filename)
+            start_epoch = checkpoint['epoch']
+            model.load_state_dict(checkpoint['state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            losslogger = checkpoint['losslogger']
+            print("=> loaded checkpoint '{}' (epoch {})"
+                      .format(filename, checkpoint['epoch']))
+        else:
+            print("=> no checkpoint found at '{}'".format(filename))
+
+        return model, optimizer, start_epoch, losslogger
 
     def __repr__(self):
         # type: () -> str

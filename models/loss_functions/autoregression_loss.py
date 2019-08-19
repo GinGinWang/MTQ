@@ -34,8 +34,8 @@ class AutoregressionLoss(BaseModule):
         :param z_dist: the batch of estimated cpds.
         :return: the mean log-likelihood (averaged along the batch axis).
         """
-        z_d = z.detach()
-        # z_d = z 
+        # z_d = z.detach()
+        z_d = z 
         # Apply softmax
         z_dist = F.softmax(z_dist, dim=1)
 

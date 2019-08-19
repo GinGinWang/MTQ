@@ -8,51 +8,24 @@ import math
 
 
 
-def create_checkpoints_dir(dataset, num_blocks, hidden_size, code_length, estimator, noise = 0, noise2= 0, noise3 = 0, noise4 = 0):
+def create_checkpoints_dir(dataset, fixed, mulobj, num_blocks, hidden_size, code_length, estimator):
     
     dirName = f'checkpoints/{dataset}/'
     
-    if estimator == 'SOS':
+    if estimator in ['SOS','MAF']:
         dirName = f'{dirName}b{num_blocks}h{hidden_size}c{code_length}/'
-    
-    if noise >0:
-        dirName = f'{dirName}noise_{noise}/'
-    elif noise2 >0:
-        dirName = f'{dirName}noise2_{noise2}/'
-    elif noise3 >0:
-        dirName = f'{dirName}noise3_{noise3}/'
-    elif noise4 >0:
-        dirName = f'{dirName}noise4_{noise4}/'
-
     #create dir
     if not os.path.exists(dirName):
         os.makedirs(dirName)
         print(f'Make Dir:{dirName}')
-
     return dirName
 
-def create_file_path(mulobj, model_name, dataset, score_normed, novel_ratio, num_blocks, hidden_size, code_length, lam, noise, noise2, noise3, noise4, checkpoint):
+def create_file_path(mulobj, model_name, dataset, score_normed, num_blocks, hidden_size, code_length, lam, checkpoint):
 
     if mulobj:
-        result_path = f"results/Mul_{model_name}_{dataset}_nml{score_normed}_nlr{novel_ratio}_b{num_blocks}_h{hidden_size}_c{code_length}_lam{lam}"
+        result_path = f"results/Mul_{model_name}_{dataset}_nml{score_normed}_b{num_blocks}_h{hidden_size}_c{code_length}_lam{lam}"
     else:
-       result_path = f"results/{model_name}_{dataset}_nml{score_normed}_nlr{novel_ratio}_b{num_blocks}_h{hidden_size}_c{code_length}_lam{lam}"
-
-    
-    if (noise > 0):
-        result_path = f"{result_path}_ns{noise}"
-
-    elif (noise2 > 0):
-        result_path = f"{result_path}_ns2{noise2}"
-    
-    elif(noise3>0):
-        result_path = f"{result_path}_ns3{noise3}"
-
-    elif(noise4>0):
-        result_path = f"{result_path}_ns4{noise4}"
-    
-    if (checkpoint!=None):
-        result_path = f"{result_path}_at{checkpoint}"
+        result_path = f"results/{model_name}_{dataset}_nml{score_normed}_b{num_blocks}_h{hidden_size}_c{code_length}_lam{lam}"
 
     result_path = f"{result_path}.txt"
 
@@ -67,14 +40,19 @@ def set_random_seed(seed):
     """
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic= True
+    # torch.backends.cudnn.enabled = False
+    
+    os.environ['PYTHONHASHSEED'] = str(seed)
     
     random.seed(seed)
     np.random.seed(seed)
     # np.random.shuffle.seed(seed)
     torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
 
-
+def _init_fn(worker_id):
+    np.random.seed(int(seed))
 
 # def weights_init(model):
     

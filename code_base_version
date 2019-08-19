@@ -1,0 +1,12 @@
+base:
+dataset: 
+mnist
+fmnist
+
+
+experiment:
+dataset: 
+noise-robustness
+novel-ratio
+gth-related
+

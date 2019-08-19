@@ -12,42 +12,57 @@ from datasets.transforms import ToFloat32
 from datasets.transforms import ToFloatTensor2D
 from datasets.transforms import ToFloatTensor2Dt
 from datasets.transforms import OCToFloatTensor2Dt
+
+
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
 import scipy.io as io
-import os
+
 # thyroid
-class THYROID (OneClassDataset):
+class KDDCUP (OneClassDataset):
     
-    def __init__(self, path, n_class = 2, select = 0):
+    def __init__(self, path, n_class = 2, select  = 0):
 
         # type: (str) -> None
         """
         Class constructor.
         :param path: The folder in which to download MNIST.
         """
-        super(THYROID, self).__init__()
-
-        self.path = path
-        data = io.loadmat(os.join(path,'thyroid.mat'))
-        self.normal_class = 0
-        self.n_class = n_class
+        super(KDDCUP, self).__init__()
         self.select = select
-        self.name = 'thyroid'
-        self.train_split ={}
-        self.test_split = {}
-        idxs = np.arange(len(data['y']))
-        np.random.shuffle(idxs)
+        self.n_class = n_class
+        self.normal_class = 0
 
-        self.train_split['X'] = data['X'][idxs[0:int(0.5*len(idxs))]]
-        self.train_split['y'] = data['y'][idxs[0:int(0.5*len(idxs))]]
-        print(f"{len(self.train_split['y'])} for train sets")
+        self.name = 'kddcup'
         
-        self.test_split['X'] = data['X'][idxs[int(0.5*len(idxs)):]]
-        self.test_split['y'] = data['y'][idxs[int(0.5*len(idxs)):]]
-        print(f"{len(self.test_split['y'])} for  test sets")
-        
-        self.train_idx = np.arange(len(self.train_split['y']))
-        self.test_idx = np.arange(len(self.test_split['y']))
+        # # KDDCup 10% Data
+        url_data = f"{path}/kddcup.data_10_percent.gz"
+        # info data (column names, col types)
+        url_info = f"{path}/kddcup.names"
 
+        # Import info data
+        df_info = pd.read_csv(url_info, sep=":", skiprows=1, index_col=False, names=["colname", "type"])
+        colnames = df_info.colname.values
+        coltypes = np.where(df_info["type"].str.contains("continuous"), "float", "str")
+        colnames = np.append(colnames, ["status"])
+        coltypes = np.append(coltypes, ["str"])
+
+        # Import data
+        df = pd.read_csv(url_data, names=colnames, index_col=False,
+                         dtype=dict(zip(colnames, coltypes)))
+        # Dumminize
+        X = pd.get_dummies(df.iloc[:,:-1]).values
+
+        # Create Traget Flag
+        # Anomaly data when status is normal, Otherwise, Not anomaly.
+        y = np.where(df.status == "normal.", 1, 0)
+
+        # 50 for testing
+        X_train, self.X_test, y_train, self.y_test = train_test_split(X, y, test_size=0.50, random_state=123)
+
+        X_train, y_train = X_train[y_train == 0], y_train[y_train == 0]
+        self.X_train, self.y_train = X_train, y_train
 
         # Transform zone
         self.val_transform = transforms.Compose([ToFloatTensor2Dt()])
@@ -58,32 +73,21 @@ class THYROID (OneClassDataset):
         self.mode = None
         self.length = None
 
-        # val idx in normal class (all possible classes)
-        self.val_idxs = None
-        # train idx in normal class
-        self.train_idxs = None
-        # test idx with 50%->90% normal class(50% -> 10% novelty)
-        self.test_idxs = None
-
-
     def val(self, normal_class):
         # type: (int) -> None
         """
          in validation mode.
         :param normal_class: the class to be considered normal.
         """
-        # Update mode, indexes, length and transform 
         self.mode = 'val'
         self.transform = self.val_transform
-        
-        self.val_idxs = [idx for idx in self.train_idx if self.train_split['y'][idx] == 0 ]
-        self.val_idxs =self.val_idxs[int(0.9*len(self.val_idxs)):]
-       
-        self.length = len(self.val_idxs)
+        val_num = int(0.1*len(self.X_train))
+        self.X_val = self.X_train[0:val_num,:]
+        self.y_val = self.y_train[0:val_num]
+        self.length = len(self.y_val)
 
 
-
-    def train(self, normal_class):
+    def train(self,normal_class=0):
         # type: (int) -> None
         """
         By JingJing
@@ -91,16 +95,12 @@ class THYROID (OneClassDataset):
 
         :param normal_class: the class to be considered normal.
         """
-
+         # normal_class=0
+        
         # Update mode, indexes, length and transform
         self.mode = 'train'
         self.transform = self.val_transform
-        # training examples are all normal
-        self.train_idxs = [idx for idx in self.train_idx if self.train_split['y'][idx] == 0]
-
-        
-        self.length = len(self.train_idxs)
-        # print 
+        self.length = len(self.y_train)
         print(f"Training Set prepared, Num:{self.length}")
 #---
 
@@ -113,22 +113,13 @@ class THYROID (OneClassDataset):
         :param normal_class: the class to be considered normal.
         :param norvel_ratio: the ratio of novel examples
         """
-        
         # Update mode, length and transform
         self.mode = 'test'
         self.transform = self.test_transform
 
         # testing examples (norm)
-        self.length = len(self.test_split['y'])
+        self.length = len(self.y_test)
         
-        normal_idxs = [idx for idx in self.test_idx if self.test_split['y'][idx] == 0]
-        normal_num = len(normal_idxs)
-        novel_num = self.length - normal_num
-
-        self.test_idxs = self.test_idx
-        
-        print(f"Test Set prepared, Num:{self.length},Novel_num:{novel_num},Normal_num:{normal_num}")
-
 
 
 
@@ -147,19 +138,25 @@ class THYROID (OneClassDataset):
 
         # Load the i-th example
         if self.mode == 'test':
-            x = self.test_split['X'][self.test_idxs[i]]
-            y = self.test_split['y'][self.test_idxs[i]]
-
+            # HWC
+            x = self.X_test[i,:]
+            # x = np.expand_dims(x, axis=0)
+            # x = x.reshape((11,11))
+            y = (self.y_test[i]==0)
             x = np.float32(x)[..., np.newaxis]
-            sample = x, int(y==0)
+            sample = x, int(y)
 
         elif self.mode == 'val':
-            x= self.train_split['X'][self.val_idxs[i]]
+            x= self.X_val[i,:]
+            # x = np.expand_dims(x, axis=0)
+            # x = x.reshape((11,11))
             x = np.float32(x)[..., np.newaxis]
             sample = x, x
         elif self.mode == 'train':
-            x= self.train_split['X'][self.train_idxs[i]]
-            x = np.float32(x)[..., np.newaxis]
+            x= self.X_train[i,:]
+            # x = np.expand_dims(x, axis=0)
+            # x = x.reshape((11,11)) 
+            x = np.float32(x)[..., np.newaxis]  
             sample = x, x
         else:
             raise ValueError
@@ -182,6 +179,7 @@ class THYROID (OneClassDataset):
             classes = [self.select] # select one class to train
         return classes
 
+
     @property
     def train_classes(self):
         # type: () -> np.ndarray
@@ -200,6 +198,6 @@ class THYROID (OneClassDataset):
         """
         Returns the shape of examples.
         """
-        return 1, 6, 1
+        return 1,121,1
     def __repr__(self):
-        return ("ONE-CLASS MNIST (normal class =  0 )")
+        return ("ONE-CLASS MNIST (normal class = 0)")

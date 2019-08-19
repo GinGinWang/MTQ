@@ -14,7 +14,7 @@ from models.blocks_2d import UpsampleBlock
 
 # flows
 from models.transform_sos import TinvSOS
-# from models.transform_maf import TinvMAF
+from models.transform_maf import TinvMAF
 
 # estimator
 from models.estimator_1D import Estimator1D
@@ -191,8 +191,8 @@ class LSA_MNIST(BaseModule):
         # Build estimator
         if est_name == "SOS":
             self.estimator = TinvSOS(num_blocks, code_length,hidden_size)      
-        # elif est_name == "MAF":
-        #     self.estimator = TinvMAF(num_blocks, code_length,hidden_size)
+        elif est_name == "MAF":
+            self.estimator = TinvMAF(num_blocks, code_length,hidden_size)
         elif est_name == 'EN':
             self.estimator = Estimator1D(
             code_length=code_length,
@@ -233,14 +233,14 @@ class LSA_MNIST(BaseModule):
         if self.est_name == 'EN':
                 # density distribution of z 
             z_dist = self.estimator(z)
-        elif self.est_name in ['SOS']:
+        elif self.est_name in ['SOS','MAF']:
             s, log_jacob_T_inverse = self.estimator(z)
 
         
         # Without Estimator
         if self.est_name == 'EN':
             return x_r, z, z_dist
-        elif self.est_name == 'SOS':
+        elif self.est_name in ['SOS','MAF']:
                 return  x_r, z, s, log_jacob_T_inverse
         else:
             return x_r

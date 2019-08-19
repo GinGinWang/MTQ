@@ -5,28 +5,17 @@ import torch
 import numpy as np
 import torch.nn as nn
 
-### model?? dataset??? training????
-##MODEL! Dataset! Training???
-
-# from datasets import *
-from old.datasets.mnist import MNIST
-
-from datasets.cifar10 import CIFAR10
-from datasets.fmnist import FMNIST
-from datasets.thyroid import THYROID
-from datasets.KDDCUP import KDDCUP
-from datasets.cifar10_gth import CIFAR10_GTH
-from datasets.fmnist_gth import FMNIST_GTH
+from datasets import *
 
 # models
-from models.LSA_mnist import LSA_MNIST
-from models import LSA_CIFAR10
-from models import LSA_KDDCUP
+from models.LSA_mnist import LSA_MNIST #  mnist/fmnist
+from models import LSA_CIFAR10 # cifar10
+from models import LSA_KDDCUP # kddcup
 
-# Estimator
 from models.estimator_1D import Estimator1D
-# from models.transform_maf import TinvMAF
+from models.transform_maf import TinvMAF
 from models.transform_sos import TinvSOS
+
 # random seed
 from utils import set_random_seed
 # Main Class
@@ -41,31 +30,17 @@ def main():
     """
     Performs One-class classification tests on one dataset
     """
-
     
     ## Parse command line arguments
     args = parse_arguments()
-    device = torch.device("cuda:0")
+    device = torch.device('cuda')
 
-    # Lock seeds
-    # set_random_seed(123456789) 
-    set_random_seed(11111111) # good mnist
-    # set_random_seed(30101990) # 
-    # set_random_seed(987654321) # (good)
-    # set_random_seed(22222222) # good
-    # set_random_seed(33333333) # good
-    # set_random_seed(44444444)
-    # set_random_seed(55555555) # good
-    # set_random_seed(66666666) # (good)
-    # set_random_seed(77777777)
-    # set_random_seed(88888888)
-    # set_random_seed(99999999)
+    #random seed
+    set_random_seed(args.seed) # good mnist
 
     # prepare dataset in train mode
     if args.dataset == 'mnist':
-        # dataset = MNIST(path='data/MNIST', n_class = args.n_class, select = args.select, select_novel_classes = args.select_novel_classes)
-        dataset = MNIST(path='data/MNIST', n_class = args.n_class, select = args.select)
-        
+        dataset = MNIST(path='data/MNIST', n_class = args.n_class, select = args.select, select_novel_classes = args.select_novel_classes)
 
     elif args.dataset == 'fmnist':
         dataset = FMNIST(path='data/FMNIST', n_class = args.n_class, select = args.select)
@@ -73,26 +48,16 @@ def main():
     elif args.dataset == 'cifar10':
         dataset = CIFAR10(path='data/CIFAR', n_class = args.n_class, select= args.select)
 
-    elif args.dataset == 'cifar10_gth':
-        dataset = CIFAR10_GTH(path='data/CIFAR', n_class = args.n_class, select= args.select)
-
-    elif args.dataset == 'fmnist_gth':
-        dataset = FMNIST_GTH(n_class = args.n_class, select= args.select)
-    
     elif args.dataset == 'thyroid':
-        dataset = THYROID(path ='data/UCI/thyroid.mat')
+        dataset = THYROID(path ='data/UCI/')
 
     elif args.dataset == 'kddcup':
-        dataset = KDDCUP()
+        dataset = KDDCUP(path = './data/UCI')
     else:
         raise ValueError('Unknown dataset')
 
 
-    print ("dataset shape: ",dataset.shape)
-    
-
-    checkpoints_dir = create_checkpoints_dir(args.dataset, args.num_blocks, args.hidden_size, args.code_length, args.estimator,args.noise, args.noise2,args.noise3,args.noise4)
-
+    checkpoints_dir = create_checkpoints_dir(args.dataset, args.fixed, args.mulobj, args.num_blocks, args.hidden_size, args.code_length, args.estimator)
 
     # MODEL
     if (args.autoencoder == None):
@@ -126,24 +91,18 @@ def main():
             elif args.dataset in ['kddcup']:
                 model =LSA_KDDCUP(num_blocks=args.num_blocks, hidden_size= args.hidden_size, code_length = args.code_length).cuda()
 
-            elif args.dataset =='cifar10':
-                model =LSA_CIFAR10(input_shape=dataset.shape, code_length = args.code_length, num_blocks=args.num_blocks, est_name= args.estimator,hidden_size= args.hidden_size).cuda()
+            # elif args.dataset =='cifar10':
+            #     model =LSA_CIFAR10(input_shape=dataset.shape, code_length = args.code_length, num_blocks=args.num_blocks, est_name= args.estimator,hidden_size= args.hidden_size).cuda()
             else:
                 ValueError("Unknown Dataset")        
         else:
             raise ValueError('Unknown Autoencoder')
-    
-    
-   
+
 
     # # set to Test mode
-    result_file_path = create_file_path(args.mulobj,model.name,args.dataset,args.score_normed,args.novel_ratio,args.num_blocks,args.hidden_size,args.code_length, args.lam, args.noise, args.noise2, args.noise3, args.noise4, args.checkpoint)
+    result_file_path = create_file_path(args.mulobj,model.name,args.dataset,args.score_normed,args.num_blocks,args.hidden_size,args.code_length, args.lam, args.checkpoint)
 
-    nowdir=os.getcwd()
-    if args.fixed and args.mulobj:
-        checkpoints_dir = f'{nowdir}/checkpoints/{args.dataset}/fixed_mulobj/'
-    elif args.fixed:
-        checkpoints_dir = f'{nowdir}/checkpoints/{args.dataset}/fixed_fixed/'
+    
 
     print(checkpoints_dir)
 
@@ -151,7 +110,6 @@ def main():
         dataset = dataset, 
         model = model, 
         score_normed = args.score_normed, 
-        novel_ratio = args.novel_ratio, 
         lam = args.lam, 
         checkpoints_dir = checkpoints_dir, 
         result_file_path = result_file_path, 
@@ -161,21 +119,19 @@ def main():
         lr = args.lr, 
         epochs = args.epochs, 
         before_log_epochs = args.before_log_epochs, 
-        noise = args.noise, 
-        noise2 = args.noise2, 
-        noise3 = args.noise3,
-        noise4 = args.noise4, 
         code_length = args.code_length,
         mulobj = args.mulobj, 
-        test_checkpoint = args.checkpoint, 
-        epoch_start = args.epoch_start,
+        test_checkpoint = args.checkpoint,
+        log_step = args.log_step,
         device = device,
-        fixed = args.fixed
+        fixed = args.fixed,
+        pretrained = args.pretrained,
+        load_lsa =args.load_lsa
         )
 
-
-    helper.test_one_class_classification()
-        
+    # helper.test_one_class_classification()
+    # helper.compute_AUROC(cl= args.select)
+    helper.train_classification()  
 
 
 
@@ -201,25 +157,14 @@ def parse_arguments():
                         help='The name of the dataset to perform tests on.'
                         'Choose among `mnist`, `cifar10`', metavar='')
     
-    # parser.add_argument('--Combine_density', dest='cd',action = 'store_true',default = False, help = 'Use reconstruction loss as one dimension of latent vector')
-
     parser.add_argument('--PreTrained', dest='pretrained',action = 'store_true',default = False, help = 'Use Pretrained Model')
-    parser.add_argument('--Add', dest='add',action = 'store_true',default = False)
-    
 
-    parser.add_argument('--premodel',type= str, default='LSA',help = 'Pretrained autoencoder')
     parser.add_argument('--Fixed', dest='fixed',action = 'store_true', default = False, help = 'Fix the autoencoder while training')
-    # parser.add_argument('--from_pretrained', dest= 'from_pretrained',action='store_true', default=False)
     parser.add_argument('--NoTrain', dest= 'trainflag',action='store_false', default=True, help = 'Test Mode')
     parser.add_argument('--NoTest',  dest= 'testflag',action='store_false', default=True, help = 'Train Mode')
 
     parser.add_argument('--MulObj', dest= 'mulobj',action='store_true', default=False)
-    parser.add_argument('--fixed', dest= 'fixed',action='store_true', default=False)
 
-    
-    # parser.add_argument('--NoDecoder', dest='decoder_flag',action='store_false', default = True)
-    # parser.add_argument('--NoAutoencoder', dest='coder',action='store_false', default = True)
-    
     # batch size for test
     parser.add_argument(
     '--batch_size',
@@ -231,14 +176,14 @@ def parse_arguments():
     parser.add_argument(
     '--epochs',
     type=int,
-    default=1000,
-    help='number of epochs to train/test (default: 1000)')
+    default=10000,
+    help='number of epochs to train/test (default: 10000)')
     
     # epochs before logging 
     parser.add_argument(
     '--before_log_epochs',
     type=int,
-    default=-1,
+    default=30,
     help='number of epochs before logging (default: -1)')
 
     # select checkpoint
@@ -248,13 +193,6 @@ def parse_arguments():
     default=None,
     help='number of epochs to check when testing (default: Use the last one)')
     
-
-    parser.add_argument(
-    '--epoch_start',
-    type=int,
-    default=0,
-    help='number of epochs to start when training (default: Use the last one)')
-
     # learning rate 
     parser.add_argument(
     '--lr', type=float, default=0.0001, help='learning rate (default: 0.0001)')
@@ -296,16 +234,6 @@ def parse_arguments():
         default= False,
         help ='For Test: Normalize novelty score by Valid Set' )
 
-    # novel ratio
-    # default use 10% novel examples in test set
-
-    parser.add_argument(
-        '--novel_ratio',
-        type = float,
-        default= 1,
-        help ='For Test: Ratio, novel examples in test sets: [0.1,1]' )
-    
-   
     parser.add_argument(
     '--n_class',
     type = int,
@@ -323,7 +251,7 @@ def parse_arguments():
     '--list',
     nargs='+',
     default = None,
-    help = 'Select specific classes as test dataset')
+    help = 'Select specific novel classes as test dataset (default: all other classes in dataset)')
 
 
     parser.add_argument(
@@ -333,31 +261,22 @@ def parse_arguments():
     help='trade off between reconstruction loss and autoregression loss')
     
     parser.add_argument(
-    '--noise',
-    type=float,
-    default=0,
-    help='noise in training data')
-
-
-    parser.add_argument(
-    '--noise2',
-    type=float,
-    default=0,
-    help='noise in training data')
-    
+    '--seed',
+    type=int,
+    default=1,
+    help='random_seed')
 
     parser.add_argument(
-    '--noise3',
-    type=float,
-    default=0,
-    help='noise in training data')
-    
+    '--log_step',
+    type=int,
+    default=100,
+    help='log_step')
 
     parser.add_argument(
-    '--noise4',
-    type=float,
-    default=0,
-    help='noise in training data')
+    '--load_lsa',
+    action ='store_true',
+    default= False,
+    help ='use-pretrained lsa (default: False)' )
 
     return parser.parse_args()
 

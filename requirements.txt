@@ -1,4 +1,4 @@
-Keras-Applications==1.0.6
-Keras-Preprocessing==1.0.5
-Markdown==2.6.11
-numpy==1.16.0
+-f /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/avx2
+-f /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic
+numpy==1.16.3
+torch-gpu==1.0.0

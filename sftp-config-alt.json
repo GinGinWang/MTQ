@@ -16,10 +16,16 @@
     "remote_path": "/home/jing1991/projects/def-yaoliang/jing1991",
     "ignore_regexes":[
     "_pycache_/",
-    "checkpoints/",
+    // "checkpoints/",
     "history_image/",
     "baseline_ADT/results/",
-    "\\.git/","\\.pkl","\\.png","\\.pdf","\\.npz","\\.npy","\\.gz","\\.pyc"
+    "baseline_GPND/",
+    "baseline_LSA/",
+    "baseline_VAE",
+    "data/",
+    "\\.git/",
+    // "\\.pkl",
+    "\\.pdf","\\.npz","\\.npy","\\.gz","\\.pyc"
     ],
     //"file_permissions": "664",
     //"dir_permissions": "775",
