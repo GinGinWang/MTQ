@@ -9,6 +9,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from pandas.plotting import scatter_matrix
 
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import precision_recall_fscore_support
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import confusion_matrix
 
 
 def modify_inf(result):
@@ -59,13 +63,25 @@ def plot_source_dist_by_dimensions(sample, sample_y, filename):
 	scatter_matrix(data_novel, alpha=0.2, figsize=(50, 50), diagonal='hist', color = 'r', marker='o',hist_kwds={'bins':20})
 	plt.savefig(f'{filename}_novel.png')
 
+def compute_metric(model_name, sample_ns_t, sample_y):
+# Compute precision, recall, f1_score based on threshold
+# if we know a/100 is the percentile of novelty samples in testset
+ 
+    # # y = 1 normal, y = 0 novel
+    real_nr= float(sum(sample_y==0)/len(sample_y))            
+    print(f"Real Novelty_Num: {sum(sample_y == 0)} in {len(sample_y)} samples, Novel Ratio= {real_nr}")
 
 
-	# use cornerplt
+    # #based on density(sort first)
+    threshold1 = np.percentile(sample_ns_t, real_nr*100)
+    print(f"threshold1:{threshold1}")
 
-	# chains = (sample[normal_idxs, 0:5],sample[novel_idxs, 0:5])
+    y_hat1 = np.where(sample_ns_t >= threshold1, 1, 0)
+    print(f"Density-based, Predicted Novelty_Num: {sum(y_hat1==0)} in {len(y_hat1)} samples")
+    wrong_predict1 = np.where(sample_y!= y_hat1)
+    print(f"Wrongly Predict on {len(wrong_predict1)}")                
 
-	# cp.multi_corner_plot(chains, axis_labels=columns, linewidth=2.,\
- #                                            chain_labels=["normal","novel"], figsize= (20,20), )
+    precision_den, recall_den, f1_den, _ =  precision_recall_fscore_support((sample_y==0),(y_hat1==0), average= "binary")
+    acc_den = accuracy_score((sample_y==0),(y_hat1==0))
 
-	# plt.savefig(f'distgraph/test.png')
+    return precision_den, recall_den,f1_den

@@ -26,7 +26,7 @@ from models.loss_functions import *
 import math
 
 # from prettytable import PrettyTable
-# from tqdm import tqdm
+from tqdm import tqdm
 
 from scipy.stats import norm
 def _init_fn():
@@ -45,8 +45,6 @@ class OneClassTestHelper(object):
         checkpoints_dir, 
         result_file_path, 
         batch_size , 
-        trainflag, 
-        testflag, 
         lr , 
         epochs, 
         before_log_epochs, 
@@ -86,12 +84,7 @@ class OneClassTestHelper(object):
         self.batch_size = batch_size
         self.lam = lam
 
-
-        # control novel ratio in test sets.
-
-        self.trainflag = trainflag # whether need train
-        self.testflag = testflag # whether test
-        
+        # training-strategy
         if mulobj: 
             self.train_strategy = 'mul'
         elif fixed:
@@ -138,16 +131,15 @@ class OneClassTestHelper(object):
         self.result_dir = None
 
         # Related to training
-        if trainflag:
-            self.optimizer = optim.Adam(self.model.parameters(), lr= lr, weight_decay=1e-6)
-            if self.fixed or self.pretrained:
-                if (self.model.estimator !=None):
-                    self.est_optimizer = optim.Adam(self.model.estimator.parameters(),lr = lr, weight_decay = 1e-6)
-                self.ae_optimizer  = optim.Adam(list(self.model.encoder.parameters())+list(self.model.decoder.parameters()),lr = lr, weight_decay = 1e-6)
+        self.optimizer = optim.Adam(self.model.parameters(), lr= lr, weight_decay=1e-6)
+        if self.fixed or self.pretrained:
+            if (self.model.estimator !=None):
+                self.est_optimizer = optim.Adam(self.model.estimator.parameters(),lr = lr, weight_decay = 1e-6)
+            self.ae_optimizer  = optim.Adam(list(self.model.encoder.parameters())+list(self.model.decoder.parameters()),lr = lr, weight_decay = 1e-6)
 
-            self.lr = lr
-            self.train_epochs = epochs
-            self.before_log_epochs = before_log_epochs
+        self.lr = lr
+        self.train_epochs = epochs
+        self.before_log_epochs = before_log_epochs
         
         
     def get_path(self):
@@ -170,11 +162,6 @@ class OneClassTestHelper(object):
         # self.test_result_dir = join(checkpoints_dir,f'{cl}{name}_{train_strategy}_history_test')
 
         self.train_history_dir = join(checkpoints_dir,f'{cl}{name}_{train_strategy}_loss_history')
-
-        if (not (self.test_checkpoint ==None)) and (not self.trainflag):
-                # select one epoch to test
-            self.model_dir = join(checkpoints_dir,f'{cl}{self.name}_{train_strategy}_{test_checkpoint}.pkl')
-            self.test_result_dir = join(checkpoints_dir,f'{cl}{name}_{train_strategy}_{test_checkpoint}_history_test')
 
         
     def _eval_quantile(self, s, method_name='n_cdf'):
@@ -579,14 +566,15 @@ class OneClassTestHelper(object):
             
             model_dir_epoch = join(self.checkpoints_dir,f'{cl}{self.name}_{self.train_strategy}_{epoch}.pkl')
             
+            #train every epoch
             train_loss, train_rec, train_nllk= self.train_every_epoch(epoch,cl)      
             
-            # validate
+            # validate every epoch
             validation_loss,validation_rec,validation_nllk = self.validate(epoch, cl)
 
-            # loss_history['train_loss'].append(train_loss)
-            # loss_history['train_rec'].append(train_rec)
-            # loss_history['train_nllk'].append(train_nllk)
+            loss_history['train_loss'].append(train_loss)
+            loss_history['train_rec'].append(train_rec)
+            loss_history['train_nllk'].append(train_nllk)
 
             loss_history['validation_loss'].append(validation_loss)
             loss_history['validation_rec'].append(validation_rec)
@@ -603,8 +591,8 @@ class OneClassTestHelper(object):
 
             if (epoch % self.log_step == 0 ) :
                     torch.save(self.model.state_dict(), model_dir_epoch)
-                    # np.save(self.result_dir,history)
-                    # save sample data
+            
+            # early stop
             # if (epoch - best_train_epoch)> 50 and ((not self.fixed) or (self.fixed and self.ae_finished)):
             #     if (epoch-best_train_rec_epoch) > 50 and (epoch- best_train_nllk_epoch)>50:
             #         print (f"Break at Epoch:{epoch}")
@@ -643,13 +631,20 @@ class OneClassTestHelper(object):
         
         state = {'epoch': epoch + 1, 'state_dict': self.model.state_dict(),
              'optimizer': self.optimizer.state_dict()}
-        torch.save(state, {self.model_detail_dir})
+        torch.save(state, self.model_detail_dir)
         
         np.savez(self.train_history_dir, loss_history= loss_history, best_validation_epoch = best_validation_epoch, best_validation_rec_epoch= best_train_rec_epoch)
 
     def test_one_class_classification(self, cl):
+        
+        # TEST FOR specific epoch
+        if (self.test_checkpoint !=None):
+            # select one epoch to test
+            self.model_dir = join(self.checkpoints_dir,f'{cl}{self.name}_{self.train_strategy}_{self.test_checkpoint}.pkl')
+            self.test_result_dir = join(self.checkpoints_dir,f'{cl}{self.name}_{self.train_strategy}_{self.test_checkpoint}_history_test')
 
-        # Load the checkpoint    
+        # Load the checkpoint 
+        bs = self.batch_size   
         self.model.load_w(self.model_dir)
         print(f"Load Model from {self.model_dir}")
 
@@ -658,7 +653,7 @@ class OneClassTestHelper(object):
         min_llk, max_llk, min_rec, max_rec,min_q1,max_q1,min_q2,max_q2,min_qinf,max_qinf = self.compute_normalizing_coefficients(cl)
         # Test sets
         self.dataset.test(cl)
-        data_num = self.dataset.length
+        
         loader = DataLoader(self.dataset, batch_size = bs, shuffle = False)
 
         # density related 
@@ -675,9 +670,7 @@ class OneClassTestHelper(object):
         
                 
         # TEST
-        # for i, (x, y) in tqdm(enumerate(loader), desc=f'Computing scores for {self.dataset}'):
-        for i, (x, y) in enumerate(loader):
-          
+        for i, (x, y) in tqdm(enumerate(loader), desc=f'Computing scores for {self.dataset}'):  
             x = x.to(self.device)
             with torch.no_grad():
                 if self.name in ['LSA_SOS','SOS','LSA_MAF']:
@@ -698,134 +691,104 @@ class OneClassTestHelper(object):
                 
             if self.name in ['LSA_SOS','LSA_EN','EN','SOS','LSA_MAF']:    
                 sample_llk[i*bs:i*bs+bs] = - self.loss.autoregression_loss.cpu().numpy()
-    
 
-            # +inf,-inf,nan
-            sample_llk = modify_inf(sample_llk)
+        sample_llk = modify_inf(sample_llk)
 
-            if self.score_normed:
-                # Normalize scores
-                sample_llk= normalize(sample_llk, min_llk, max_llk)
-                sample_nrec = normalize(sample_nrec, min_rec, max_rec)
+        if self.score_normed:
+            # Normalize scores
+            sample_llk= normalize(sample_llk, min_llk, max_llk)
+            sample_nrec = normalize(sample_nrec, min_rec, max_rec)
+        
+        sample_ns = novelty_score(sample_llk, sample_nrec)
+        sample_ns = modify_inf(sample_ns)
+
+        if self.name =='LSA_SOS':
+            sample_ns_t = sample_llk # larger, normal
+        else:
+            sample_ns_t = sample_ns # larger, normal
+
+        precision_den, f1_den, recall_den = compute_metric(self.name, sample_ns_t,sample_y)
+
+        # # based on quantile-norm-inf
+        if self.name in ['LSA_SOS','LSA_MAF']:
+            this_class_metrics = [
+            roc_auc_score(sample_y, sample_ns),
+            roc_auc_score(sample_y, sample_llk),
+            roc_auc_score(sample_y, sample_nrec),
+            roc_auc_score(sample_y, sample_q1),
+            roc_auc_score(sample_y, sample_q2),
+            roc_auc_score(sample_y, sample_qinf),    #
+            precision_den,
+            f1_den,
+            recall_den
+            ]
+
+        #     threshold_qinf = -pow((1-0.9),1/self.code_length)*0.5
+        #     real_threshold = np.percentile(sample_qinf,real_nr*100)
+
+        #     print(f"threshold_qinf:{threshold_qinf},vs{real_threshold}")
+        #     print(np.max(sample_qinf))
+        #     print(np.min(sample_qinf))
+        #     y_hat_qinf = np.where((sample_qinf)>=(threshold_qinf), 1, 0)
+
             
-            sample_ns = novelty_score(sample_llk, sample_nrec)
-            sample_ns = modify_inf(sample_ns)
+        #     CM = confusion_matrix(sample_y==0, y_hat_qinf==0)
+        #     TN = CM[0][0]
+        #     FN = CM[1][0]
 
-            # Compute precision, recall, f1_score based on threshold
-            # if we know a/100 is the percentile of novelty samples in testset
-            if self.name =='LSA_SOS':
-                sample_ns_t = sample_llk # larger, normal
-            else:
-                sample_ns_t = sample_ns # larger, normal
+        #     if (FN + TN ==0):
+        #         tn_n = 0
+        #     else:
+        #         tn_n = float(TN)/(float(FN+TN))
+            
+        #     print(f"Quantile-based, Predicted Novelty_Num: {sum(y_hat_qinf==0)} in {len(y_hat_qinf)} samples")
+        #     ####################################################
+        #     precision_qinf, recall_qinf, f1_qinf, _ = precision_recall_fscore_support((sample_y==0),(y_hat_qinf==0), average="binary")
+        #     acc_qinf = accuracy_score((sample_y==0),(y_hat_qinf==0))
+        #     # plot_source_dist_by_dimensions(sample_u, sample_y, self.test_result_dir) 
+        # add rows
+        
+        # every row
+        # that_class_metrics = [
+        # precision_den,
+        # f1_den,
+        # recall_den,
+        # acc_den,
+        # precision_q1,
+        # f1_q1,
+        # recall_q1,
+        # precision_q2,
+        # f1_q2,
+        # recall_q2,
+        # precision_qinf,
+        # f1_qinf,
+        # recall_qinf,
+        # acc_qinf,
+        # tn_n
+        # ]
 
-            # y = 1 normal, y = 0 novel
-            real_nr= float(sum(sample_y==0)/len(sample_y))            
-            print(f"Real Novelty_Num: {sum(sample_y == 0)} in {len(sample_y)} samples, Novel Ratio= {real_nr}")
+        # add rows
+        # threshold_table.add_row([cl_idx] + that_class_metrics)
+        # another_all_metrics.append(that_class_metrics)
 
+        elif self.name in ['LSA_EN']:
+         # every row
+            this_class_metrics = [
+            roc_auc_score(sample_y, sample_ns),
+            roc_auc_score(sample_y, sample_llk),
+            roc_auc_score(sample_y, sample_nrec),
+            precision_den,
+            f1_den,
+            recall_den
+            ]
+        elif self.name in ['LSA']:
+        # every row
+            this_class_metrics = [
+            roc_auc_score(sample_y, sample_ns)
+            ]
 
-            #based on density(sort first)
-            threshold1 = np.percentile(sample_ns_t, real_nr*100)
-            print(f"threshold1:{threshold1}")
+        return this_class_metrics
 
-            y_hat1 = np.where(sample_ns_t >= threshold1, 1, 0)
-            print(f"Density-based, Predicted Novelty_Num: {sum(y_hat1==0)} in {len(y_hat1)} samples")
-            # wrong_predict1 = np.where(sample_y!= y_hat1)
-            # print(f"Wrongly Predict on {len(wrong_predict1)}")                
-            # ####################################################
-            # precision_den, recall_den, f1_den, _ =  precision_recall_fscore_support((sample_y==0),(y_hat1==0), average= "binary")
-            # acc_den = accuracy_score((sample_y==0),(y_hat1==0))
-            ###################################################
-
-            # based on quantile-norm-inf
-            if self.name in ['LSA_SOS','LSA_MAF']:
-                threshold_qinf = -pow((1-0.9),1/self.code_length)*0.5
-                real_threshold = np.percentile(sample_qinf,real_nr*100)
-
-                print(f"threshold_qinf:{threshold_qinf},vs{real_threshold}")
-                print(np.max(sample_qinf))
-                print(np.min(sample_qinf))
-                y_hat_qinf = np.where((sample_qinf)>=(threshold_qinf), 1, 0)
-
-                
-                CM = confusion_matrix(sample_y==0, y_hat_qinf==0)
-                TN = CM[0][0]
-                FN = CM[1][0]
-
-                if (FN + TN ==0):
-                    tn_n = 0
-                else:
-                    tn_n = float(TN)/(float(FN+TN))
-                
-                print(f"Quantile-based, Predicted Novelty_Num: {sum(y_hat_qinf==0)} in {len(y_hat_qinf)} samples")
-                ####################################################
-                precision_qinf, recall_qinf, f1_qinf, _ = precision_recall_fscore_support((sample_y==0),(y_hat_qinf==0), average="binary")
-                acc_qinf = accuracy_score((sample_y==0),(y_hat_qinf==0))
-                # plot_source_dist_by_dimensions(sample_u, sample_y, self.test_result_dir) 
-
-                # every row
-                this_class_metrics = [
-                roc_auc_score(sample_y, sample_ns),
-                roc_auc_score(sample_y, sample_llk),
-                roc_auc_score(sample_y, sample_nrec),
-                roc_auc_score(sample_y, sample_q1),
-                roc_auc_score(sample_y, sample_q2),
-                roc_auc_score(sample_y, sample_qinf),    #
-                precision_den,
-                f1_den,
-                recall_den
-                ]
-
-                # add rows
-                # auroc_table.add_row([cl_idx] + this_class_metrics)
-                all_metrics.append(this_class_metrics)
-
-                # every row
-                that_class_metrics = [
-                precision_den,
-                f1_den,
-                recall_den,
-                acc_den,
-                # precision_q1,
-                # f1_q1,
-                # recall_q1,
-                # precision_q2,
-                # f1_q2,
-                # recall_q2,
-                precision_qinf,
-                f1_qinf,
-                recall_qinf,
-                acc_qinf,
-                tn_n
-                ]
-
-                # add rows
-                # threshold_table.add_row([cl_idx] + that_class_metrics)
-                another_all_metrics.append(that_class_metrics)
-
-            elif self.name in ['LSA_EN']:
-                 # every row
-                    this_class_metrics = [
-                    roc_auc_score(sample_y, sample_ns),
-                    roc_auc_score(sample_y, sample_llk),
-                    roc_auc_score(sample_y, sample_nrec),
-                    precision_den,
-                    f1_den,
-                    recall_den
-                    ]
-                    # add rows
-                    # auroc_table.add_row([cl_idx] + this_class_metrics)
-                    all_metrics.append(this_class_metrics)
-            elif self.name in ['LSA']:
-                # every row
-                    this_class_metrics = [
-                    roc_auc_score(sample_y, sample_ns)
-                    ]
-                    # add rows
-                    # auroc_table.add_row([cl_idx] + this_class_metrics)
-                    all_metrics.append(this_class_metrics)
-
-        return all_metrics    
-    
     def train_classification(self):
         bs =self.batch_size
         # Start iteration over classes
@@ -854,7 +817,9 @@ class OneClassTestHelper(object):
             self.cl = cl
             self.get_path()
             one_class_metric= self.test_one_class_classification(cl)
-            all_metrics.append(this_class_metrics)
+            # auroc_table.add_row([cl_idx] + this_class_metrics)
+
+            all_metrics.append(one_class_metric)
 
         all_metrics = np.array(all_metrics)
         avg_metrics = np.mean(all_metrics, axis=0)
@@ -921,30 +886,30 @@ class OneClassTestHelper(object):
         return sample_llk.min(), sample_llk.max(), sample_nrec.min(), sample_nrec.max(),sample_q1.min(),sample_q1.max(),sample_q2.min(),sample_q2.max(),sample_qinf.min(), sample_qinf.max()
 
     # @property
-    # def empty_table(self):
-    #     # type: () -> PrettyTable
-    #     """
-    #     Sets up a nice ascii-art table to hold results.
-    #     This table is suitable for the one-class setting.
-    #     :return: table to be filled with auroc metrics.
-    #     """
-    #     table = PrettyTable()
-    #     style = self.style
-    #     table.field_names = {
+    def empty_table(self):
+        # type: () -> PrettyTable
+        """
+        Sets up a nice ascii-art table to hold results.
+        This table is suitable for the one-class setting.
+        :return: table to be filled with auroc metrics.
+        """
+        table = PrettyTable()
+        style = self.style
+        table.field_names = {
 
-    #     'auroc':['Class', 'AUROC-NS', 'AUROC-LLK', 'AUROC-REC','AUROC-q1','AUROC-q2','AUROC-qinf','PRCISION','F1','RECALL'],
+        'auroc':['Class', 'AUROC-NS', 'AUROC-LLK', 'AUROC-REC','AUROC-q1','AUROC-q2','AUROC-qinf','PRCISION','F1','RECALL'],
 
 
-    #     'threshold':['Class', 'precision_den', 'f1_den', 'recall_den','acc_den',
+        'threshold':['Class', 'precision_den', 'f1_den', 'recall_den','acc_den',
         
-    #     # 'precision_q1','f1_q1','recall_q1',
-    #     # 'precision_q2','f1_q2','recall_q2', 
-    #     'precision_qinf','f1_qinf','recall_qinf','acc_qinf','tn_n']
-    #     }[style]
+        # 'precision_q1','f1_q1','recall_q1',
+        # 'precision_q2','f1_q2','recall_q2', 
+        'precision_qinf','f1_qinf','recall_qinf','acc_qinf','tn_n']
+        }[style]
 
-    #     # format
-    #     table.float_format = '0.4'
-    #     return table
+        # format
+        table.float_format = '0.4'
+        return table
 
 
     def compute_AUROC(self, epoch_min = 0, epoch_max = 3000, epoch_step =50, cl = 0):

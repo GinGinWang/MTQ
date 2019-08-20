@@ -114,8 +114,6 @@ def main():
         checkpoints_dir = checkpoints_dir, 
         result_file_path = result_file_path, 
         batch_size = args.batch_size, 
-        trainflag = args.trainflag, 
-        testflag = args.testflag, 
         lr = args.lr, 
         epochs = args.epochs, 
         before_log_epochs = args.before_log_epochs, 
@@ -129,9 +127,12 @@ def main():
         load_lsa =args.load_lsa
         )
 
-    # helper.test_one_class_classification()
-    # helper.compute_AUROC(cl= args.select)
-    helper.train_classification()  
+    if args.trainflag:
+        helper.train_classification()
+    elif args.testflag:
+        helper.test_classification()
+    else:
+        helper.compute_AUROC(cl= args.select)
 
 
 
@@ -160,8 +161,9 @@ def parse_arguments():
     parser.add_argument('--PreTrained', dest='pretrained',action = 'store_true',default = False, help = 'Use Pretrained Model')
 
     parser.add_argument('--Fixed', dest='fixed',action = 'store_true', default = False, help = 'Fix the autoencoder while training')
-    parser.add_argument('--NoTrain', dest= 'trainflag',action='store_false', default=True, help = 'Test Mode')
-    parser.add_argument('--NoTest',  dest= 'testflag',action='store_false', default=True, help = 'Train Mode')
+
+    parser.add_argument('--Train', dest= 'trainflag',action='store_true', default=False, help = 'Train Mode')
+    parser.add_argument('--Test',  dest= 'testflag',action='store_true', default=False, help = 'Test Mode')
 
     parser.add_argument('--MulObj', dest= 'mulobj',action='store_true', default=False)
 
@@ -178,7 +180,7 @@ def parse_arguments():
     type=int,
     default=10000,
     help='number of epochs to train/test (default: 10000)')
-    
+     
     # epochs before logging 
     parser.add_argument(
     '--before_log_epochs',
