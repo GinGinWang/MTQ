@@ -182,6 +182,7 @@ class MNIST(OneClassDataset):
         # Apply transform
         if self.transform:
             sample = self.transform(sample)
+
         return sample
 
     @property

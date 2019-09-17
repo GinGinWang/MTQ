@@ -8,6 +8,7 @@ import math
 
 
 
+
 def create_checkpoints_dir(dataset, fixed, mulobj, num_blocks, hidden_size, code_length, estimator):
     
     dirName = f'checkpoints/{dataset}/'

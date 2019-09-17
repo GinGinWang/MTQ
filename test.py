@@ -9,8 +9,13 @@ from datasets import *
 
 # models
 from models.LSA_mnist import LSA_MNIST #  mnist/fmnist
+from models.LSA_mnist_deep import LSA_MNIST_D
+from models.LSA_mnist_wide import LSA_MNIST_W
+
+
 from models import LSA_CIFAR10 # cifar10
 from models import LSA_KDDCUP # kddcup
+from models import LSA_THYROID
 
 from models.estimator_1D import Estimator1D
 from models.transform_maf import TinvMAF
@@ -30,7 +35,7 @@ def main():
     """
     Performs One-class classification tests on one dataset
     """
-    
+
     ## Parse command line arguments
     args = parse_arguments()
     device = torch.device('cuda')
@@ -49,10 +54,10 @@ def main():
         dataset = CIFAR10(path='data/CIFAR', n_class = args.n_class, select= args.select)
 
     elif args.dataset == 'thyroid':
-        dataset = THYROID(path ='data/UCI/')
+        dataset = THYROID(path ='data/UCI')
 
     elif args.dataset == 'kddcup':
-        dataset = KDDCUP(path = './data/UCI')
+        dataset = KDDCUP(path = 'data/UCI')
     else:
         raise ValueError('Unknown dataset')
 
@@ -89,18 +94,29 @@ def main():
                 model =LSA_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator,hidden_size= args.hidden_size).cuda()
 
             elif args.dataset in ['kddcup']:
-                model =LSA_KDDCUP(num_blocks=args.num_blocks, hidden_size= args.hidden_size, code_length = args.code_length).cuda()
+                model =LSA_KDDCUP(num_blocks=args.num_blocks, hidden_size= args.hidden_size, code_length = args.code_length,est_name =args.estimator).cuda()
 
-            # elif args.dataset =='cifar10':
-            #     model =LSA_CIFAR10(input_shape=dataset.shape, code_length = args.code_length, num_blocks=args.num_blocks, est_name= args.estimator,hidden_size= args.hidden_size).cuda()
+            elif args.dataset in ['thyroid']:
+                model =LSA_THYROID(num_blocks=args.num_blocks, hidden_size= args.hidden_size, code_length = args.code_length,est_name =args.estimator).cuda()
+            
+            elif args.dataset =='cifar10':
+                model =LSA_CIFAR10(input_shape=dataset.shape, code_length = args.code_length, num_blocks=args.num_blocks, est_name= args.estimator,hidden_size= args.hidden_size).cuda()
             else:
                 ValueError("Unknown Dataset")        
+        
+        elif args.autoencoder =='LSAD':
+                model =LSA_MNIST_D(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator,hidden_size= args.hidden_size).cuda()
+        
+        elif args.autoencoder =='LSAW':
+                model =LSA_MNIST_W(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator,hidden_size= args.hidden_size).cuda()
+
+        
         else:
             raise ValueError('Unknown Autoencoder')
 
 
     # # set to Test mode
-    result_file_path = create_file_path(args.mulobj,model.name,args.dataset,args.score_normed,args.num_blocks,args.hidden_size,args.code_length, args.lam, args.checkpoint)
+    result_file_path = create_file_path(args.mulobj, model.name,args.dataset,args.score_normed,args.num_blocks,args.hidden_size,args.code_length, args.lam, args.checkpoint)
 
     
 
@@ -126,13 +142,18 @@ def main():
         pretrained = args.pretrained,
         load_lsa =args.load_lsa
         )
-
+    
     if args.trainflag:
-        helper.train_classification()
+        cl = args.select
+        helper.train_one_class_classification(cl)
     elif args.testflag:
         helper.test_classification()
-    else:
-        helper.compute_AUROC(cl= args.select)
+    elif args.compute_AUROC:
+        helper.compute_AUROC(log_step = args.log_step, epoch_max = args.epochs)
+    elif args.plot_training_loss_auroc:
+        helper.plot_training_loss_auroc(log_step = args.log_step)
+    
+    # helper.visualize_latent_vector(args.select)
 
 
 
@@ -147,9 +168,11 @@ def parse_arguments():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     # autoencoder name 
-    parser.add_argument('--autoencoder', type=str,
-                        help='The Autoencoder framework.'
-                        'Choose among `LSA`,`AAE`', metavar='')
+    parser.add_argument(
+        '--autoencoder', 
+        type=str,
+        help='The Autoencoder framework. Choose among `LSA`,`AAE`', 
+        metavar='')
     # density estimator
     parser.add_argument('--estimator', type=str, help='The name of density estimator.'
                         'Choose among `SOS`, `MAF`', metavar='')
@@ -159,14 +182,14 @@ def parse_arguments():
                         'Choose among `mnist`, `cifar10`', metavar='')
     
     parser.add_argument('--PreTrained', dest='pretrained',action = 'store_true',default = False, help = 'Use Pretrained Model')
-
     parser.add_argument('--Fixed', dest='fixed',action = 'store_true', default = False, help = 'Fix the autoencoder while training')
+    parser.add_argument('--MulObj', dest= 'mulobj',action='store_true', default=False)
 
     parser.add_argument('--Train', dest= 'trainflag',action='store_true', default=False, help = 'Train Mode')
     parser.add_argument('--Test',  dest= 'testflag',action='store_true', default=False, help = 'Test Mode')
-
-    parser.add_argument('--MulObj', dest= 'mulobj',action='store_true', default=False)
-
+    parser.add_argument('--compute_AUROC',  dest= 'compute_AUROC',action='store_true', default=False, help = 'Compute AUROC for trained Models in different epochs')
+    parser.add_argument('--plot_training_loss_auroc',  dest= 'plot_training_loss_auroc',action='store_true', default=False, help = 'Plot training loss history and the corresponding AUROC')
+    
     # batch size for test
     parser.add_argument(
     '--batch_size',
@@ -178,14 +201,15 @@ def parse_arguments():
     parser.add_argument(
     '--epochs',
     type=int,
-    default=10000,
+    default=3000,
     help='number of epochs to train/test (default: 10000)')
-     
+    
+
     # epochs before logging 
     parser.add_argument(
     '--before_log_epochs',
     type=int,
-    default=30,
+    default=100,
     help='number of epochs before logging (default: -1)')
 
     # select checkpoint

@@ -47,6 +47,7 @@ class Encoder(BaseModule):
 
         # Convolutional network
         self.conv = nn.Sequential(
+            # PrintLayer(), # Add Print layer for debug
             DownsampleBlock(channel_in=c, channel_out=32, activation_fn=activation_fn),
             DownsampleBlock(channel_in=32, channel_out=64, activation_fn=activation_fn),
         )
@@ -78,6 +79,14 @@ class Encoder(BaseModule):
 
         return o
 
+class PrintLayer(nn.Module):
+    def __init__(self):
+        super(PrintLayer, self).__init__()
+    
+    def forward(self, x):
+        # Do your print / debug stuff here
+        print(x)
+        return x
 
 class Decoder(BaseModule):
     """

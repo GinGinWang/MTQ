@@ -28,7 +28,7 @@ class Encoder(BaseModule):
     MNIST model encoder.
     same as LSA
     """
-    def __init__(self):
+    def __init__(self, code_length):
         # type: (Tuple[int, int, int], int) -> None
         """
         Class constructor:
@@ -40,17 +40,14 @@ class Encoder(BaseModule):
 
         
         activation_fn = nn.Hardtanh()
-
         self.fc = nn.Sequential(
-            nn.Linear(in_features=121, out_features=60),
+            nn.Linear(in_features=6, out_features=12),
             # nn.BatchNorm1d(num_features=60),
             activation_fn,
-            nn.Linear(in_features=60, out_features=30),
+            nn.Linear(in_features=12, out_features=4),
             activation_fn,
-            nn.Linear(in_features=30, out_features=10),
-            activation_fn,
-            nn.Linear(in_features=10, out_features=5),
-            nn.Sigmoid()
+            nn.Linear(in_features=4, out_features=code_length),
+            # nn.Sigmoid()
         )
 
     def forward(self, x):
@@ -74,7 +71,7 @@ class Decoder(BaseModule):
     """
     MNIST model decoder.
     """
-    def __init__(self):
+    def __init__(self, code_length):
         # type: (int, Tuple[int, int, int], Tuple[int, int, int]) -> None
         """
         Class constructor.
@@ -90,16 +87,12 @@ class Decoder(BaseModule):
 
         # FC network
         self.fc = nn.Sequential(
-            nn.Linear(in_features=5, out_features=10),
+            nn.Linear(in_features=code_length, out_features=4),
             # nn.BatchNorm1d(num_features=64),
             activation_fn,
-            nn.Linear(in_features=10, out_features=30),
+            nn.Linear(in_features=4, out_features=12),
             activation_fn,
-            nn.Linear(in_features=30, out_features=60),
-            activation_fn,
-            nn.Linear(in_features=60, out_features=121),
-            # nn.BatchNorm1d(num_features=self.output_shape),
-            activation_fn
+            nn.Linear(in_features=12, out_features=6),
         )
 
 
@@ -119,13 +112,13 @@ class Decoder(BaseModule):
         return o
 
 
-class LSA_KDDCUP(BaseModule):
+class LSA_THYROID(BaseModule):
     """
     LSA model for MNIST one-class classification.
     """
  
 
-    def __init__(self,num_blocks,hidden_size):
+    def __init__(self,num_blocks,hidden_size, code_length,est_name):
         # type: (Tuple[int, int, int], int, int) -> None
         """
         Class constructor.
@@ -140,22 +133,42 @@ class LSA_KDDCUP(BaseModule):
                             True  =  input of estimator is (z,|x-xr|^2)
 
         """
-        super(LSA_KDDCUP, self).__init__()
+        super(LSA_THYROID, self).__init__()
 
         
-        self.coder_name = 'LSA'
+        self.code_length = code_length
+        self.est_name = est_name
 
-        self.name = f'LSA_SOS'
+        if est_name == None:  
+            self.name = 'LSA'
+        else:
+            self.name = f'LSA_{est_name}'
+        
+        print(f'{self.name} Model Initialization')
+        
         
         # Build encoder
         self.encoder = Encoder(
-             )
+            code_length )
 
         # Build decoder
-        self.decoder = Decoder(
+        self.decoder = Decoder( code_length
         )
 
-        self.estimator = TinvSOS(num_blocks, 5, hidden_size)      
+        # Build estimator
+        if est_name == "SOS":
+            self.estimator = TinvSOS(num_blocks, code_length,hidden_size)      
+        elif est_name == "MAF":
+            self.estimator = TinvMAF(num_blocks, code_length,hidden_size)
+        elif est_name == 'EN':
+            self.estimator = Estimator1D(
+            code_length=code_length,
+            fm_list=[32, 32, 32, 32],
+            cpd_channels=100
+    )   
+        # No estimator
+        elif est_name == None:
+            self.estimator = None      
             
 
     def forward(self, x):
@@ -173,9 +186,17 @@ class LSA_KDDCUP(BaseModule):
         x_r = self.decoder(z)
         x_r = x_r.view(-1,*x.shape)
         
-        # Estimate CPDs with autoregression
-        # density estimator
-        s, log_jacob_T_inverse = self.estimator(z)
+        if self.est_name == 'EN':
+                # density distribution of z 
+            z_dist = self.estimator(z)
+        elif self.est_name in ['SOS','MAF']:
+            s, log_jacob_T_inverse = self.estimator(z)
 
-        return  x_r, z, s, log_jacob_T_inverse
         
+        # Without Estimator
+        if self.est_name == 'EN':
+            return x_r, z, z_dist
+        elif self.est_name in ['SOS','MAF']:
+                return  x_r, z, s, log_jacob_T_inverse
+        else:
+            return x_r

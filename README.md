@@ -12,6 +12,11 @@
 * **train.py** - code for training novelty dector.
 * **test.py** - code for testing/run novelty dector.
 
+
+### Datasets
+* Thyroid: http://odds.cs.stonybrook.edu/thyroid-disease-dataset/
+* KDDCUP: 
+* 
 ### *Results*
 ** Results names denote the model name and parameters.
 
@@ -67,6 +72,7 @@ Autoencoder + Density Estimator (estimated network)
                 'Threshold'
 
 First, we only consider AUROC-based metric: 'AUROC-LLK', 'AUROC-REC', 'AUROC-NS'
+
 
 
 [1] Papamakarios G, Pavlakou T, Murray I. Masked autoregressive flow for density estimation[C]//Advances in Neural Information Processing Systems. 2017: 2338-2347.

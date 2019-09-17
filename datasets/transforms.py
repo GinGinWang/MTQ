@@ -21,7 +21,6 @@ class ToFloatTensor2D(object):
 
         X = np.array(X)
         Y = np.array(Y)
-
         # swap color axis because
         # numpy image: B x H x W x C
         X = X.transpose(2, 0, 1) / 255.
@@ -29,7 +28,35 @@ class ToFloatTensor2D(object):
 
         X = np.float32(X)
         Y = np.float32(Y)
+
         return torch.from_numpy(X), torch.from_numpy(Y)
+
+
+
+#cifar10
+class ToFloatTensor2D_cifar10(object):
+    """ Convert images to FloatTensors """
+
+    def __call__(self, sample):
+        X, Y = sample
+
+        X = np.array(X)
+        Y = np.array(Y)
+        # swap color axis because
+        # numpy image: B x H x W x C
+        X = np.squeeze(X, axis=3)
+        Y = np.squeeze(Y, axis=3)
+        
+        X = X.transpose(2, 0, 1) / 255.
+        Y = Y.transpose(2, 0, 1) / 255.
+
+        X = np.float32(X)
+        Y = np.float32(Y)
+
+        return torch.from_numpy(X), torch.from_numpy(Y)
+
+
+
 
 # class ToFloatTensor2D_GT(object):
 #     """ Convert images to FloatTensors """
@@ -258,12 +285,37 @@ class OCToFloatTensor2D(object):
 
         # swap color axis because
         # numpy image: B x H x W x C
-        
+        # mnist 28*28*1
         X = X.transpose(2, 0, 1) / 255.
 
         X = np.float32(X)
 
         return torch.from_numpy(X), Y
+
+
+
+class OCToFloatTensor2D_cifar10(object):
+    """ 
+    Convert images to FloatTensors.
+    Differently from ToFloatTensor2D, this transform
+    is used on testing samples for one-class classification.
+    Only applied on X
+     
+    """
+
+    def __call__(self, sample):
+        X, Y = sample
+
+        # swap color axis because
+        # numpy image: B x H x W x C
+        # mnist 28*28*1
+        X = np.squeeze(X, axis=3)
+        X = X.transpose(2, 0, 1) / 255.
+
+        X = np.float32(X)
+
+        return torch.from_numpy(X), Y
+
 
 # class OCToFloatTensor2D_GT(object):
 #     """ 
@@ -327,6 +379,7 @@ class OCToFloatTensor2Dt(object):
         # X = X.transpose(2, 0, 1)
         X = np.float32(X)
         X = torch.from_numpy(X)  
+
         return X, Y
 class OCToFloatTensor3D(object):
     """ Convert videos to FloatTensors """

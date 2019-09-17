@@ -42,7 +42,7 @@ class Encoder(BaseModule):
         activation_fn = nn.Hardtanh()
 
         self.fc = nn.Sequential(
-            nn.Linear(in_features=121, out_features=60),
+            nn.Linear(in_features=125, out_features=60),
             # nn.BatchNorm1d(num_features=60),
             activation_fn,
             nn.Linear(in_features=60, out_features=30),
@@ -50,7 +50,7 @@ class Encoder(BaseModule):
             nn.Linear(in_features=30, out_features=10),
             activation_fn,
             nn.Linear(in_features=10, out_features=code_length),
-            nn.Sigmoid()
+            # nn.Sigmoid() ### maybe remove?????
         )
 
     def forward(self, x):
@@ -97,9 +97,9 @@ class Decoder(BaseModule):
             activation_fn,
             nn.Linear(in_features=30, out_features=60),
             activation_fn,
-            nn.Linear(in_features=60, out_features=121),
+            nn.Linear(in_features=60, out_features=125),
             # nn.BatchNorm1d(num_features=self.output_shape),
-            activation_fn
+            # activation_fn
         )
 
 
@@ -125,7 +125,7 @@ class LSA_KDDCUP(BaseModule):
     """
  
 
-    def __init__(self,num_blocks,hidden_size, code_length):
+    def __init__(self,num_blocks,hidden_size, code_length, est_name):
         # type: (Tuple[int, int, int], int, int) -> None
         """
         Class constructor.
@@ -143,9 +143,16 @@ class LSA_KDDCUP(BaseModule):
         super(LSA_KDDCUP, self).__init__()
 
         
-        self.coder_name = 'LSA'
+        self.code_length = code_length
+        self.est_name = est_name
+
+        if est_name == None:  
+            self.name = 'LSA'
+        else:
+            self.name = f'LSA_{est_name}'
         
-        self.name = f'LSA_SOS'
+        print(f'{self.name} Model Initialization')
+        
         
         # Build encoder
         self.encoder = Encoder(
@@ -155,7 +162,20 @@ class LSA_KDDCUP(BaseModule):
         self.decoder = Decoder( code_length
         )
 
-        self.estimator = TinvSOS(num_blocks, code_length, hidden_size)      
+        # Build estimator
+        if est_name == "SOS":
+            self.estimator = TinvSOS(num_blocks, code_length,hidden_size)      
+        elif est_name == "MAF":
+            self.estimator = TinvMAF(num_blocks, code_length,hidden_size)
+        elif est_name == 'EN':
+            self.estimator = Estimator1D(
+            code_length=code_length,
+            fm_list=[32, 32, 32, 32],
+            cpd_channels=100
+    )   
+        # No estimator
+        elif est_name == None:
+            self.estimator = None      
             
 
     def forward(self, x):
@@ -173,9 +193,17 @@ class LSA_KDDCUP(BaseModule):
         x_r = self.decoder(z)
         x_r = x_r.view(-1,*x.shape)
         
-        # Estimate CPDs with autoregression
-        # density estimator
-        s, log_jacob_T_inverse = self.estimator(z)
+        if self.est_name == 'EN':
+                # density distribution of z 
+            z_dist = self.estimator(z)
+        elif self.est_name in ['SOS','MAF']:
+            s, log_jacob_T_inverse = self.estimator(z)
 
-        return  x_r, z, s, log_jacob_T_inverse
         
+        # Without Estimator
+        if self.est_name == 'EN':
+            return x_r, z, z_dist
+        elif self.est_name in ['SOS','MAF']:
+                return  x_r, z, s, log_jacob_T_inverse
+        else:
+            return x_r

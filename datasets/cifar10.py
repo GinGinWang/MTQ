@@ -10,6 +10,8 @@ from datasets.base import OneClassDataset
 from datasets.transforms import OCToFloatTensor2D
 from datasets.transforms import ToFloat32
 from datasets.transforms import ToFloatTensor2D
+from datasets.transforms import ToFloatTensor2D_cifar10
+from datasets.transforms import OCToFloatTensor2D_cifar10
 
 
 class CIFAR10(OneClassDataset):
@@ -50,9 +52,10 @@ class CIFAR10(OneClassDataset):
         self.shuffled_train_idx = train_idx
 
         # Transform zone
-        self.val_transform = transforms.Compose([ToFloatTensor2D()])
-        self.train_transform = transforms.Compose([ToFloatTensor2D()])
-        self.test_transform = transforms.Compose([ToFloat32(), OCToFloatTensor2D()])
+        self.val_transform = transforms.Compose([ToFloatTensor2D_cifar10()])
+        self.train_transform = transforms.Compose([ToFloatTensor2D_cifar10()])
+        self.test_transform = transforms.Compose([ToFloat32(), OCToFloatTensor2D_cifar10()])
+        
         self.transform = None
 
         # Other utilities
@@ -182,6 +185,7 @@ class CIFAR10(OneClassDataset):
         # Apply transform
         if self.transform:
             sample = self.transform(sample)
+        
         return sample
 
     @property
@@ -217,7 +221,7 @@ class CIFAR10(OneClassDataset):
         """
         Returns the shape of examples.
         """
-        return 1, 28, 28
+        return 3, 32, 32
 
     def __repr__(self):
         return ("ONE-CLASS CIFAR10 (normal class =  {} )").format(self.normal_class)

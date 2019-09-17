@@ -8,15 +8,15 @@
     "sync_down_on_open": true,
     "sync_same_age": true,
     
-    "host": "tml.cs.uwaterloo.ca",
-    "user": "jj27wang",
-    "password": "hatCiagiahoj",
+    "host": "graham.computecanada.ca",
+    "user": "jing1991",
+    "password": "wjj1991913!",
     "port": "22",
     
-    "remote_path": "/home/jj27wang/novelty-detection/NovelDect_SoS/SoSLSA/",
+    "remote_path": "/home/jing1991/projects/def-yaoliang/jing1991",
     "ignore_regexes":[
     "_pycache_/",
-    // "checkpoints/",
+    "checkpoints/",
     "history_image/",
     "baseline_ADT/results/",
     "baseline_GPND/",
@@ -24,7 +24,7 @@
     "baseline_VAE",
     "data/",
     "\\.git/",
-    // "\\.pkl",
+    "\\.pkl",
     "\\.pdf","\\.npz","\\.npy","\\.gz","\\.pyc"
     ],
     //"file_permissions": "664",

@@ -16,7 +16,18 @@ class BaseModule(nn.Module):
 
         :param checkpoint_path: the checkpoint file to be loaded.
         """
-        self.load_state_dict(torch.load(checkpoint_path), strict= False)
+        self.load_state_dict(torch.load(checkpoint_path))
+
+    def load_lsa(self, checkpoint_path):
+        pretrained_dict = torch.load(checkpoint_path)
+        model_dict = self.state_dict()
+        # 1. filter out unnecessary keys
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+        # 2. overwrite entries in the existing state dict
+        model_dict.update(pretrained_dict) 
+        # 3. load the new state dict
+        self.load_state_dict(model_dict)
+
 
     
     def load_checkpont(self,filename):

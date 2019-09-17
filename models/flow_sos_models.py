@@ -1,3 +1,9 @@
+"""
+This is sos flow.
+
+Model from sosflow
+"""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -7,7 +13,7 @@ import math
 
 def get_mask(in_features, out_features, in_flow_features, mask_type=None):
     """
-    mask_type: input | None | output
+    mask_type: input | None | output.
 
     See Figure 1 for a better illustration:
     https://arxiv.org/pdf/1502.03509.pdf
@@ -26,33 +32,62 @@ def get_mask(in_features, out_features, in_flow_features, mask_type=None):
 
 
 class MaskedLinear(nn.Linear):
+    """
+    MaskedLinear.
+
+    From.
+    """
+
     def __init__(self, in_features, out_features, mask, bias=True):
+        """
+        Intialization.
+
+        From
+        """
         super(MaskedLinear, self).__init__(in_features, out_features, bias)
         self.register_buffer('mask', mask)
 
     def forward(self, inputs):
+        """
+        Forward.
+
+        From
+        """
         return F.linear(inputs, self.weight * self.mask, self.bias)
 
 
 class ConditionerNet(nn.Module):
+    """
+    Conditioner Net.
+
+    From
+    """
 
     def __init__(self, input_size, hidden_size, k, m, n_layers=1):
+        """
+        Init.
+
+        From
+        """
         super().__init__()
         # k: number of squares
-        self.k = k 
+        self.k = k
         # m = r+1, r: degree of polynomials in every squares
         self.m = m
         # input_size: dimension of input data
         self.input_size = input_size
         # output_size: number of parameters of conditioner
         self.output_size = k * self.m * input_size + input_size
-        self.network = self._make_net(input_size, hidden_size, self.output_size, n_layers)
+        self.network = self._make_net(input_size, hidden_size,
+                                      self.output_size, n_layers)
 
     def _make_net(self, input_size, hidden_size, output_size, n_layers):
 
         # n_layers is fixed to 1 here
         if self.input_size > 1:
-            # make sure the the i_th output of net only dependent on 1,..i-1 th input of net
+            # make sure the the i_th output of net only dependent
+            # on 1,..i-1 th input of net
+
             input_mask = get_mask(
                 input_size, hidden_size, input_size, mask_type='input')
             hidden_mask = get_mask(hidden_size, hidden_size, input_size)
@@ -79,65 +114,80 @@ class ConditionerNet(nn.Module):
         return network
 
     def forward(self, inputs):
-        '''
-        Inputs: batch of data
+        """
+        Forward.
+
+        Inputs: batch of data.
         Return:
             C
             const
-        '''
+        """
         batch_size = inputs.size(0)
         params = self.network(inputs)
         # params[:,0:kmn] is a, params[:,kmn:end] constant
         # params:b*(kmn+n)
         i = self.k * self.m * self.input_size
         # params
-        c = params[:, :i].view(batch_size, -1, self.input_size).transpose(1,2).view(
+        c = params[:, :i].view(batch_size,
+                               -1, self.input_size).transpose(1, 2).view(
             batch_size, self.input_size, self.k, self.m, 1)
         # c: b*n*k*m*1
         const = params[:, i:].view(batch_size, self.input_size)
         # const: b*n
-        # C: b*n*k*m*1 X b*n*k *1 *m = b * n* k *m * m 
+        # C: b*n*k*m*1 X b*n*k *1 *m = b * n* k *m * m
         # every square parts (one of k summed up parts) has m*m parameters
-        C = torch.matmul(c, c.transpose(3,4))
-        return C, const
+        cc = torch.matmul(c, c.transpose(3, 4))
+        return cc, const
 
 
 #
 #   SOS Block:
 #
 
-
 class SOSFlow(nn.Module):
+    """
+    SOS flow.
+
+    From
+    """
+
     @staticmethod
     def power(z, k):
+        """
+        Power.
+
+        From
+        """
         return z ** (torch.arange(k).float().to(z.device))
 
     def __init__(self, input_size, hidden_size, k, r, n_layers=1):
-        super().__init__()
-        '''
-        Initialize: build conditional nets (cn)/ prepare denominators for polymomials
+        """
+        Initialize.
+
+        build conditional nets (cn)/ prepare denominators for polymomials.
         Args:
             input_size:
             hidden_size: number of hidden neurons in every hiden  layer of cn
-            k: number of squares (of polynomials)  
+            k: number of squares (of polynomials)
             r: degree of polynomials
             n_layers: number of hidden layers
-        '''
+        """
+        super().__init__()
         self.k = k
-        self.m = r+1
+        self.m = r + 1
 
         # build conditioner network
-        self.conditioner = ConditionerNet(input_size, hidden_size, k, self.m, n_layers)
-        
+        self.conditioner = ConditionerNet(input_size,
+                                          hidden_size, k, self.m, n_layers)
         self.register_buffer('filter', self._make_filter())
 
     def _make_filter(self):
         # e.g k = 2  m = 3
 
-        n = torch.arange(self.m).unsqueeze(1) 
+        n = torch.arange(self.m).unsqueeze(1)
         # n = [[0],[1],[2]]^T
         # n: m*1
-        e = torch.ones(self.m).unsqueeze(1).long() 
+        e = torch.ones(self.m).unsqueeze(1).long()
         # e = [[1],[1],[1]]^T
         # e: m*1
         filter = (n.mm(e.transpose(0, 1))) + (e.mm(n.transpose(0, 1))) + 1
@@ -148,12 +198,14 @@ class SOSFlow(nn.Module):
         return filter.float()
 
     def forward(self, inputs, mode='direct'):
-        '''
+        """
+        Forward.
+
         Args:
-            inputs: shape[batch_size,input_size]
-            mode: direction of flow
-            T-inverse(Z) = S
-        '''
+        inputs: shape[batch_size,input_size]
+        mode: direction of flow
+        T-inverse(Z) = S
+        """
         batch_size, input_size = inputs.size(0), inputs.size(1)
         # batch_size: b
         # input_size: d
@@ -163,31 +215,34 @@ class SOSFlow(nn.Module):
         # C: bs x d x k x m x m
         # const: bs x d
 
-        Z = SOSFlow.power(inputs.unsqueeze(-1), self.m).view(batch_size, input_size, 1, self.m,1)  
+        zz = SOSFlow.power(
+            inputs.unsqueeze(-1), self.m).view(batch_size,
+                                               input_size, 1, self.m, 1)
         # X: bs x d x 1 x m x 1
-        S = self._transform(Z, C / self.filter) * inputs + const
+        ss = self._transform(zz, C / self.filter) * inputs + const
         # S: bs x d x 1 x m x 1
-        # S = T-inverse(X), T-inverse is SoS-flow, i.e., si =T_i-inverse(x_i)= c+ integral_0^{x_i}(sum of squares dependent on x_1,..x_{i-1})
-        
-        # logdet(T-inverse)= log(abs((partial T_1/partial x_1)*(partial T_2/partial x_2),....(partial T_d/partial x_d)))
+        # S = T-inverse(X), T-inverse is SoS-flow,
+        #  i.e., si =T_i-inverse(x_i)= c+ integral_0^{x_i}
+        # (sum of squares dependent on x_1,..x_{i-1})
+        # logdet(T-inverse)= log(abs((partial T_1/partial x_1)
+        #           *(partial T_2/partial x_2),..(partial T_d/partial x_d)))
         # (partial T_i/partial x_i)= sum of squares (where u = x_i)
-        
-        logdet = torch.log(torch.abs(self._transform(Z, C))).sum(dim=1, keepdim=True)
+        logdet = torch.log(
+            torch.abs(self._transform(zz, C))).sum(dim=1, keepdim=True)
 
         # logdet: log(jacobian of T-inverse)
         # logdet: -log(jacobian of T )
-        
-        return S, logdet
+        return ss, logdet
 
-    def _transform(self, X, C):
+    def _transform(self, xx, cc):
         # C: b* d * k * m * m
         # X: b* d * 1* m * 1
-        CX = torch.matmul(C, X)                                                                 # bs x d x k x m x 1
-        XCX = torch.matmul(X.transpose(3, 4), CX)                                               # bs x d x k x 1 x 1
-        summed = XCX.squeeze(-1).squeeze(-1).sum(-1)                                            # bs x d
-        
-        return summed
+        cc_xx = torch.matmul(cc, xx)  # bs x d x k x m x 1
+        xx_cc_xx = torch.matmul(xx.transpose(3, 4), cc_xx)
+        # bs x d x k x 1 x 1
+        summed = xx_cc_xx.squeeze(-1).squeeze(-1).sum(-1)  # bs x d
 
+        return summed
 
 
 class BatchNormFlow(nn.Module):
@@ -203,9 +258,11 @@ class BatchNormFlow(nn.Module):
         self.eps = eps
         self.register_buffer('running_mean', torch.zeros(num_inputs))
         self.register_buffer('running_var', torch.ones(num_inputs))
+
     def forward(self, inputs, mode='direct'):
+
         if mode == 'direct':
-            if self.training:
+            if True:  # self.training:
                 self.batch_mean = inputs.mean(0)
                 self.batch_var = (
                     inputs - self.batch_mean).pow(2).mean(0) + self.eps
@@ -217,15 +274,26 @@ class BatchNormFlow(nn.Module):
                                       (1 - self.momentum))
                 mean = self.batch_mean
                 var = self.batch_var
+
+                # mean = self.running_mean
+                # var = self.running_var
             else:
+
                 mean = self.running_mean
                 var = self.running_var
+
             x_hat = (inputs - mean) / var.sqrt()
             y = torch.exp(self.log_gamma) * x_hat + self.beta
+
+            # if self.training:
+            #     print(f"Train:{mean.mean()},{var.mean()}")
+            # else:
+            #     print(f"Val:{mean.mean()},{var.mean()}")
+
             return y, (self.log_gamma - 0.5 * torch.log(var)).sum(
                 -1, keepdim=True)
         else:
-            if self.training:
+            if True:  # self.training:
                 mean = self.batch_mean
                 var = self.batch_var
             else:
@@ -310,16 +378,16 @@ class FlowSequential(nn.Sequential):
         samples = self.forward(noise, cond_inputs, mode='inverse')[0]
         return samples
 
-    def jacobians(self, X):
-        assert len(X.size()) == 1
+    def jacobians(self, xx):
+        assert len(xx.size()) == 1
         N = len(self._modules)
-        num_inputs = X.size(-1)
+        num_inputs = xx.size(-1)
         jacobians = torch.zeros(N, num_inputs, num_inputs)
         n_jacob = 0
         for i in range(N):
-            J_i = self._modules[str(i)]._jacob(X)
-            if J_i is not None:
-                jacobians[n_jacob,:,:] = J_i
+            jj_i = self._modules[str(i)]._jacob(xx)
+            if jj_i is not None:
+                jacobians[n_jacob, :, :] = jj_i
                 n_jacob += 1
-            del J_i
-        return jacobians[:n_jacob,:,:]
+            del jj_i
+        return jacobians[:n_jacob, :, :]

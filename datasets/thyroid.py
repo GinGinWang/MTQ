@@ -17,7 +17,7 @@ import os
 # thyroid
 class THYROID (OneClassDataset):
     
-    def __init__(self, path, n_class = 2, select = 0):
+    def __init__(self, path):
 
         # type: (str) -> None
         """
@@ -27,109 +27,106 @@ class THYROID (OneClassDataset):
         super(THYROID, self).__init__()
 
         self.path = path
-        data = io.loadmat(os.join(path,'thyroid.mat'))
-        self.normal_class = 0
-        self.n_class = n_class
-        self.select = select
+        data = io.loadmat(f'{path}/thyroid.mat')
+        self.normal_class = 1 
+        
         self.name = 'thyroid'
         self.train_split ={}
         self.test_split = {}
-        idxs = np.arange(len(data['y']))
-        np.random.shuffle(idxs)
 
-        self.train_split['X'] = data['X'][idxs[0:int(0.5*len(idxs))]]
-        self.train_split['y'] = data['y'][idxs[0:int(0.5*len(idxs))]]
-        print(f"{len(self.train_split['y'])} for train sets")
+        features = data['X']
+        labels = data['y'].squeeze()
+        labels = (labels == 0)
+
+        N, self.dimension = features.shape
         
-        self.test_split['X'] = data['X'][idxs[int(0.5*len(idxs)):]]
-        self.test_split['y'] = data['y'][idxs[int(0.5*len(idxs)):]]
-        print(f"{len(self.test_split['y'])} for  test sets")
+        nominal_data = features[labels==1,:]
+        nominal_labels = labels[labels==1]
+
+        N_nominal = nominal_data.shape[0]
+
+        novel_data = features[labels==0,:]
+        novel_labels = labels[labels==0]
+
+        N_novel = novel_data.shape[0]
+
+        print(f"thyroid:{N_novel+N_nominal}\t N_novel:{N_novel}\tN_nominal:{N_nominal}\t novel-ratio:{N_novel/N_nominal}")
+
+
+        randIdx = np.arange(N_nominal)
+        np.random.shuffle(randIdx)
         
-        self.train_idx = np.arange(len(self.train_split['y']))
-        self.test_idx = np.arange(len(self.test_split['y']))
+        N_train_valid = N_nominal//2
+        N_train = int(N_train_valid *0.9)
+        N_valid = N_train_valid -N_train
 
+        # 0.45 nominal data as training set
+        self.X_train = nominal_data[randIdx[:N_train]]
+        self.y_train = nominal_labels[randIdx[:N_train]]
+        
+        # 0.05 nominal data as validation set
+        self.X_val = nominal_data[randIdx[N_train:N_train_valid]]
+        self.y_val =nominal_data[randIdx[N_train:N_train_valid]]
 
-        # Transform zone
-        self.val_transform = transforms.Compose([ToFloatTensor2Dt()])
-        self.test_transform = transforms.Compose([ToFloat32(), OCToFloatTensor2Dt()])
-        self.transform = None
+        # 0.5 nominal data + all novel data as test set
+        self.X_test = nominal_data[randIdx[N_train_valid:]]
+        self.y_test = nominal_labels[randIdx[N_train_valid:]]
+        self.X_test = np.concatenate((self.X_test, novel_data),axis=0)
+        self.y_test = np.concatenate((self.y_test, novel_labels),axis=0)
+
+        
+        print(f"thyroid: train-{N_train},validation-{N_valid},test-{len(self.y_test)}(novel-ratio:{float(sum(self.y_test == 0)/len(self.y_test))})")
 
         # Other utilities
         self.mode = None
         self.length = None
 
-        # val idx in normal class (all possible classes)
-        self.val_idxs = None
-        # train idx in normal class
-        self.train_idxs = None
-        # test idx with 50%->90% normal class(50% -> 10% novelty)
-        self.test_idxs = None
+        # Transform zone
+        self.val_transform = transforms.Compose([ToFloatTensor2Dt()])
+        self.train_transform = transforms.Compose([ToFloatTensor2Dt()])
+        self.test_transform = transforms.Compose([ToFloat32(), OCToFloatTensor2Dt()])
+        self.transform = None
 
-
-    def val(self, normal_class):
+    def val(self, nominal_class = 1 ):
         # type: (int) -> None
         """
          in validation mode.
-        :param normal_class: the class to be considered normal.
+        :param nominal_class: the class to be considered nominal.
         """
         # Update mode, indexes, length and transform 
         self.mode = 'val'
+        self.length = len(self.y_val)
         self.transform = self.val_transform
-        
-        self.val_idxs = [idx for idx in self.train_idx if self.train_split['y'][idx] == 0 ]
-        self.val_idxs =self.val_idxs[int(0.9*len(self.val_idxs)):]
-       
-        self.length = len(self.val_idxs)
 
-
-
-    def train(self, normal_class):
+    def train(self, nominal_class = 1):
         # type: (int) -> None
-        """
-        By JingJing
-        in training mode.
-
-        :param normal_class: the class to be considered normal.
-        """
-
-        # Update mode, indexes, length and transform
-        self.mode = 'train'
-        self.transform = self.val_transform
-        # training examples are all normal
-        self.train_idxs = [idx for idx in self.train_idx if self.train_split['y'][idx] == 0]
-
         
-        self.length = len(self.train_idxs)
-        # print 
-        print(f"Training Set prepared, Num:{self.length}")
-#---
+        self.mode = 'train'
+        self.length = len(self.y_train)
+         # manually shuffled
+        randIdx = np.arange(self.length)
+        self.X_train = self.X_train[randIdx]
+
+        self.transform = self.train_transform
 
 
-    def test(self, normal_class=0, norvel_ratio =1):
+
+
+    def test(self, nominal_class=1):
         # type: (int) -> None
         """
         Sets  test mode.
 
-        :param normal_class: the class to be considered normal.
+        :param nominal_class: the class to be considered nominal.
         :param norvel_ratio: the ratio of novel examples
         """
         
         # Update mode, length and transform
         self.mode = 'test'
-        self.transform = self.test_transform
 
         # testing examples (norm)
-        self.length = len(self.test_split['y'])
-        
-        normal_idxs = [idx for idx in self.test_idx if self.test_split['y'][idx] == 0]
-        normal_num = len(normal_idxs)
-        novel_num = self.length - normal_num
-
-        self.test_idxs = self.test_idx
-        
-        print(f"Test Set prepared, Num:{self.length},Novel_num:{novel_num},Normal_num:{normal_num}")
-
-
+        self.length = len(self.y_test)
+        self.transform = self.test_transform
 
 
     def __len__(self):
@@ -145,24 +142,21 @@ class THYROID (OneClassDataset):
         Provides the i-th example.
         """
 
-        # Load the i-th example
-        if self.mode == 'test':
-            x = self.test_split['X'][self.test_idxs[i]]
-            y = self.test_split['y'][self.test_idxs[i]]
-
+        if self.mode == 'train':
+            x = self.X_train[i]
             x = np.float32(x)[..., np.newaxis]
-            sample = x, int(y==0)
+            sample = x, x
 
         elif self.mode == 'val':
-            x= self.train_split['X'][self.val_idxs[i]]
+            x = self.X_val[i]
             x = np.float32(x)[..., np.newaxis]
             sample = x, x
-        elif self.mode == 'train':
-            x= self.train_split['X'][self.train_idxs[i]]
+
+        elif self.mode == 'test':
+            x = self.X_test[i]
+            y = self.y_test[i]
             x = np.float32(x)[..., np.newaxis]
-            sample = x, x
-        else:
-            raise ValueError
+            sample = x, y
 
         # Apply transform
         if self.transform:
@@ -176,11 +170,7 @@ class THYROID (OneClassDataset):
         """
         Returns all test possible test sets (the 10 classes).
         """
-        if self.select ==None:
-            classes = np.arange(0,self.n_class)
-        else:
-            classes = [self.select] # select one class to train
-        return classes
+        return [1]
 
     @property
     def train_classes(self):
@@ -188,18 +178,14 @@ class THYROID (OneClassDataset):
         """
         Returns all test possible test sets (the 10 classes).
         """
-        if self.select == None:
-            classes = np.arange(0, self.n_class)
-        else:
-            classes = [self.select]
-        return classes
+        return [1]
 
     @property
     def shape(self):
-        # type: () -> Tuple[int, int, int]
+        # type: () -> Tuple[int, int]
         """
         Returns the shape of examples.
         """
-        return 1, 6, 1
+        return 1,6,1
     def __repr__(self):
-        return ("ONE-CLASS MNIST (normal class =  0 )")
+        return ("ONE-CLASS MNIST (nominal class =  0 )")

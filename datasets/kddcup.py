@@ -16,13 +16,13 @@ from datasets.transforms import OCToFloatTensor2Dt
 
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
+# from sklearn.model_selection import train_test_split
 import scipy.io as io
 
 # thyroid
 class KDDCUP (OneClassDataset):
     
-    def __init__(self, path, n_class = 2, select  = 0):
+    def __init__(self, path):
 
         # type: (str) -> None
         """
@@ -30,64 +30,107 @@ class KDDCUP (OneClassDataset):
         :param path: The folder in which to download MNIST.
         """
         super(KDDCUP, self).__init__()
-        self.select = select
-        self.n_class = n_class
-        self.normal_class = 0
 
         self.name = 'kddcup'
-        
+        self.normal_class = 1
+        # path='data/UCI'
         # # KDDCup 10% Data
-        url_data = f"{path}/kddcup.data_10_percent.gz"
-        # info data (column names, col types)
-        url_info = f"{path}/kddcup.names"
+        data = pd.read_csv(f"{path}/kddcup.data_10_percent.gz", header=None,names=['duration', 'protocol_type', 'service', 'flag', 'src_bytes', 'dst_bytes', 'land', 'wrong_fragment', 'urgent', 'hot', 
+            'num_failed_logins', 'logged_in', 'num_compromised', 'root_shell', 'su_attempted', 'num_root', 'num_file_creations', 'num_shells', 'num_access_files', 'num_outbound_cmds', 'is_host_login', 'is_guest_login', 'count', 'srv_count', 'serror_rate', 'srv_serror_rate', 'rerror_rate', 'srv_rerror_rate', 'same_srv_rate', 'diff_srv_rate', 'srv_diff_host_rate', 'dst_host_count', 'dst_host_srv_count', 'dst_host_same_srv_rate', 'dst_host_diff_srv_rate', 'dst_host_same_src_port_rate', 'dst_host_srv_diff_host_rate', 'dst_host_serror_rate', 'dst_host_srv_serror_rate', 'dst_host_rerror_rate', 'dst_host_srv_rerror_rate', 'type'])
 
-        # Import info data
-        df_info = pd.read_csv(url_info, sep=":", skiprows=1, index_col=False, names=["colname", "type"])
-        colnames = df_info.colname.values
-        coltypes = np.where(df_info["type"].str.contains("continuous"), "float", "str")
-        colnames = np.append(colnames, ["status"])
-        coltypes = np.append(coltypes, ["str"])
+        #categorical: protocol_type, service, flag, land, logged_in,is_host_login,is_guest_login
+        #one-hot coding on protocol_type, service, flag
+        #binary value on land, logged_in, is_guest_login, is_host_login
 
-        # Import data
-        df = pd.read_csv(url_data, names=colnames, index_col=False,
-                         dtype=dict(zip(colnames, coltypes)))
-        # Dumminize
-        X = pd.get_dummies(df.iloc[:,:-1]).values
+        data.loc[data["type"] != "normal.", 'type'] = 1 # as Nominal
+        data.loc[data["type"] == "normal.", 'type'] = 0 # as Novel
 
-        # Create Traget Flag
-        # Anomaly data when status is normal, Otherwise, Not anomaly.
-        y = np.where(df.status == "normal.", 1, 0)
+        # one-hot coding for categorical features
+        one_hot_protocol = pd.get_dummies(data["protocol_type"])
+        one_hot_service = pd.get_dummies(data["service"])
+        one_hot_flag = pd.get_dummies(data["flag"])
 
-        # 50 for testing
-        X_train, self.X_test, y_train, self.y_test = train_test_split(X, y, test_size=0.50, random_state=123)
+        one_hot_land = pd.get_dummies(data["land"])
+        one_hot_logged_in= pd.get_dummies(data["logged_in"])
+        one_hot_is_guest_login = pd.get_dummies(data["is_guest_login"])
+        one_hot_is_host_login  = pd.get_dummies(data["is_host_login"])
 
-        X_train, y_train = X_train[y_train == 0], y_train[y_train == 0]
-        self.X_train, self.y_train = X_train, y_train
 
-        # Transform zone
-        self.val_transform = transforms.Compose([ToFloatTensor2Dt()])
-        self.test_transform = transforms.Compose([ToFloat32(), OCToFloatTensor2Dt()])
-        self.transform = None
+        data = data.drop("protocol_type",axis=1)
+        data = data.drop("service",axis=1)
+        data = data.drop("flag",axis=1)
+            
+        data = pd.concat([one_hot_protocol, one_hot_service,one_hot_flag,data], axis=1)
+        data = pd.concat([one_hot_land,one_hot_is_host_login,one_hot_logged_in,one_hot_is_guest_login, data], axis=1)
+        
+        features = data.iloc[:,:-1].values
+        labels = data.iloc[:,-1].values
+
+        
+
+        N, self.dimension = features.shape
+        print(self.dimension)
+        
+        novel_data = features[labels==0]
+        novel_labels = labels[labels==0]
+
+        N_novel = novel_data.shape[0]
+
+        nominal_data = features[labels==1]
+        nominal_labels = labels[labels==1]
+
+        N_nominal = nominal_data.shape[0]
+
+
+        print(f"KDDCUP({N_novel+N_nominal})\t N_novel:{N_novel}\tN_nominal:{N_nominal}\t novel-ratio:{N_novel/N_nominal}")
+
+        randIdx = np.arange(N_nominal)
+        np.random.shuffle(randIdx)
+        N_train_valid = N_nominal//2
+        N_train = int(N_train_valid *0.9)
+        N_valid = N_train_valid -N_train
+
+        # 0.45 nominal data
+        self.X_train = nominal_data[randIdx[:N_train]]
+        self.y_train = nominal_labels[randIdx[:N_train]]
+        
+        # 0.05 nominal data
+        self.X_val = nominal_data[randIdx[N_train:N_train_valid]]
+        self.y_val =nominal_data[randIdx[N_train:N_train_valid]]
+        
+        # 0.5 nominal data + all normal data
+        self.X_test = nominal_data[randIdx[N_train_valid:]]
+        self.y_test = nominal_labels[randIdx[N_train_valid:]]
+        self.X_test = np.concatenate((self.X_test, novel_data),axis=0)
+        self.y_test = np.concatenate((self.y_test, novel_labels),axis=0)
+
 
         # Other utilities
         self.mode = None
         self.length = None
 
-    def val(self, normal_class):
+        # Transform zone
+        self.val_transform = transforms.Compose([ToFloatTensor2Dt()])
+        self.train_transform = transforms.Compose([ToFloatTensor2Dt()])
+        self.test_transform = transforms.Compose([ToFloat32(), OCToFloatTensor2Dt()])
+        self.transform = None
+
+
+        print(f"thyroid: train-f{N_train},validation-{N_valid},test-{len(self.y_test)}(novel-ratio:){float(sum(self.y_test == 1)/len(self.y_test))}")
+
+
+    def val(self, cl = 1):
         # type: (int) -> None
         """
          in validation mode.
         :param normal_class: the class to be considered normal.
         """
         self.mode = 'val'
-        self.transform = self.val_transform
-        val_num = int(0.1*len(self.X_train))
-        self.X_val = self.X_train[0:val_num,:]
-        self.y_val = self.y_train[0:val_num]
         self.length = len(self.y_val)
+        self.transform = self.val_transform
 
 
-    def train(self,normal_class=0):
+    def train(self, cl = 1):
         # type: (int) -> None
         """
         By JingJing
@@ -95,17 +138,18 @@ class KDDCUP (OneClassDataset):
 
         :param normal_class: the class to be considered normal.
         """
-         # normal_class=0
-        
-        # Update mode, indexes, length and transform
+        # Update mode, indexes, length
         self.mode = 'train'
-        self.transform = self.val_transform
+
         self.length = len(self.y_train)
-        print(f"Training Set prepared, Num:{self.length}")
-#---
+        # manually shuffled
+        randIdx = np.arange(self.length)
+        self.X_train = self.X_train[randIdx]
+
+        self.transform = self.train_transform
 
 
-    def test(self, normal_class=0, norvel_ratio =1):
+    def test(self, cl = 1):
         # type: (int) -> None
         """
         Sets  test mode.
@@ -115,13 +159,11 @@ class KDDCUP (OneClassDataset):
         """
         # Update mode, length and transform
         self.mode = 'test'
-        self.transform = self.test_transform
 
         # testing examples (norm)
         self.length = len(self.y_test)
+        self.transform = self.test_transform
         
-
-
 
     def __len__(self):
         # type: () -> int
@@ -137,29 +179,21 @@ class KDDCUP (OneClassDataset):
         """
 
         # Load the i-th example
-        if self.mode == 'test':
-            # HWC
-            x = self.X_test[i,:]
-            # x = np.expand_dims(x, axis=0)
-            # x = x.reshape((11,11))
-            y = (self.y_test[i]==0)
+        if self.mode == 'train':
+            x = self.X_train[i]
             x = np.float32(x)[..., np.newaxis]
-            sample = x, int(y)
+            sample = x, x
 
         elif self.mode == 'val':
-            x= self.X_val[i,:]
-            # x = np.expand_dims(x, axis=0)
-            # x = x.reshape((11,11))
+            x = self.X_val[i]
             x = np.float32(x)[..., np.newaxis]
             sample = x, x
-        elif self.mode == 'train':
-            x= self.X_train[i,:]
-            # x = np.expand_dims(x, axis=0)
-            # x = x.reshape((11,11)) 
-            x = np.float32(x)[..., np.newaxis]  
-            sample = x, x
-        else:
-            raise ValueError
+
+        elif self.mode == 'test':
+            x = self.X_test[i]
+            y = self.y_test[i]
+            x = np.float32(x)[..., np.newaxis]
+            sample = x, y
 
         # Apply transform
         if self.transform:
@@ -167,17 +201,14 @@ class KDDCUP (OneClassDataset):
 
         return sample
 
+
     @property
     def test_classes(self):
         # type: () -> np.ndarray
         """
-        Returns all test possible test sets (the 10 classes).
+        Returns all test possible test sets ().
         """
-        if self.select ==None:
-            classes = np.arange(0,self.n_class)
-        else:
-            classes = [self.select] # select one class to train
-        return classes
+        return [1]
 
 
     @property
@@ -186,11 +217,7 @@ class KDDCUP (OneClassDataset):
         """
         Returns all test possible test sets (the 10 classes).
         """
-        if self.select == None:
-            classes = np.arange(0, self.n_class)
-        else:
-            classes = [self.select]
-        return classes
+        return [1]
 
     @property
     def shape(self):
@@ -198,6 +225,6 @@ class KDDCUP (OneClassDataset):
         """
         Returns the shape of examples.
         """
-        return 1,121,1
+        return  self.dimension
     def __repr__(self):
-        return ("ONE-CLASS MNIST (normal class = 0)")
+        return ("ONE-CLASS kddcup")
