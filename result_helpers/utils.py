@@ -113,49 +113,49 @@ def compute_quantile_metric(model_name, sample_qinf, sample_y, code_length, quan
     return precision, recall,f1
 
 
-# def custom_viz(kernels, path=None, cols=None):
-#     def set_size(w,h, ax=None):
+def custom_viz(kernels, path=None, cols=None):
+    def set_size(w,h, ax=None):
         
-#         if not ax: 
-#             ax=plt.gca()
-#             l = ax.figure.subplotpars.left
-#             r = ax.figure.subplotpars.right
-#             t = ax.figure.subplotpars.top
-#             b = ax.figure.subplotpars.bottom
-#             figw = float(w)/(r-l)
-#             figh = float(h)/(t-b)
-#             ax.figure.set_size_inches(figw, figh)
+        if not ax: 
+            ax=plt.gca()
+            l = ax.figure.subplotpars.left
+            r = ax.figure.subplotpars.right
+            t = ax.figure.subplotpars.top
+            b = ax.figure.subplotpars.bottom
+            figw = float(w)/(r-l)
+            figh = float(h)/(t-b)
+            ax.figure.set_size_inches(figw, figh)
         
-#             N = kernels.shape[0]
-#             C = kernels.shape[1]
+            N = kernels.shape[0]
+            C = kernels.shape[1]
 
-#             Tot = N*C
+            Tot = N*C
 
-#             # If single channel kernel with HxW size,# plot them in a row.# Else, plot image with C number of columns.if C>1:
-#             columns = C
-#         elif cols==None:
-#             columns = N
-#         elif cols:
-#             columns = cols
-#             rows = Tot // columns 
-#             rows += Tot % columns
+            # If single channel kernel with HxW size,# plot them in a row.# Else, plot image with C number of columns.if C>1:
+            columns = C
+        elif cols==None:
+            columns = N
+        elif cols:
+            columns = cols
+            rows = Tot // columns 
+            rows += Tot % columns
 
-#             pos = range(1,Tot + 1)
+            pos = range(1,Tot + 1)
 
-#     fig = plt.figure(1)
-#     fig.tight_layout()
-#     k=0
-#     for i in range(kernels.shape[0]):
-#         for j in range(kernels.shape[1]):
-#             img = kernels[i][j]
-#             ax = fig.add_subplot(rows,columns,pos[k])
-#             ax.imshow(img, cmap='gray')
-#             plt.axis('off')
-#             k = k+1
+    fig = plt.figure(1)
+    fig.tight_layout()
+    k=0
+    for i in range(kernels.shape[0]):
+        for j in range(kernels.shape[1]):
+            img = kernels[i][j]
+            ax = fig.add_subplot(rows,columns,pos[k])
+            ax.imshow(img, cmap='gray')
+            plt.axis('off')
+            k = k+1
 
-#     set_size(30,30,ax)
+    set_size(30,30,ax)
     
-#     if path:
-#         plt.savefig(path, dpi=100)
+    if path:
+        plt.savefig(path, dpi=100)
     
-#     plt.show()
+    plt.show()

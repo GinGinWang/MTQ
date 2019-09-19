@@ -54,7 +54,7 @@ class LSASOSLoss(nn.Module):
 
         # Store numerical
         self.reconstruction_loss = rec_loss
-        self.autoregression_loss = arg_loss* self.lam
+        self.autoregression_loss = arg_loss
         
         self.nlog_probs = nlog_probs * self.lam
         self.nagtive_log_jacob = nlog_jacob_d * self.lam

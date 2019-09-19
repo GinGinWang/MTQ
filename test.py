@@ -153,7 +153,8 @@ def main():
     elif args.plot_training_loss_auroc:
         helper.plot_training_loss_auroc(log_step = args.log_step)
     
-    # helper.visualize_latent_vector(args.select)
+    else:
+        helper.visualize_latent_vector(args.select)
 
 
 
@@ -209,7 +210,7 @@ def parse_arguments():
     parser.add_argument(
     '--before_log_epochs',
     type=int,
-    default=100,
+    default=30,
     help='number of epochs before logging (default: -1)')
 
     # select checkpoint

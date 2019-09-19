@@ -36,7 +36,7 @@ import pickle
 from models.flow_sos_models import BatchNormFlow
 from scipy.stats import norm
 
-
+import seaborn as sns
 def _init_fn():
     np.random.seed(12)
 
@@ -635,7 +635,7 @@ class OneClassTestHelper(object):
         converge_epochs = 30
         
         if self.name in ['LSA_SOS','LSAW_SOS','LSAD_SOS']:
-            converge_epochs = 200
+            converge_epochs = 100
         
         for epoch in range(self.train_epochs):
             
@@ -671,7 +671,7 @@ class OneClassTestHelper(object):
                     torch.save(self.model.state_dict(), model_dir_epoch)
             
             # early stop
-            if (epoch - best_validation_epoch)> converge_epochs and (epoch > self.before_log_epochs) and (self.name in ['LSA','LSAW','LSAD']):
+            if (epoch - best_validation_epoch)> converge_epochs and (epoch > self.before_log_epochs):
                 # if (epoch-best_train_rec_epoch) > 50 and (epoch- best_train_nllk_epoch)>50:
                 #     print (f"Break at Epoch:{epoch}")
                 break
@@ -1176,79 +1176,94 @@ class OneClassTestHelper(object):
 
     # Visualize feature maps
         self.get_path(cl)
-        if (self.test_checkpoint !=None):
-            # select one epoch to test
-            self.model_dir = join(self.checkpoints_dir,f'{cl}{self.name}_{self.train_strategy}_{self.test_checkpoint}.pkl')
-            self.test_result_dir = join(self.checkpoints_dir,f'{cl}{self.name}_{self.train_strategy}_{self.test_checkpoint}_history_test')
+        
+        def get_latent_vector(train_strategy):
+        
+            if (self.test_checkpoint !=None):
+                # select one epoch to test
+                self.model_dir = join(self.checkpoints_dir,f'{cl}{self.name}_{train_strategy}_{self.test_checkpoint}.pkl')
+                self.test_result_dir = join(self.checkpoints_dir,f'{cl}{self.name}_{train_strategy}_{self.test_checkpoint}_history_test')
+            
+            # Load the checkpoint 
+            bs = self.batch_size   
+            self.model.load_w(self.model_dir)
+            print(f"Load Model from {self.model_dir}")
 
-        # Load the checkpoint 
-        bs = self.batch_size   
-        self.model.load_w(self.model_dir)
-        print(f"Load Model from {self.model_dir}")
+            self.model.eval()
+            self.dataset.test(cl) 
+            loader = DataLoader(self.dataset, batch_size = bs, shuffle = False)
 
-        self.model.eval()
-        self.dataset.test(cl) 
-        loader = DataLoader(self.dataset, batch_size = bs, shuffle = False)
+            activation = {}
+            def get_activation(name):
+                def hook(model, input, output):
+                    activation[name] = output.detach()
+                return hook
 
-        activation = {}
-        def get_activation(name):
-            def hook(model, input, output):
-                activation[name] = output.detach()
-            return hook
-        self.model.encoder.register_forward_hook(get_activation('encoder'))
-        sample_act = np.zeros(shape=(len(self.dataset), self.code_length))
-                
-        # true label
-        sample_y = np.zeros(shape=(len(self.dataset),))
+            self.model.encoder.register_forward_hook(get_activation('encoder'))
+            sample_act = np.zeros(shape=(len(self.dataset), self.code_length))
+                    
+            # true label
+            sample_y = np.zeros(shape=(len(self.dataset),))
 
-        # compute feature map
-        for i, (x, y) in tqdm(enumerate(loader), desc=f'Computing scores for {self.dataset}'):  
-            x = x.to(self.device)
-            # x = torch.randn(1, 1, 28, 28)
-            self.model(x)
-            act = activation['encoder'].squeeze()
-            dimension_num = act.size(0)
-            act = act.cpu().numpy()
+            # compute feature map
+            for i, (x, y) in tqdm(enumerate(loader), desc=f'Computing scores for {self.dataset}'):  
+                x = x.to(self.device)
+                # x = torch.randn(1, 1, 28, 28)
+                self.model(x)
+                act = activation['encoder'].squeeze()
+                dimension_num = act.size(0)
+                act = act.cpu().numpy()
 
-            sample_y[i*bs:i*bs+bs] = y
-            sample_act[i*bs:i*bs+bs] = act
+                sample_y[i*bs:i*bs+bs] = y
+                sample_act[i*bs:i*bs+bs] = act
+            return sample_act, sample_y
+
 
         # Select features to include in the plot
         # plot_feat = range(dimension_num)
 
-        idx = np.arange(len(sample_y))
-        np.random.shuffle(idx)
-        # sample_act = sample_act[idx[0:100],0:10]
-        # sample_y = sample_y[idx[0:100]]
+        # idx = np.arange(len(sample_y))
+        # np.random.shuffle(idx)
+        # # sample_act = sample_act[idx[0:100],0:10]
+        # # sample_y = sample_y[idx[0:100]]
 
-        sample_act_1 = np.mean(sample_act[sample_y==1], axis =0)
-        sample_act_0 = np.mean(sample_act[sample_y==0], axis =0)
-        sample_y = [0,1]
-        sample_act= [sample_act_0,sample_act_1]
+        # sample_act_1 = np.mean(sample_act[sample_y==1], axis =0)
+        # sample_act_0 = np.mean(sample_act[sample_y==0], axis =0)
+        # sample_y = [0,1]
+        # sample_act = [sample_act_0,sample_act_1]
 
 
-        mat_data = np.mat(sample_act)
-        mat_data = mat_data.transpose()
+        # mat_data = np.mat(sample_act)
+        # mat_data = mat_data.transpose()
 
+        sample_act, sample_y = get_latent_vector('fix')
+        sample_act2, sample_y2 = get_latent_vector('mul')
+        sample_tr = ["fix"]*len(sample_y)
+        sample_tr2 = ["mul"]*len(sample_y)
+        
+        
         data_dict = {}
-        for idx in range(mat_data.shape[0]):
-            arr = np.array(mat_data[idx,:])
-            lst = list(arr)
-            lst = list(lst[0])
-            data_dict[str(idx)] = lst
 
-        data_dict['label']=sample_y
-        print(data_dict['label'])
-        pd_df = pd.DataFrame(data_dict)
+        # for idx in range(mat_data.shape[0]):
+        #     arr = np.array(mat_data[idx,:])
+        #     lst = list(arr)
+        #     lst = list(lst[0])
+        #     data_dict[str(idx)] = lst
+        print(sample_act.shape)
+        print(sample_act2.shape)
+        sample_act = np.append(sample_act.squeeze(), sample_act2.squeeze()).reshape(20000,64)
+        print(sample_act.shape)
 
+        data_dict['activation'] =  sample_act[:,1]
+        data_dict['label'] = np.append(sample_y.squeeze(), sample_y2.squeeze())
+        data_dict['train_strategy'] = np.append(np.array(sample_tr).squeeze(),np.array(sample_tr2).squeeze())
+
+        print(sum(sample_y))
         plt.figure(0)
-        parallel_coordinates(pd_df,'label')
-        plt.show()
-        # print(self.model.encoder.fc.state_dict().keys())
-        plt.savefig(f'distgraph/{cl}{self.name}_{self.train_strategy}_latentv.png')
-
+        sns.violinplot(y='activation', x = 'label', data=data_dict, hue = 'train_strategy',split=False)
+        
+        plt.savefig("distgraph/1_feature.png")
         plt.close(0)
-
         # kernels = self.model.encoder.conv[0].conv1a.weight.cpu().detach().clone()
         # kernels = kernels - kernels.min()
         # kernels = kernels / kernels.max()
