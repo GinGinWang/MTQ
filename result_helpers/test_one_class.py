@@ -607,7 +607,7 @@ class OneClassTestHelper(object):
 
         print(f"n_parameters:{self.model.n_parameters}")
         
-        converge_epochs = 300
+        converge_epochs = 100
 
 
         for epoch in range(self.train_epochs):

@@ -203,7 +203,7 @@ def parse_arguments():
     '--epochs',
     type=int,
     default=3000,
-    help='number of epochs to train/test (default: 10000)')
+    help='number of epochs to train/test (default: 3000)')
     
 
     # epochs before logging 
