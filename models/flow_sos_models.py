@@ -262,7 +262,7 @@ class BatchNormFlow(nn.Module):
     def forward(self, inputs, mode='direct'):
 
         if mode == 'direct':
-            if True:  # self.training:
+            if self.training:
                 self.batch_mean = inputs.mean(0)
                 self.batch_var = (
                     inputs - self.batch_mean).pow(2).mean(0) + self.eps
@@ -275,10 +275,7 @@ class BatchNormFlow(nn.Module):
                 mean = self.batch_mean
                 var = self.batch_var
 
-                # mean = self.running_mean
-                # var = self.running_var
             else:
-
                 mean = self.running_mean
                 var = self.running_var
 

@@ -1,14 +1,11 @@
-# tempory estimator 
-# based on MAF
+"""based on MAF."""
 
-from typing import List
-
-import torch
 import torch.nn as nn
 
 from models.base import BaseModule
 
 import models.flow_maf_models as fnn
+
 
 class TinvMAF(BaseModule):
     """
@@ -17,24 +14,24 @@ class TinvMAF(BaseModule):
 
     Model: T-inverse , T-inverse(z) = s, where T-inverse is built by MAFflow
 
-        Input: latent vector z 
+        Input: latent vector z
         Output: s, -log_jacob of T (i.e., logjab of T-inverse)
     """
 
-    def __init__(self, num_blocks, input_size, hidden_size, use_bn=True):
+    def __init__(self, num_blocks, input_size, hidden_size, use_bn= True):
         # type: (int, List[int], int) -> None
         """
         Implements an estimator for 1-dimensional vectors.
         1-dimensional vectors arise from the encoding of images.
 
         Model: T-inverse , T-inverse(z) = s, T-inverse is built by SoSflow
-        Input: latent vector z 
+        Input: latent vector z
         Output: s, -log_jacob of T (i.e., logjab of T-inverse)
         """
         num_cond_inputs = None
         act = 'relu'
         self.name = 'MAF'
-        self.input_size =input_size
+        self.input_size = input_size
 
 
         super(TinvMAF, self).__init__()
@@ -79,4 +76,4 @@ class TinvMAF(BaseModule):
 
         s, log_jacob_T_inv = self.T_inverse(h)
 
-        return s,log_jacob_T_inv
+        return s, log_jacob_T_inv

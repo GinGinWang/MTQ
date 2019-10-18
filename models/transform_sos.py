@@ -16,7 +16,7 @@ class TinvSOS(BaseModule):
 
     Model: T-inverse , T-inverse(z) = s, where T-inverse is built by SoSflow
 
-        Input: latent vector z 
+        Input: latent vector z
         Output: s, -log_jacob of T (i.e., logjab of T-inverse)
     """
     #TO DO: Normalization??? Initialization???
@@ -29,7 +29,7 @@ class TinvSOS(BaseModule):
 
         Args:
             num_blocks
-            input_size: dimension of input data z  
+            input_size: dimension of input data z
             num_hidden: neuron number in every hidden layer
             K: number of squares to be summed up
             M: degree of polynomial in every square part
@@ -50,11 +50,11 @@ class TinvSOS(BaseModule):
         if device is not None:
             model.to(device)
 
-        # Initialization
-        # TO DO: initialize linear???
-        for module in model.modules():
-            if isinstance(module, nn.Linear):
-                nn.init.orthogonal_(module.weight)
+        # # Initialization
+        # # TO DO: initialize linear???
+        # for module in model.modules():
+        #     if isinstance(module, nn.Linear):
+        #         nn.init.orthogonal_(module.weight)
         
         self.T_inverse = model
 

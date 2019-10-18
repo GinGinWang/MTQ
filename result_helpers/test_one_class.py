@@ -1,3 +1,8 @@
+"""
+Train or Test.
+
+"""
+
 from os.path import join
 from typing import Tuple
 import torch.optim as optim
@@ -9,7 +14,7 @@ from torch.utils.data import DataLoader
 
 from datasets.base import OneClassDataset
 from models.base import BaseModule
-from models.loss_functions import * 
+from models.loss_functions import *
 from datasets.utils import novelty_score
 from datasets.utils import normalize
 
@@ -37,6 +42,8 @@ from models.flow_sos_models import BatchNormFlow
 from scipy.stats import norm
 
 import seaborn as sns
+
+
 def _init_fn():
     np.random.seed(12)
 
@@ -177,19 +184,13 @@ class OneClassTestHelper(object):
 
         self.train_history_dir = join(checkpoints_dir,f'{cl}{name}_{train_strategy}_loss_history')
 
-        
-    def _eval_quantile(self, s, method_name='n_cdf'):
+
+    def _eval_quantile(self, s):
+
     #  from s~N(R^d) to u~(0,1)^d
     #  u_i = phi(s_i), where phi is the cdf of N(0,1)
     # Compute S 
     # only for SOS density estimator
-
-        # if self.name =='LSA_SOS':
-        #     _, _, s, _ = self.model(x)
-        # elif self.name =='SOS':
-        #     s, _ = self.model(x)
-        # else:
-        #      ValueError("Quantiles only computed for SOS Density Estimator")
 
         bs = s.shape[0]
         s_dim = s.shape[1]
@@ -197,34 +198,27 @@ class OneClassTestHelper(object):
         q1 = []
         q2 = []
         qinf = []
-        if method_name=='n_cdf':
-            for i in range(bs):
-                # for every sample
-                # cdf 
-                u_s = norm.cdf(s_numpy[i,:]) ## Source point in the source uniform distribution
-                # u = abs(np.ones((1,s_dim))*0.5-u_s)
-                u = abs(0.5-u_s)
-                if self.code_length>1:
-                    uq_1 = np.linalg.norm(u,1)
-                    uq_2 = np.linalg.norm(u)
-                    uq_inf = np.linalg.norm(u,np.inf)
-                else:
-                    uq_1 = u
-                    uq_2 = u
-                    uq_inf = u
 
-                # uq_inf = np.max(u)
-                q1.append(-uq_1)
-                q2.append(-uq_2)
-                qinf.append(-uq_inf)
-        else:
-            ValueError("Unknown Mapping")
+        for i in range(bs):
+            # for every sample
+            # cdf
+            u_s = norm.cdf(s_numpy[i, :])
+            # Source point in the source uniform distribution
+            # u = abs(np.ones((1,s_dim))*0.5-u_s)
+
+            u = abs(0.5 - u_s)
+
+            uq_1 = np.linalg.norm(u, 1)
+            uq_2 = np.linalg.norm(u)
+            uq_inf = np.linalg.norm(u, np.inf)
+
+            q1.append(-uq_1)
+            q2.append(-uq_2)
+            qinf.append(-uq_inf)
 
         return q1, q2, qinf, u_s
-    
-    
-    
-    def _eval(self, x, average = True, quantile_flag = False):
+
+    def _eval(self, x, average=True, quantile_flag=False):
 
         if self.name in ['LSA','LSAD','LSAW']:
             # ok
@@ -246,7 +240,7 @@ class OneClassTestHelper(object):
         if quantile_flag:
             q1, q2, qinf, u_s = self._eval_quantile(s)
             return tot_loss, q1, q2, qinf, u_s
-        else:    
+        else:
             return tot_loss 
 
 
@@ -263,9 +257,9 @@ class OneClassTestHelper(object):
                 else:
                     self.model.load_lsa(f'/home/jj27wang/novelty-detection/NovelDect_SoS/SoSLSA/checkpoints/{self.dataset.name}/{cl}LSA_1_b.pkl')
                 
-                print("load pretraind autoencoder")
+                print("load pre-traind autoencoder")
                 self.ae_finished = True
-        
+
         # print(epoch)
         # print("weight")
         # print(self.model.encoder.conv[0].bn1b.weight.detach().cpu().numpy())
@@ -275,7 +269,6 @@ class OneClassTestHelper(object):
         # model_copy.load_state_dict(self.model.state_dict())
         # model_copy.cuda()
 
-  
         epoch_loss = 0
         epoch_recloss = 0
         epoch_nllk = 0
@@ -284,7 +277,7 @@ class OneClassTestHelper(object):
 
         self.dataset.train(cl)
         # self.model.train()
-        loader = DataLoader(self.dataset, batch_size = self.batch_size, shuffle= False, worker_init_fn = _init_fn, num_workers = 0)
+        loader = DataLoader(self.dataset, batch_size = self.batch_size, shuffle = False, worker_init_fn = _init_fn, num_workers = 0)
         
         dataset_name = self.dataset.name
         epoch_size = self.dataset.length
@@ -294,8 +287,6 @@ class OneClassTestHelper(object):
         for batch_idx, (x , _) in enumerate(loader):
 
             x = x.to(self.device)
-            if batch_idx == 0:
-                tempx = x 
             self.optimizer.zero_grad()
             self._eval(x)
 
@@ -304,60 +295,49 @@ class OneClassTestHelper(object):
             # Multi-objective Optimization
                 # g1: the gradient of reconstruction loss w.r.t the parameters of encoder
                 # g2: the gradient of auto-regression loss w.r.t the parameters of encoder
+
                 # Backward Total loss= Reconstruction loss + Auto-regression Loss
-                torch.autograd.backward(self.loss.autoregression_loss+self.loss.reconstruction_loss, self.model.parameters(),retain_graph =True)
-                #g1_list = g1 + g2
-                g1_list= [pi.grad.data.clone() for pi in list(self.model.encoder.parameters())]    
+                torch.autograd.backward(self.loss.total_loss, self.model.parameters(),retain_graph =True)
+                # g1_list = g1 + g2
+                g1_list = [pi.grad.data.clone() for pi in list(self.model.encoder.parameters())]    
                 # Backward Auto-regression Loss, the gradients computed in the first backward are not cleared
                 # torch.autograd.backward(self.loss.autoregression_loss,list(self.model.encoder.parameters())+list(self.model.estimator.parameters()))
                 # torch.autograd.backward(self.loss.autoregression_loss, self.model.parameters())
-                torch.autograd.backward(self.loss.autoregression_loss, self.model.encoder.parameters())
 
+                for p in self.model.estimator.parameters():
+                    p.grad.zero_()
+
+                torch.autograd.backward(self.loss.autoregression_loss, self.model.encoder.parameters())
                 
                 #g2_list = g1_list + g2
-                g2_list= [pi.grad.data.clone() for pi in list(self.model.encoder.parameters())]
+                g2_list = [pi.grad.data.clone() for pi in list(self.model.encoder.parameters())]
                 
                 # the gradients w.r.t estimator are accumulated, div 2 to get the original one
-                # for p in self.model.estimator.parameters():
-                #     p.grad.data.div(2.0)
-
                 # compute alpha
                 top = 0
                 down = 0
-            
-
                 # the formula (4) in Multi_Task Learning as Multi-Objective Function
-                i =0
-                for p in self.model.encoder.parameters():
-                    g2   =  (g2_list[i]-g1_list[i])
-                    g1   =  (g1_list[i]-g2)
-
+                for i in range(len(g2_list)):
+                    g2 = (g2_list[i] - g1_list[i])  # regression loss
+                    g1 = (g1_list[i] - g2)  # reconstruction loss
                     g1 = g1.view(-1,)
                     g2 = g2.view(-1,)
+                    top = top + torch.dot((g2 - g1), g2)
+                    down = down + torch.dot((g1 - g2), (g1 - g2))
 
+                alpha = (top / down).item()
+                alpha = max(min(alpha, 1), 0)
 
-                    top   =  top + torch.dot((g2-g1),g2).sum()
-
-                    down  =  down+ torch.dot((g1-g2),(g1-g2)).sum()
-                    i     =  i + 1
-
-                # print(top)
-                alpha = (top/down).item()
-                alpha = max(min(alpha,1),0)
-                # print(alpha)
-                
                 # compute new gradient of Shared Encoder by combined two gradients
-                i=0
-    
-                s_alpha =s_alpha + alpha*x.shape[0]
+                i = 0
+                s_alpha = s_alpha + alpha * x.shape[0]
 
                 for p in self.model.encoder.parameters():
-                    newlrg2 = g2_list[i]-g1_list[i]
-                    newlrg1 = 2*g1_list[i]-g2_list[i]
+                    newlrg2 = g2_list[i] - g1_list[i]
+                    newlrg1 = g1_list[i] - newlrg2
                     # compute the multi-gradient of the parameters in the encoder
-                    p.grad.zero_()
-                    p.grad.data = torch.mul(newlrg1,alpha)+torch.mul(newlrg2, 1-alpha)
-                    i = i+1
+                    p.grad.data = torch.mul(newlrg1, alpha) + torch.mul(newlrg2, 1 - alpha)
+                    i = i + 1
 
                 self.optimizer.step()
 
@@ -447,10 +427,8 @@ class OneClassTestHelper(object):
         # for module in self.model.modules():
         #     if isinstance(module, BatchNormFlow):
         #         module.momentum = 0
-        
         # with torch.no_grad():
         #     self.model(tempx)
-    
         # for module in self.model.modules():
         #     if isinstance(module, BatchNormFlow):
         #         module.momentum = 1
@@ -463,8 +441,8 @@ class OneClassTestHelper(object):
         prefix = 'Validation'
         
         val_loss = 0
-        val_nllk=0
-        val_rec =0
+        val_nllk = 0
+        val_rec  = 0
         bs = self.batch_size
 
         self.dataset.val(cl)
@@ -597,16 +575,15 @@ class OneClassTestHelper(object):
         # type: () -> None
         """
         Actually performs trains.
-        """     
+        """
 
         self.get_path(cl)
 
         best_validation_epoch = 0
-        
+
         best_train_epoch = 0
         best_train_rec_epoch = 0
 
-       
         best_validation_loss = float('+inf')
         best_validation_rec = float('+inf')
         best_validation_nllk = float('+inf')
@@ -615,8 +592,7 @@ class OneClassTestHelper(object):
         best_train_rec = float('+inf')
         best_train_nllk = float('+inf')
 
-
-        best_model = None 
+        best_model = None
         best_rec_model = None
 
         old_validation_loss = float('+inf')
@@ -628,27 +604,24 @@ class OneClassTestHelper(object):
         loss_history['validation_loss'] = []
         loss_history['validation_rec'] = []
         loss_history['validation_nllk'] = []
-        
-        print(f"n_parameters:{self.model.n_parameters}")
 
- 
-        converge_epochs = 30
+        print(f"n_parameters:{self.model.n_parameters}")
         
-        if self.name in ['LSA_SOS','LSAW_SOS','LSAD_SOS']:
-            converge_epochs = 100
-        
+        converge_epochs = 300
+
+
         for epoch in range(self.train_epochs):
             
             model_dir_epoch = join(self.checkpoints_dir,f'{cl}{self.name}_{self.train_strategy}_{epoch}.pkl')
             
             #train every epoch
             self.model.train()
-            train_loss, train_rec, train_nllk= self.train_every_epoch(epoch,cl) 
+            train_loss, train_rec, train_nllk = self.train_every_epoch(epoch,cl) 
             # train_loss =0; train_rec = 0; train_nllk =0;    
 
             # validate every epoch
             self.model.eval()
-            validation_loss,validation_rec,validation_nllk = self.validate(epoch, cl)
+            validation_loss, validation_rec, validation_nllk = self.validate(epoch, cl)
 
             loss_history['train_loss'].append(train_loss)
             loss_history['train_rec'].append(train_rec)
@@ -662,9 +635,10 @@ class OneClassTestHelper(object):
             if (validation_loss < best_validation_loss): 
                 best_validation_loss = validation_loss
                 best_validation_epoch = epoch
-                best_model = self.model 
-                if (epoch>self.before_log_epochs):
+                best_model = self.model
+                if epoch > self.before_log_epochs:
                     torch.save(best_model.state_dict(), self.best_model_dir)
+
                 print(f'Best_valid_epoch at :{epoch} with valid_loss:{best_validation_loss}' )
 
             if (epoch % self.log_step == 0 ) :
@@ -672,8 +646,6 @@ class OneClassTestHelper(object):
             
             # early stop
             if (epoch - best_validation_epoch)> converge_epochs and (epoch > self.before_log_epochs):
-                # if (epoch-best_train_rec_epoch) > 50 and (epoch- best_train_nllk_epoch)>50:
-                #     print (f"Break at Epoch:{epoch}")
                 break
 
             
@@ -693,78 +665,96 @@ class OneClassTestHelper(object):
         np.savez(self.train_history_dir, loss_history= loss_history, best_validation_epoch = best_validation_epoch, best_validation_rec_epoch= best_train_rec_epoch)
 
     def test_one_class_classification(self, cl):
-        
-        # TEST FOR specific epoch
-        if (self.test_checkpoint !=None):
-            # select one epoch to test
-            self.model_dir = join(self.checkpoints_dir,f'{cl}{self.name}_{self.train_strategy}_{self.test_checkpoint}.pkl')
-            self.test_result_dir = join(self.checkpoints_dir,f'{cl}{self.name}_{self.train_strategy}_{self.test_checkpoint}_history_test')
+        """
+        Test fore one class.
 
-        # Load the checkpoint 
-        bs = self.batch_size   
+        cl as the nominal class, others classes as novel classes
+        """
+        # for specific checkpoint
+        if (self.test_checkpoint is not None):
+            # select one epoch to test
+            checkpoint_name =\
+                f'{cl}{self.name}_{self.train_strategy}_{self.test_checkpoint}'
+            self.model_dir = join(self.checkpoints_dir,
+                                  f'{checkpoint_name}.pkl')
+            self.test_result_dir = join(self.checkpoints_dir,
+                                        f'{checkpoint_name}_history_test')
+
+        # load the checkpoint
+        bs = self.batch_size
         self.model.load_w(self.model_dir)
         print(f"Load Model from {self.model_dir}")
 
         self.model.eval()
-        # normalizing coefficient of the Novelty Score (Eq.9 in LSA)
-        min_llk, max_llk, min_rec, max_rec,min_q1,max_q1,min_q2,max_q2,min_qinf,max_qinf = self.compute_normalizing_coefficients(cl)
         # Test sets
         self.dataset.test(cl)
-        
-        loader = DataLoader(self.dataset, batch_size = bs, shuffle = False)
 
-        # density related 
+        loader = DataLoader(self.dataset, batch_size=bs, shuffle=False)
+
+        # density related
         sample_llk = np.zeros(shape=(len(self.dataset),))
         sample_nrec = np.zeros(shape=(len(self.dataset),))
         # true label
         sample_y = np.zeros(shape=(len(self.dataset),))
-        # quantile related 
+        # quantile related
         sample_q1 = np.zeros(shape=(len(self.dataset),))
         sample_q2 = np.zeros(shape=(len(self.dataset),))
         sample_qinf = np.zeros(shape=(len(self.dataset),))
-        # source point u (64)
+        # source distribution u (64)
         sample_u = np.zeros(shape=(len(self.dataset), self.code_length))
-        
-                
-        # TEST
-        for i, (x, y) in tqdm(enumerate(loader), desc=f'Computing scores for {self.dataset}'):  
+
+        for i, (x, y) in tqdm(enumerate(loader),
+                              desc=f'Computing scores for {self.dataset}'):
             x = x.to(self.device)
             with torch.no_grad():
-                if self.name in ['LSA_SOS','SOS','LSA_MAF','LSAD_SOS','LSAW_SOS']:
-                    tot_loss, q1, q2, qinf, u = self._eval(x, average = False, quantile_flag= True)
-                    # quantile 
-                    sample_q1[i*bs:i*bs+bs] = q1
-                    sample_q2[i*bs:i*bs+bs] = q2
-                    sample_qinf[i*bs:i*bs+bs] = qinf
-                    # source point 
-                    sample_u[i*bs:i*bs+bs] = u
+                if self.name in ['LSA_SOS', 'SOS', 'LSA_MAF',
+                                 'LSAD_SOS', 'LSAW_SOS']:
+                    tot_loss, q1, q2, qinf, u =\
+                        self._eval(x, average=False, quantile_flag=True)
+                    # quantile
+                    sample_q1[i * bs:i * bs + bs] = q1
+                    sample_q2[i * bs:i * bs + bs] = q2
+                    sample_qinf[i * bs:i * bs + bs] = qinf
+                    # source point
+                    sample_u[i * bs:i * bs + bs] = u
                 else:
-                    tot_loss = self._eval(x, average = False)
+                    tot_loss = self._eval(x, average=False)
 
-            sample_y[i*bs:i*bs+bs] = y
+            # True label
+            sample_y[i * bs:i * bs + bs] = y
             # score larger-->normal data
-            if self.name in ['LSA','LSAD','LSAW','LSA_SOS','LSA_EN','LSAW_EN','LSA_MAF','LSAD_SOS','LSAW_SOS']:
-                sample_nrec[i*bs:i*bs+bs] = - self.loss.reconstruction_loss.cpu().numpy()
-                
-            if self.name in ['LSA_SOS','LSA_EN','LSAW_EN','EN','SOS','LSA_MAF','LSAD_SOS','LSAW_SOS']:    
-                sample_llk[i*bs:i*bs+bs] = - self.loss.autoregression_loss.cpu().numpy()
+            if self.name in ['LSA', 'LSAD', 'LSAW',
+                             'LSA_SOS', 'LSAD_SOS', 'LSAW_SOS',
+                             'LSA_EN', 'LSA_MAF']:
+                sample_nrec[i * bs:i * bs + bs]\
+                    = - self.loss.reconstruction_loss.cpu().numpy()
+
+            if self.name in ['LSA_SOS', 'LSAD_SOS', 'LSAW_SOS',
+                             'LSA_EN',
+                             'EN', 'SOS', 'LSA_MAF']:
+                sample_llk[i * bs:i * bs + bs]\
+                    = - self.loss.autoregression_loss.cpu().numpy()
 
         sample_llk = modify_inf(sample_llk)
 
         if self.score_normed:
             # Normalize scores
-            sample_llk= normalize(sample_llk, min_llk, max_llk)
+            # normalizing coefficient of the Novelty Score (Eq.9 in LSA)
+            min_llk, max_llk, min_rec, max_rec,min_q1,max_q1,min_q2,max_q2,min_qinf,max_qinf = self.compute_normalizing_coefficients(cl)
+            sample_llk = normalize(sample_llk, min_llk, max_llk)
             sample_nrec = normalize(sample_nrec, min_rec, max_rec)
-        
+            sample_q1 = normalize(sample_q1, min_q1, max_q1)
+            sample_q2 = normalize(sample_q2, min_q2, max_q2)
+            sample_q1 = normalize(sample_qinf, min_qinf, max_qinf)
+
+
         sample_ns = novelty_score(sample_llk, sample_nrec)
-        sample_ns = modify_inf(sample_ns)
 
-        if self.name in ['LSA_SOS','LSAD_SOS','LSAW_SOS']:
-            sample_ns_t = sample_llk # larger, normal
-        else:
-            sample_ns_t = sample_ns # larger, normal
+        # if self.name in ['LSA_SOS', 'LSAD_SOS', 'LSAW_SOS']:
+        #     sample_ns_t = sample_llk # larger, normal
+        # else:
+        sample_ns_t = sample_ns  # larger, normal
 
-        
         # # based on quantile-norm-inf
         if self.name in ['LSA_SOS','LSA_MAF','LSAD_SOS','LSAW_SOS']:
 
@@ -773,60 +763,26 @@ class OneClassTestHelper(object):
             precision_q2, f1_q2, recall_q2 = compute_quantile_metric(self.name, sample_q2, sample_y, self.code_length, '2')
             precision_qinf, f1_qinf, recall_qinf = compute_quantile_metric(self.name, sample_qinf, sample_y, self.code_length, 'inf')
 
-            this_class_metrics = [
-            roc_auc_score(sample_y, sample_ns),
-            roc_auc_score(sample_y, sample_llk),
-            roc_auc_score(sample_y, sample_nrec),
-            roc_auc_score(sample_y, sample_q1),
-            roc_auc_score(sample_y, sample_q2),
-            roc_auc_score(sample_y, sample_qinf),    #
-            precision_den,
-            f1_den,
-            recall_den,
-            precision_q1,
-            f1_q1,
-            recall_q1,
-
-            precision_q2,
-            f1_q2,
-            recall_q2,
-            
-            precision_qinf,
-            f1_qinf,
-            recall_qinf,
-            
-            ]
-
-        #     acc_qinf = accuracy_score((sample_y==0),(y_hat_qinf==0))
-        #     # plot_source_dist_by_dimensions(sample_u, sample_y, self.test_result_dir) 
-        # add rows
-        
-        # every row
-        # that_class_metrics = [
-        # precision_den,
-        # f1_den,
-        # recall_den,
-        # acc_den,
-        # precision_q1,
-        # f1_q1,
-        # recall_q1,
-        # precision_q2,
-        # f1_q2,
-        # recall_q2,
-        # precision_qinf,
-        # f1_qinf,
-        # recall_qinf,
-        # acc_qinf,
-        # tn_n
-        # ]
-
-        # add rows
-        # threshold_table.add_row([cl_idx] + that_class_metrics)
-        # another_all_metrics.append(that_class_metrics)
-
-        elif self.name in ['LSA_EN','LSAW_EN']:
+            this_class_metrics = [roc_auc_score(sample_y, sample_ns),
+                                  roc_auc_score(sample_y, sample_llk),
+                                  roc_auc_score(sample_y, sample_nrec),
+                                  roc_auc_score(sample_y, sample_q1),
+                                  roc_auc_score(sample_y, sample_q2),
+                                  roc_auc_score(sample_y, sample_qinf),    #
+                                  precision_den,
+                                  f1_den,
+                                  recall_den,
+                                  precision_q1,
+                                  f1_q1,
+                                  recall_q1,
+                                  precision_q2,
+                                  f1_q2,
+                                  recall_q2,
+                                  precision_qinf,
+                                  f1_qinf,
+                                  recall_qinf]
+        elif self.name in ['LSA_EN']:
          # every row
-
             precision_den, f1_den, recall_den = compute_density_metric(self.name, sample_ns_t,sample_y)
             this_class_metrics = [
             roc_auc_score(sample_y, sample_ns),
@@ -848,58 +804,48 @@ class OneClassTestHelper(object):
             precision_q2, f1_q2, recall_q2 = compute_quantile_metric(self.name, sample_q2, sample_y, self.code_length, '2')
             precision_qinf, f1_qinf, recall_qinf = compute_quantile_metric(self.name, sample_qinf, sample_y, self.code_length, 'inf')
 
-            this_class_metrics = [
-            roc_auc_score(sample_y, sample_ns),
-            precision_den,
-            f1_den,
-            recall_den,
-            precision_q1,
-            f1_q1,
-            recall_q1,
-            precision_q2,
-            f1_q2,
-            recall_q2,
-            precision_qinf,
-            f1_qinf,
-            recall_qinf
-            ]
+            this_class_metrics = [roc_auc_score(sample_y, sample_ns),
+                                  precision_den,
+                                  f1_den,
+                                  recall_den,
+                                    precision_q1,
+                                    f1_q1,
+                                    recall_q1,
+                                    precision_q2,
+                                    f1_q2,
+                                    recall_q2,
+                                    precision_qinf,
+                                    f1_qinf,
+                                    recall_qinf
+                ]
         return this_class_metrics
 
     def test_classification(self):
+        """
+        Test Result.
+
+        Test for all classes and generate result table
+        """
         auroc_table = self.empty_table
         all_metrics = []
-        # threshold_table = self.empty_table
-        # another_all_metrics = []
 
-        bs =self.batch_size
-        
         # Start iteration over classes
         for cl_idx, cl in enumerate(self.dataset.test_classes):
             self.cl = cl
             self.get_path(cl)
-            one_class_metric= self.test_one_class_classification(cl)
+            one_class_metric = self.test_one_class_classification(cl)
             auroc_table.add_row([cl_idx] + one_class_metric)
-
             all_metrics.append(one_class_metric)
 
         all_metrics = np.array(all_metrics)
         avg_metrics = np.mean(all_metrics, axis=0)
 
-        # another_all_metrics =np.array(another_all_metrics)
-        # another_avg_metrics = np.mean(another_all_metrics, axis=0)
-
-
         auroc_table.add_row(['avg'] + list(avg_metrics))
         print(auroc_table)
 
-        # threshold_table.add_row(['avg'] + list(another_avg_metrics))
-        # print(threshold_table)
-        
         # Save table
-        # with open(self.result_file_path, mode='w') as f:
-        #     f.write(str(auroc_table))
-            # f.write(str(threshold_table))
-        print (avg_metrics)
+        with open(self.result_file_path, mode='w') as f:
+            f.write(str(auroc_table))
 
 
 

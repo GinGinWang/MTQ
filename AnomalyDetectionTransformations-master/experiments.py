@@ -8,112 +8,21 @@ import numpy as np
 import scipy.stats
 from scipy.special import psi, polygamma
 from sklearn.metrics import roc_auc_score
-
 from sklearn.svm import OneClassSVM
 from sklearn.model_selection import ParameterGrid
 from sklearn.externals.joblib import Parallel, delayed
 from keras.models import Model, Input, Sequential
 from keras.layers import Dense, Dropout
 from keras.utils import to_categorical
-
-from utils import load_cifar10, load_cats_vs_dogs, load_fashion_mnist, load_cifar100, load_mnist
-from utils import save_roc_pr_curve_data, get_class_name_from_index, get_channels_axis#, save_transformation
-
+from utils import load_cifar10, load_cats_vs_dogs, load_fashion_mnist, load_cifar100
+from utils import save_roc_pr_curve_data, get_class_name_from_index, get_channels_axis
 from transformations import Transformer
 from models.wide_residual_network import create_wide_residual_network
 from models.encoders_decoders import conv_encoder, conv_decoder
 from models import dsebm, dagmm, adgan
 import keras.backend as K
-from keras.callbacks import ModelCheckpoint
 
-import argparse
-from argparse import Namespace
-
-
-import fnmatch
-import os
-
-
-
-RESULTS_DIR = './results/' # saved weights
-FT_DIR = 'gtfeatures/' # extracted gt features which is the output of the last hidden layer
-
-
-# def _transformations_extract (dataset_load_fn, dataset_name, single_class_ind, epoch, gpu_q):
-#     #for weights saved for class c
-#     # extract training gt features of class c 
-#     # extract testing gt features of the whole dataset
-
-#     weights_list = []
-
-#     classname = get_class_name_from_index(single_class_ind, dataset_name)
-#     print(classname)
-#     for file in os.listdir(os.path.join(RESULTS_DIR,dataset_name)):
-#         if fnmatch.fnmatch(file, f'{dataset_name}_transformations_{classname}*.h5'):
-#             print(file)
-#             weights_list.append(file)
-#             mdl_weights_epoch_name = file
-
-#     print (weights_list)
-
-    
-
-#     print("Transformations Experiments")
-#     gpu_to_use = gpu_q.get()
-#     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_to_use
-
-#     (x_train, y_train), (x_test, y_test) = dataset_load_fn()
-
-#     transformer = Transformer(8, 8)
-#     n, k = (10, 4)
-
-#     mdl = create_wide_residual_network(x_train.shape[1:], transformer.n_transforms, n, k)
-#     mdl_weights_path = os.path.join(RESULTS_DIR, dataset_name, mdl_weights_epoch_name)
-    
-    
-#     # load trained model
-#     mdl.load_weights(mdl_weights_path)
-#     layerlist = [layer.name for layer in mdl.layers]
-#     print(f"All layers of the model:{layerlist} ")
-#     print(layerlist[-3])   
-#     layer_name = layerlist[-3]
-
-#     intermediate_layer_model = Model(inputs=mdl.input, outputs=mdl.get_layer(layer_name).output)
-
-#     # extract training gt features of class c with the model trained by class c 
-#     x_train_task = x_train[y_train.flatten() == single_class_ind]
-#     batch_size = 1024
-#     train_observed_data  = x_train_task
-
-#     train_wanted_feature_list = []
-#     for t_ind in range(transformer.n_transforms):
-#         train_wanted_feature = intermediate_layer_model.predict(transformer.transform_batch(train_observed_data, [t_ind] * len(train_observed_data)),
-#                                          batch_size=batch_size)
-#         train_wanted_feature_list.append(train_wanted_feature)
-
-#     train_wanted_feature_list = np.array(train_wanted_feature_list)
-#     train_wanted_feature_list = train_wanted_feature_list.transpose(1,0,2)
-#     train_n, train_c, train_fn = train_wanted_feature_list.shape
-#     for i in range(train_n):
-        
-        
-#     np.savez(f'gtfeatures/train_e{epoch:02d}_{dataset_name}_m{single_class_ind}',train_wanted_feature_list)
-
-
-#     # extract test gt features of all classes with the model trained by class c
-#     test_wanted_feature_list =[]
-#     for test_single_class_ind in range(10):
-#         x_test_task = x_test[y_test.flatten() == test_single_class_ind]
-#         test_observed_data = x_test_task
-        
-#         for t_ind in range(transformer.n_transforms):
-#             test_wanted_feature  =intermediate_layer_model.predict(transformer.transform_batch(test_observed_data, [t_ind] * len(test_observed_data)), batch_size=batch_size)
-#             test_wanted_feature_list.append(test_wanted_feature)
-    
-#     np.savez(f'gtfeatures/test_e{epoch:02d}_{dataset_name}_m{single_class_ind}',test_wanted_feature_list)
-#             # train_epoch_dataset_modelclass_dataclass_transformations
-
-#     gpu_q.put(gpu_to_use)
+RESULTS_DIR = './results'
 
 
 def _transformations_experiment(dataset_load_fn, dataset_name, single_class_ind, gpu_q):
@@ -139,19 +48,21 @@ def _transformations_experiment(dataset_load_fn, dataset_name, single_class_ind,
                                                            transformations_inds)
     batch_size = 128
 
-    mdl_weights_epoch_name = '{}_transformations_{}_'.format(dataset_name,
-                                                           get_class_name_from_index(single_class_ind, dataset_name))
-    mdl_weights_epoch_name = mdl_weights_epoch_name+'{epoch:02d}_weights.hdf5'
-    
-    
-    mdl_weights_epoch_path = os.path.join(RESULTS_DIR, dataset_name, mdl_weights_epoch_name)
-    
-    checkpoint = ModelCheckpoint(mdl_weights_epoch_path)
-    callbacks_list = [checkpoint]
-
     mdl.fit(x=x_train_task_transformed, y=to_categorical(transformations_inds),
-            batch_size=batch_size, epochs=int(np.ceil(200/transformer.n_transforms)),callbacks=callbacks_list
+            batch_size=batch_size, epochs=int(np.ceil(200/transformer.n_transforms))
             )
+
+    #################################################################################################
+    # simplified normality score
+    #################################################################################################
+    # preds = np.zeros((len(x_test), transformer.n_transforms))
+    # for t in range(transformer.n_transforms):
+    #     preds[:, t] = mdl.predict(transformer.transform_batch(x_test, [t] * len(x_test)),
+    #                               batch_size=batch_size)[:, t]
+    #
+    # labels = y_test.flatten() == single_class_ind
+    # scores = preds.mean(axis=-1)
+    #################################################################################################
 
     def calc_approx_alpha_sum(observations):
         N = len(observations)
@@ -219,31 +130,20 @@ def _train_ocsvm_and_score(params, xtrain, test_labels, xtest):
     return roc_auc_score(test_labels, OneClassSVM(**params).fit(xtrain).decision_function(xtest))
 
 
-def _raw_ocsvm_experiment(dataset_load_fn, dataset_name, single_class_ind):
-    # noise_ratio = 0.05
-    (x_train, y_train), (x_test, y_test) = dataset_load_fn()
+def _raw_ocsvm_experiment(dataset_load_fn, dataset_name, single_class_ind, gpu_q):
     print(single_class_ind)
+    gpu_to_use = gpu_q.get()
+    os.environ["CUDA_VISIBLE_DEVICES"] = gpu_to_use
+
+    (x_train, y_train), (x_test, y_test) = dataset_load_fn()
 
     x_train = x_train.reshape((len(x_train), -1))
     x_test = x_test.reshape((len(x_test), -1))
 
     x_train_task = x_train[y_train.flatten() == single_class_ind]
-    
-
-    # noise = x_train[y_train.flatten() == 3] # for noise to class 8
-
-    # if noise_ratio >0:
-    #     noise_num = int(len(x_train_task)/(1-noise_ratio)*noise_ratio)
-    #     print(f"Clean Num {len(x_train_task)}")
-    #     print(f"Noise Num {noise_num}")
-    #     noise = noise[0:noise_num]
-    #     # add noise to train
-    #     x_train_task.concatenate(w)
-    # # x_train_task=x_train_task[0:int(0.9*len(x_train_task))] ## select 90% as training task
-    
-    if dataset_name in ['cats-vs-dogs']:  # OC-SVM is quadratic on the number of examples, so subsample training set
-        subsample_inds = np.random.choice(len(x_train_task), 5000, replace=False)
-        x_train_task = x_train_task[subsample_inds]
+    # if dataset_name in ['cats-vs-dogs']:  # OC-SVM is quadratic on the number of examples, so subsample training set
+    #     subsample_inds = np.random.choice(len(x_train_task), 5000, replace=False)
+    #     x_train_task = x_train_task[subsample_inds]
 
     pg = ParameterGrid({'nu': np.linspace(0.1, 0.9, num=9),
                         'gamma': np.logspace(-7, 2, num=10, base=2)})
@@ -262,6 +162,7 @@ def _raw_ocsvm_experiment(dataset_load_fn, dataset_name, single_class_ind):
                                                      datetime.now().strftime('%Y-%m-%d-%H%M'))
     res_file_path = os.path.join(RESULTS_DIR, dataset_name, res_file_name)
     save_roc_pr_curve_data(scores, labels, res_file_path)
+    gpu_q.put(gpu_to_use)
 
 
 def _cae_ocsvm_experiment(dataset_load_fn, dataset_name, single_class_ind, gpu_q):
@@ -280,8 +181,6 @@ def _cae_ocsvm_experiment(dataset_load_fn, dataset_name, single_class_ind, gpu_q
     cae.compile('adam', 'mse')
 
     x_train_task = x_train[y_train.flatten() == single_class_ind]
-    # x_train_task=x_train_task[0:int(0.9*len(x_train_task))] ## select 90% as training task
-    
     x_test_task = x_test[y_test.flatten() == single_class_ind]  # This is just for visual monitoring
     cae.fit(x=x_train_task, y=x_train_task, batch_size=128, epochs=200, validation_data=(x_test_task, x_test_task))
 
@@ -330,8 +229,6 @@ def _dsebm_experiment(dataset_load_fn, dataset_name, single_class_ind, gpu_q):
     epochs = 200
     reconstruction_mdl.compile('adam', 'mse')
     x_train_task = x_train[y_train.flatten() == single_class_ind]
-    # x_train_task=x_train_task[0:int(0.9*len(x_train_task))] ## select 90% as training task
-    
     x_test_task = x_test[y_test.flatten() == single_class_ind]  # This is just for visual monitoring
     reconstruction_mdl.fit(x=x_train_task, y=x_train_task,
                            batch_size=batch_size,
@@ -374,8 +271,6 @@ def _dagmm_experiment(dataset_load_fn, dataset_name, single_class_ind, gpu_q):
     dagmm_mdl.compile('adam', ['mse', lambda y_true, y_pred: lambda_energy*y_pred])
 
     x_train_task = x_train[y_train.flatten() == single_class_ind]
-    # x_train_task=x_train_task[0:int(0.9*len(x_train_task))] ## select 90% as training task
-    
     x_test_task = x_test[y_test.flatten() == single_class_ind]  # This is just for visual monitoring
     dagmm_mdl.fit(x=x_train_task, y=[x_train_task, np.zeros((len(x_train_task), 1))],  # second y is dummy
                   batch_size=batch_size,
@@ -416,7 +311,6 @@ def _adgan_experiment(dataset_load_fn, dataset_name, single_class_ind, gpu_q):
     input_side = x_train.shape[2]  # image side will always be at shape[2]
     critic = conv_encoder(input_side, n_channels, representation_dim=1,
                           representation_activation='linear')
-    
     noise_size = 256
     generator = conv_decoder(input_side, n_channels=n_channels, representation_dim=noise_size)
 
@@ -427,8 +321,6 @@ def _adgan_experiment(dataset_load_fn, dataset_name, single_class_ind, gpu_q):
     epochs = 100
 
     x_train_task = x_train[y_train.flatten() == single_class_ind]
-    # x_train_task=x_train_task[0:int(0.9*len(x_train_task))] ## select 90% as training task
-    
 
     def data_gen(b_size):
         chosen_inds = np.random.choice(len(x_train_task), b_size, replace=False)
@@ -449,7 +341,7 @@ def _adgan_experiment(dataset_load_fn, dataset_name, single_class_ind, gpu_q):
 
 def run_experiments(load_dataset_fn, dataset_name, q, n_classes):
 
-    # # CAE OC-SVM
+    # CAE OC-SVM
     # processes = [Process(target=_cae_ocsvm_experiment,
     #                      args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
     # for p in processes:
@@ -457,20 +349,21 @@ def run_experiments(load_dataset_fn, dataset_name, q, n_classes):
     #     p.join()
 
     # Raw OC-SVM
+    processes = [Process(target=_raw_ocsvm_experiment,
+                         args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
+    for p in processes:
+        p.start()
+        p.join()
+    
     # for c in range(n_classes):
-    #     _raw_ocsvm_experiment(load_dataset_fn, dataset_name, c)
+        # _raw_ocsvm_experiment(load_dataset_fn, dataset_name, c)
 
-    n_runs = 5
+    # n_runs = 5
 
     # # Transformations
     # for _ in range(n_runs):
-
     #     processes = [Process(target=_transformations_experiment,
     #                          args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
-
-    #     # processes = [Process(target=_transformations_experiment,
-    #     #                      args=(load_dataset_fn, dataset_name, c, q)) for c in [5,6,7,8,9]]
-
     #     if dataset_name in ['cats-vs-dogs']:  # Self-labeled set is memory consuming
     #         for p in processes:
     #             p.start()
@@ -490,14 +383,14 @@ def run_experiments(load_dataset_fn, dataset_name, q, n_classes):
     #     for p in processes:
     #         p.join()
 
-    # DAGMM
-    for _ in range(n_runs):
-        processes = [Process(target=_dagmm_experiment,
-                             args=(load_dataset_fn, dataset_name, c, q)) for c in [5,6,7,8,9]]
-        for p in processes:
-            p.start()
-        for p in processes:
-            p.join()
+    # # DAGMM
+    # for _ in range(n_runs):
+    #     processes = [Process(target=_dagmm_experiment,
+    #                          args=(load_dataset_fn, dataset_name, c, q)) for c in range(n_classes)]
+    #     for p in processes:
+    #         p.start()
+    #     for p in processes:
+    #         p.join()
 
     # # ADGAN
     # processes = [Process(target=_adgan_experiment,
@@ -540,39 +433,24 @@ def create_auc_table(metric='roc_auc'):
                                  for method_name in results[ds_name][sc_name]})
                 writer.writerow(row_dict)
 
-def main():
 
-    
+if __name__ == '__main__':
     freeze_support()
     N_GPUS = 1
-
     man = Manager()
     q = man.Queue(N_GPUS)
     for g in range(N_GPUS):
         q.put(str(g))
 
     experiments_list = [
+        # (load_cifar10, 'cifar10', 10),
         # (load_cifar100, 'cifar100', 20),
         (load_fashion_mnist, 'fashion-mnist', 10),
-        # (load_mnist, 'mnist', 10),
-        # (load_cifar10, 'cifar10', 10)
         # (load_cats_vs_dogs, 'cats-vs-dogs', 2),
     ]
 
     for data_load_fn, dataset_name, n_classes in experiments_list:
-        print("run")
         run_experiments(data_load_fn, dataset_name, q, n_classes)
 
-    # # for idx in range(1):
-    # #     for epoch in[0]:
-    # #         print(f'{idx}')
-    # #         _transformations_extract(load_cifar10, 'cifar10', idx, epoch, q)
-    
-
-    # create_auc_table()
-
-
-if __name__ == '__main__':
-    main() 
-    
+    create_auc_table()
 

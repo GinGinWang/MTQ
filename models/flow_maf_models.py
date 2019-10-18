@@ -51,6 +51,7 @@ class MaskedLinear(nn.Module):
         self.register_buffer('mask', mask)
 
     def forward(self, inputs, cond_inputs=None):
+
         # print(inputs.size())
         # print(self.linear.weight.size())
         # print(self.mask.size())
@@ -193,6 +194,7 @@ class BatchNormFlow(nn.Module):
     def forward(self, inputs, cond_inputs=None, mode='direct'):
         if mode == 'direct':
             if self.training:
+            # if True:
                 self.batch_mean = inputs.mean(0)
                 self.batch_var = (
                     inputs - self.batch_mean).pow(2).mean(0) + self.eps
@@ -213,6 +215,7 @@ class BatchNormFlow(nn.Module):
 
             x_hat = (inputs - mean) / var.sqrt()
             y = torch.exp(self.log_gamma) * x_hat + self.beta
+
             return y, (self.log_gamma - 0.5 * torch.log(var)).sum(
                 -1, keepdim=True)
         else:
