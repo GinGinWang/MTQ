@@ -129,6 +129,7 @@ class OneClassTestHelper(object):
         self.ae_optimizer = None
         self.est_optimizer = None
 
+        self.lr = lr 
         if self.fixed or self.pretrained:
             if (self.model.estimator !=None):
                 self.est_optimizer = optim.Adam(self.model.estimator.parameters(),lr = lr, weight_decay = 1e-6)
@@ -284,16 +285,6 @@ class OneClassTestHelper(object):
             # Multi-objective Optimization
                 # g1: the gradient of reconstruction loss w.r.t the parameters of encoder
                 # g2: the gradient of auto-regression loss w.r.t the parameters of encoder
-                if self.name in ['LSA_SOS','LSA_MAF']:
-                    if epoch < 10:
-                        lr = 0.0001
-                    elif epoch < 1000:
-                        lr = 0.00001
-                    else:
-                        lr = 0.000005
-                    for param_group in self.optimizer.param_groups:
-                        param_group['lr'] = lr
-
                 # Backward Total loss= Reconstruction loss + Auto-regression Loss
                 torch.autograd.backward(self.loss.total_loss, self.model.parameters(),retain_graph =True)
                 # g1_list = g1 + g2
@@ -616,13 +607,12 @@ class OneClassTestHelper(object):
         
         converge_epochs = 100
 
-
         for epoch in range(self.train_epochs):
-            
             model_dir_epoch = join(self.checkpoints_dir,f'{cl}{self.name}_{self.train_strategy}_{epoch}.pkl')
-            
+
             #train every epoch
             self.model.train()
+
             if self.load_lsa:
                 if self.name in ['LSAD_SOS','LSAD_EN']:
                     model_style = 'LSAD'
@@ -633,15 +623,23 @@ class OneClassTestHelper(object):
 
                 self.model.load_lsa(join(self.checkpoints_dir,f'{cl}{model_style}_1_b.pkl'))
                 print("load pre-traind autoencoder")
-                self.ae_finished = True # Start from pretrained autoencoder
+                self.ae_finished = True  # Start from pretrained autoencoder
 
-            train_loss, train_rec, train_nllk = self.train_every_epoch(epoch,cl) 
-            # train_loss =0; train_rec = 0; train_nllk =0;    
+            train_loss, train_rec, train_nllk = self.train_every_epoch(epoch, cl )
 
             # validate every epoch
             self.model.eval()
             validation_loss, validation_rec, validation_nllk = self.validate(epoch, cl)
-
+            
+            if self.name in ['LSA_SOS','LSA_MAF']:
+                    if old_validation_loss < validation_loss:
+                        lr = max(self.lr*0.5, 0.000005)
+                        if lr < self.lr:
+                            self.lr = lr 
+                            print(f"Learning Rate Changed to {lr}")
+                            for param_group in self.optimizer.param_groups:
+                                param_group['lr'] = self.lr
+            old_validation_loss = validation_loss
             loss_history['train_loss'].append(train_loss)
             loss_history['train_rec'].append(train_rec)
             loss_history['train_nllk'].append(train_nllk)
@@ -659,6 +657,7 @@ class OneClassTestHelper(object):
                     torch.save(best_model.state_dict(), self.best_model_dir)
 
                 print(f'Best_valid_epoch at :{epoch} with valid_loss:{best_validation_loss}' )
+
 
             if (epoch % self.log_step == 0 ) :
                     torch.save(self.model.state_dict(), model_dir_epoch)
