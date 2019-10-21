@@ -1,5 +1,10 @@
+"""
+Main Function.
 
-import argparse
+select model/dataset/parameters.
+
+"""
+
 from argparse import Namespace
 import os
 import torch
@@ -7,43 +12,33 @@ import numpy as np
 import torch.nn as nn
 
 from datasets import *
-
 # models
-from models.LSA_mnist import LSA_MNIST #  mnist/fmnist
-from models.LSA_mnist_deep import LSA_MNIST_D
-from models.LSA_mnist_wide import LSA_MNIST_W
-
-
-from models import LSA_CIFAR10 # cifar10
-from models import LSA_KDDCUP # kddcup
-from models import LSA_THYROID
-
-from models.estimator_1D import Estimator1D
-from models.transform_maf import TinvMAF
-from models.transform_sos import TinvSOS
-
+from models import *
 # random seed
 from utils import set_random_seed
+
 # Main Class
 from result_helpers.test_one_class import OneClassTestHelper
 
-# dir/path 
+# dir/path
 from utils import create_checkpoints_dir
 from utils import create_file_path
 
 def main():
-    # type: () -> None
     """
-    Performs One-class classification tests on one dataset
+    Performs Training/Test/Plotting on mnist/fashion-mnist/UCI datasets
+
+    Training:
+    Test:
+    Plotting:
     """
 
-    ## Parse command line arguments
     args = parse_arguments()
     device = torch.device('cuda')
 
-    #random seed
-    set_random_seed(args.seed) # good mnist
+    # random seed
 
+    set_random_seed(args.seed) # For replicating results.
     # prepare dataset in train mode
     if args.dataset == 'mnist':
         dataset = MNIST(path='data/MNIST', n_class = args.n_class, select = args.select, select_novel_classes = args.select_novel_classes)
@@ -95,7 +90,7 @@ def main():
                 model =LSA_MNIST(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator,hidden_size= args.hidden_size).cuda()
 
             elif args.dataset in ['kddcup']:
-                model = LSA_KDDCUP(num_blocks=args.num_blocks, hidden_size= args.hidden_size, code_length = args.code_length,est_name =args.estimator).cuda()
+                model =LSA_KDDCUP(num_blocks=args.num_blocks, hidden_size= args.hidden_size, code_length = args.code_length,est_name =args.estimator).cuda()
 
             elif args.dataset in ['thyroid']:
                 model =LSA_THYROID(num_blocks=args.num_blocks, hidden_size= args.hidden_size, code_length = args.code_length,est_name =args.estimator).cuda()

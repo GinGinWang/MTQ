@@ -1,6 +1,8 @@
 """
 Train or Test.
 
+Train and Test
+
 """
 
 from os.path import join
@@ -137,10 +139,10 @@ class OneClassTestHelper(object):
         ## Set up loss function
         # encoder + decoder
         if self.name in ['LSA','LSAD','LSAW']:
-            self.loss = LSALoss(cpd_channels=100)
+            self.loss = LSALoss(cpd_channels=200)
         # encoder + estimator+ decoder
         elif self.name in ['LSA_EN','LSAW_EN']:
-            self.loss = LSAENLoss(cpd_channels=100,lam=lam)
+            self.loss = LSAENLoss(cpd_channels=200,lam=lam)
         
         elif self.name in ['LSA_SOS', 'LSA_MAF','LSAD_SOS','LSAW_SOS']:
             self.loss =LSASOSLoss(lam)
@@ -198,15 +200,16 @@ class OneClassTestHelper(object):
         q1 = []
         q2 = []
         qinf = []
-
+        u_s = np.zeros((bs , s_dim))
         for i in range(bs):
             # for every sample
             # cdf
-            u_s = norm.cdf(s_numpy[i, :])
+            u_si = norm.cdf(s_numpy[i, :])
+            u_s[i,:] = u_si
             # Source point in the source uniform distribution
             # u = abs(np.ones((1,s_dim))*0.5-u_s)
 
-            u = abs(0.5 - u_s)
+            u = abs(0.5 - u_si)
 
             uq_1 = np.linalg.norm(u, 1)
             uq_2 = np.linalg.norm(u)
@@ -245,21 +248,7 @@ class OneClassTestHelper(object):
 
 
 
-    def train_every_epoch(self, epoch, cl):
-        if epoch == 0:
-            if self.load_lsa:
-                if self.name in ['LSAD_SOS','LSAD_EN']:
-                    self.model.load_lsa(f'/home/jj27wang/novelty-detection/NovelDect_SoS/SoSLSA/checkpoints/{self.dataset.name}/{cl}LSAD_1_b.pkl')
-                
-                elif self.name in ['LSAW_SOS','LSAW_EN']:
-                    self.model.load_lsa(f'/home/jj27wang/novelty-detection/NovelDect_SoS/SoSLSA/checkpoints/{self.dataset.name}/{cl}LSAW_1_b.pkl')
-                
-                else:
-                    self.model.load_lsa(f'/home/jj27wang/novelty-detection/NovelDect_SoS/SoSLSA/checkpoints/{self.dataset.name}/{cl}LSA_1_b.pkl')
-                
-                print("load pre-traind autoencoder")
-                self.ae_finished = True
-
+    def train_every_epoch(self, epoch, cl):    
         # print(epoch)
         # print("weight")
         # print(self.model.encoder.conv[0].bn1b.weight.detach().cpu().numpy())
@@ -295,19 +284,37 @@ class OneClassTestHelper(object):
             # Multi-objective Optimization
                 # g1: the gradient of reconstruction loss w.r.t the parameters of encoder
                 # g2: the gradient of auto-regression loss w.r.t the parameters of encoder
+                if self.name in ['LSA_SOS','LSA_MAF']:
+                    if epoch < 10:
+                        lr = 0.0001
+                    elif epoch < 1000:
+                        lr = 0.00001
+                    else:
+                        lr = 0.000005
+                    for param_group in self.optimizer.param_groups:
+                        param_group['lr'] = lr
 
                 # Backward Total loss= Reconstruction loss + Auto-regression Loss
                 torch.autograd.backward(self.loss.total_loss, self.model.parameters(),retain_graph =True)
                 # g1_list = g1 + g2
                 g1_list = [pi.grad.data.clone() for pi in list(self.model.encoder.parameters())]    
                 # Backward Auto-regression Loss, the gradients computed in the first backward are not cleared
-                # torch.autograd.backward(self.loss.autoregression_loss,list(self.model.encoder.parameters())+list(self.model.estimator.parameters()))
                 # torch.autograd.backward(self.loss.autoregression_loss, self.model.parameters())
+
+                # for p in self.model.estimator.parameters():
+                #     print(p.grad.data[0])
+                #     break
 
                 for p in self.model.estimator.parameters():
                     p.grad.zero_()
+                    # print (p.grad)
+                
+                # torch.autograd.backward(self.loss.autoregression_loss, self.model.encoder.parameters())
+                torch.autograd.backward(self.loss.autoregression_loss, list(self.model.encoder.parameters())+list(self.model.estimator.parameters()))
 
-                torch.autograd.backward(self.loss.autoregression_loss, self.model.encoder.parameters())
+                # for p in self.model.estimator.parameters():
+                #     print(p.grad.data[0])
+                #     break
                 
                 #g2_list = g1_list + g2
                 g2_list = [pi.grad.data.clone() for pi in list(self.model.encoder.parameters())]
@@ -402,7 +409,7 @@ class OneClassTestHelper(object):
             # plot_source_dist_by_dimensions(sample_u, sample_y, f"{self.train_result_dir}_{epoch}")
 
         # pbar.close()
-        # if (epoch % 100 ==0) and (self.name in ['LSA_SOS','SOS']):
+        # if (epoch % 200 ==0) and (self.name in ['LSA_SOS','SOS']):
         #     self.train_validate(epoch,loader,bs)
 
         # print epoch result
@@ -451,7 +458,7 @@ class OneClassTestHelper(object):
         epoch_size = self.dataset.length
         batch_size = len(loader)
 
-        # if (epoch % 100 ==0) and (self.name in ['LSA_SOS','SOS']):
+        # if (epoch % 200 ==0) and (self.name in ['LSA_SOS','SOS']):
         #          # density related 
         #         sample_llk = np.zeros(shape=(len(self.dataset),))
         #         sample_nrec = np.zeros(shape=(len(self.dataset),))
@@ -473,7 +480,7 @@ class OneClassTestHelper(object):
             with torch.no_grad():
                 
                 # record details 
-                # if (epoch % 100 ==0) and (self.name in ['LSA_SOS','SOS']):
+                # if (epoch % 200 ==0) and (self.name in ['LSA_SOS','SOS']):
                 #     #new add!!!
                 #     _, q1,q2, qinf, u= self._eval(x, average= False, quantile_flag= True)
 
@@ -505,7 +512,7 @@ class OneClassTestHelper(object):
                  
 
 
-        # if (epoch % 100 == 0) and (self.name in ['LSA_SOS','SOS']):
+        # if (epoch % 200 == 0) and (self.name in ['LSA_SOS','SOS']):
         #     # save test-historty
         #     np.savez(f"{self.valid_result_dir}_{epoch}", 
         #             sample_y = sample_y, 
@@ -616,6 +623,18 @@ class OneClassTestHelper(object):
             
             #train every epoch
             self.model.train()
+            if self.load_lsa:
+                if self.name in ['LSAD_SOS','LSAD_EN']:
+                    model_style = 'LSAD'
+                elif self.name in ['LSAW_SOS','LSAW_EN']:
+                    model_style = 'LSAW'
+                else:
+                    model_style = 'LSA'
+
+                self.model.load_lsa(join(self.checkpoints_dir,f'{cl}{model_style}_1_b.pkl'))
+                print("load pre-traind autoencoder")
+                self.ae_finished = True # Start from pretrained autoencoder
+
             train_loss, train_rec, train_nllk = self.train_every_epoch(epoch,cl) 
             # train_loss =0; train_rec = 0; train_nllk =0;    
 
@@ -914,7 +933,7 @@ class OneClassTestHelper(object):
         'LSA':['Class','AUROC'],
         'LSAD':['Class','AUROC'],
         'LSAW':['Class','AUROC'],
-        'SOS':['Class','AUROC','precision_q1', 'f1_q1','recall_q1','precision_q2', 'f1_q2','recall_q2','precision_qinf', 'f1_qinf','recall_qinf'],
+        'SOS':['Class','AUROC','PRCISION','F1','RECALL','precision_q1', 'f1_q1','recall_q1','precision_q2', 'f1_q2','recall_q2','precision_qinf', 'f1_qinf','recall_qinf'],
 
         # 'threshold':['Class', 'precision_den', 'f1_den', 'recall_den','acc_den',
         
@@ -929,7 +948,7 @@ class OneClassTestHelper(object):
 
 
     
-    def compute_AUROC(self, log_step = 100, epoch_max = 10000):
+    def compute_AUROC(self, log_step = 200, epoch_max = 20000):
         
         bs = self.batch_size
         auroc_dict = {
@@ -1014,7 +1033,7 @@ class OneClassTestHelper(object):
 
 
 
-    def plot_training_loss_auroc (self, log_step = 100):
+    def plot_training_loss_auroc (self, log_step = 200):
 
         model_name = self.name
         train_strategy = self.train_strategy
@@ -1025,7 +1044,7 @@ class OneClassTestHelper(object):
 
             with np.load(train_history_path, allow_pickle = True) as data:
 
-                loss_history= data['loss_history']
+                loss_history = data['loss_history']
                 train_loss = loss_history.item().get('train_loss')
                 train_rec = loss_history.item().get('train_rec')
                 train_nllk = loss_history.item().get('train_nllk')
@@ -1170,8 +1189,8 @@ class OneClassTestHelper(object):
 
         # idx = np.arange(len(sample_y))
         # np.random.shuffle(idx)
-        # # sample_act = sample_act[idx[0:100],0:10]
-        # # sample_y = sample_y[idx[0:100]]
+        # # sample_act = sample_act[idx[0:200],0:10]
+        # # sample_y = sample_y[idx[0:200]]
 
         # sample_act_1 = np.mean(sample_act[sample_y==1], axis =0)
         # sample_act_0 = np.mean(sample_act[sample_y==0], axis =0)
@@ -1195,10 +1214,10 @@ class OneClassTestHelper(object):
         #     lst = list(arr)
         #     lst = list(lst[0])
         #     data_dict[str(idx)] = lst
-        print(sample_act.shape)
-        print(sample_act2.shape)
+        # print(sample_act.shape)
+        # print(sample_act2.shape)
         sample_act = np.append(sample_act.squeeze(), sample_act2.squeeze()).reshape(20000,64)
-        print(sample_act.shape)
+        # print(sample_act.shape)
 
         data_dict['activation'] =  sample_act[:,1]
         data_dict['label'] = np.append(sample_y.squeeze(), sample_y2.squeeze())

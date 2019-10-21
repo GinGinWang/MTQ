@@ -96,7 +96,7 @@ def compute_quantile_metric(model_name, sample_qinf, sample_y, code_length, quan
     print(f"Real Novelty_Num: {sum(sample_y == 0)} in {len(sample_y)} samples, Novel Ratio= {real_nr}")
 
 
-    # threshold_q = -pow((1-0.9),1/code_length)*0.5
+    # threshold_q = -pow((1-0.00001),1/code_length)*0.5
     # if quantile_type =='1':
     # 	threshold_q = threshold_q * code_length
     # elif quantile_type == '2':
@@ -107,6 +107,7 @@ def compute_quantile_metric(model_name, sample_qinf, sample_y, code_length, quan
     print(f"{real_nr}percentage_threshold of quantile:real_threshold, max:{max(sample_qinf)} min:{min(sample_qinf)}")
     # print(f"threshold_q:{threshold_q}")
     y_hat_q = np.where((sample_qinf)>=(real_threshold), 1, 0)
+    # y_hat_q = np.where((sample_qinf)>=(threshold_q), 1, 0)
 
     print(f"Quantile-based, Predicted Novelty_Num: {sum(y_hat_q==0)} in {len(y_hat_q)} samples")
     precision, recall, f1, _= precision_recall_fscore_support((sample_y==0),(y_hat_q==0), average= "binary")

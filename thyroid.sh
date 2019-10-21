@@ -1,25 +1,32 @@
-python test.py --dataset thyroid --autoencoder LSA --lr 0.0001 --batch_size 1 --code_length 1 --epoch 20000 --select  1 --Test
+# python test.py --dataset thyroid --lr 0.000001  --batch_size 1024 --code_length 6 --epoch 50000 --select  1 --estimator SOS  --Train --log_step 2000 --before_log_epochs 2000 --hidden_size 2048
 
-# python test.py --dataset thyroid --autoencoder LSA --lr 0.00001  --batch_size 2 --code_length 2 --epoch 100000 --select  1 --estimator SOS --MulObj --Test
+# python test.py --dataset thyroid --lr 0.00001  --batch_size 1024 --code_length 6 --epoch 50000 --select  1 --estimator SOS  --Test --checkpoint b --log_step 1000 --hidden_size 2048
 
-# python test.py --dataset thyroid --autoencoder LSA --lr 0.00001  --batch_size 1024 --code_length 1 --epoch 50000 --select  1 --estimator SOS --Fixed --load_lsa --Test
-
-# python test.py --dataset thyroid --autoencoder LSA --lr 0.00001  --batch_size 1024 --code_length 1 --epoch 50000 --select  1 --estimator SOS --PreTrained --load_lsa --Test
-
-
-
-
-# python test.py --dataset thyroid --autoencoder LSA --lr 0.00001  --batch_size 1024 --code_length 1 --epoch 50000 --select  1 --estimator SOS --MulObj --compute_AUROC 
-
-# python test.py --dataset thyroid --autoencoder LSA --lr 0.00001  --batch_size 1024 --code_length 1 --epoch 50000 --select  1 --estimator SOS --Fixed --load_lsa --compute_AUROC
-
-# python test.py --dataset thyroid --autoencoder LSA --lr 0.00001  --batch_size 1024 --code_length 1 --epoch 50000 --select  1 --estimator SOS --PreTrained --load_lsa --compute_AUROC
+# +-------+--------+----------+--------+--------+--------------+--------+-----------+--------------+--------+-----------+----------------+---------+-------------+
+# | Class | AUROC  | PRCISION |   F1   | RECALL | precision_q1 | f1_q1  | recall_q1 | precision_q2 | f1_q2  | recall_q2 | precision_qinf | f1_qinf | recall_qinf |
+# +-------+--------+----------+--------+--------+--------------+--------+-----------+--------------+--------+-----------+----------------+---------+-------------+
+# |   0   | 0.9818 |  0.7634  | 0.7634 | 0.7634 |    0.5591    | 0.5591 |   0.5591  |    0.5914    | 0.5914 |   0.5914  |     0.7312     |  0.7312 |    0.7312   |
+# |  avg  | 0.9818 |  0.7634  | 0.7634 | 0.7634 |    0.5591    | 0.5591 |   0.5591  |    0.5914    | 0.5914 |   0.5914  |     0.7312     |  0.7312 |    0.7312   |
+# +-------+--------+----------+--------+--------+--------------+--------+-----------+--------------+--------+-----------+----------------+---------+-------------+
 
 
 
+# python test.py --dataset thyroid --lr 0.00001  --batch_size 1024 --code_length 6 --epoch 50000 --select  1 --estimator SOS  --Train --log_step 2000 --before_log_epochs 2000 --hidden_size 2048
 
-# python test.py --dataset thyroid --autoencoder LSA --lr 0.00001  --batch_size 1024 --code_length 1 --epoch 50000 --select  1 --estimator SOS --MulObj --plot_training_loss_auroc 
+# python test.py --dataset thyroid --lr 0.00001  --batch_size 1024 --code_length 6 --epoch 50000 --select  1 --estimator SOS  --Test --checkpoint b --log_step 1000 --hidden_size 2048
+# +-------+--------+----------+--------+--------+--------------+--------+-----------+--------------+--------+-----------+----------------+---------+-------------+
+# | Class | AUROC  | PRCISION |   F1   | RECALL | precision_q1 | f1_q1  | recall_q1 | precision_q2 | f1_q2  | recall_q2 | precision_qinf | f1_qinf | recall_qinf |
+# +-------+--------+----------+--------+--------+--------------+--------+-----------+--------------+--------+-----------+----------------+---------+-------------+
+# |   0   | 0.9842 |  0.7419  | 0.7419 | 0.7419 |    0.5161    | 0.5161 |   0.5161  |    0.5806    | 0.5806 |   0.5806  |     0.7634     |  0.7634 |    0.7634   |
+# |  avg  | 0.9842 |  0.7419  | 0.7419 | 0.7419 |    0.5161    | 0.5161 |   0.5161  |    0.5806    | 0.5806 |   0.5806  |     0.7634     |  0.7634 |    0.7634   |
+# +-------+--------+----------+--------+--------+--------------+--------+-----------+--------------+--------+-----------+----------------+---------+-------------+
 
-# python test.py --dataset thyroid --autoencoder LSA --lr 0.00001  --batch_size 1024 --code_length 1 --epoch 50000 --select  1 --estimator SOS --Fixed --load_lsa --plot_training_loss_auroc
 
-# python test.py --dataset thyroid --autoencoder LSA --lr 0.00001  --batch_size 1024 --code_length 1 --epoch 50000 --select  1 --estimator SOS --PreTrained --load_lsa --plot_training_loss_auroc
+# python test.py --dataset thyroid --lr 0.0001  --batch_size 1024 --code_length 6 --epoch 50000 --select  1 --estimator SOS  --Train --log_step 2000 --hidden_size 2048
+# python test.py --dataset thyroid --lr 0.0001  --batch_size 1024 --code_length 6 --epoch 50000 --select  1 --estimator SOS  --Test --checkpoint b --log_step 2000 --hidden_size 2048
+# +-------+--------+----------+--------+--------+--------------+--------+-----------+--------------+--------+-----------+----------------+---------+-------------+
+# | Class | AUROC  | PRCISION |   F1   | RECALL | precision_q1 | f1_q1  | recall_q1 | precision_q2 | f1_q2  | recall_q2 | precision_qinf | f1_qinf | recall_qinf |
+# +-------+--------+----------+--------+--------+--------------+--------+-----------+--------------+--------+-----------+----------------+---------+-------------+
+# |   0   | 0.9861 |  0.7527  | 0.7527 | 0.7527 |    0.4839    | 0.4839 |   0.4839  |    0.5054    | 0.5054 |   0.5054  |     0.7742     |  0.7742 |    0.7742   |
+# |  avg  | 0.9861 |  0.7527  | 0.7527 | 0.7527 |    0.4839    | 0.4839 |   0.4839  |    0.5054    | 0.5054 |   0.5054  |     0.7742     |  0.7742 |    0.7742   |
+# +-------+--------+----------+--------+--------+--------------+--------+-----------+--------------+--------+-----------+----------------+---------+-------------+
