@@ -20,10 +20,14 @@ def create_checkpoints_dir(dataset, fixed, mulobj, num_blocks, hidden_size, code
         print(f'Make Dir:{dirName}')
     return dirName
 
-def create_file_path(mulobj, model_name, dataset, score_normed, num_blocks, hidden_size, code_length, lam, checkpoint):
+def create_file_path(mulobj, fixed, pretrained, model_name, dataset, score_normed, num_blocks, hidden_size, code_length, lam, checkpoint):
 
     if mulobj:
         result_path = f"results/Mul_{model_name}_{dataset}_nml{score_normed}_b{num_blocks}_h{hidden_size}_c{code_length}_lam{lam}"
+    elif fixed:
+        result_path = f"results/fix_{model_name}_{dataset}_nml{score_normed}_b{num_blocks}_h{hidden_size}_c{code_length}_lam{lam}"
+    elif pretrained:
+        result_path = f"results/pre_{model_name}_{dataset}_nml{score_normed}_b{num_blocks}_h{hidden_size}_c{code_length}_lam{lam}"
     else:
         result_path = f"results/{model_name}_{dataset}_nml{score_normed}_b{num_blocks}_h{hidden_size}_c{code_length}_lam{lam}"
 

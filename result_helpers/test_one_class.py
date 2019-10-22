@@ -631,14 +631,14 @@ class OneClassTestHelper(object):
             self.model.eval()
             validation_loss, validation_rec, validation_nllk = self.validate(epoch, cl)
             
-            if self.name in ['LSA_SOS','LSA_MAF']:
-                    if old_validation_loss < validation_loss:
-                        lr = max(self.lr*0.5, 0.000005)
-                        if lr < self.lr:
-                            self.lr = lr 
-                            print(f"Learning Rate Changed to {lr}")
-                            for param_group in self.optimizer.param_groups:
-                                param_group['lr'] = self.lr
+            # if self.name in ['LSA_SOS','LSA_MAF']:
+            #         if old_validation_loss < validation_loss:
+            #             lr = max(self.lr*0.5, 0.000005)
+            #             if lr < self.lr:
+            #                 self.lr = lr 
+            #                 print(f"Learning Rate Changed to {lr}")
+            #                 for param_group in self.optimizer.param_groups:
+            #                     param_group['lr'] = self.lr
             old_validation_loss = validation_loss
             loss_history['train_loss'].append(train_loss)
             loss_history['train_rec'].append(train_rec)
