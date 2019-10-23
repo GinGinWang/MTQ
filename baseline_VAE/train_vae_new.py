@@ -4,8 +4,6 @@ Notes:
   - run https://github.com/altosaar/proximity_vi/blob/master/get_binary_mnist.py to download binary MNIST file
   - batch size is the innermost dimension, then the sample dimension, then latent dimension
 """
-from sklearn.metrics import roc_auc_score
-
 import torch
 import torch.utils
 import torch.utils.data
@@ -23,6 +21,9 @@ import flow
 
 from mnist import MNIST
 from torch.utils.data import DataLoader
+from sklearn.metrics import roc_auc_score
+
+dataset = MNIST(path='data/MNIST')
 
 
 config = """
@@ -35,14 +36,14 @@ batch_size: 128
 test_batch_size: 512
 max_iterations: 100000
 log_interval: 100
-early_stopping_interval: 30
+early_stopping_interval: 5
 n_samples: 128
 use_gpu: true
+train_dir: ./
+data_dir: ./
 seed: 582838
 num_epochs: 10000
 """
-
-dataset = MNIST(path='data/MNIST')
 
 class Model(nn.Module):
   """Bernoulli model parameterized by a generative network with Gaussian latents for MNIST."""
@@ -175,6 +176,7 @@ def cycle(iterable):
 # return train_loader, val_loader, test_loader
 
 def load_binary_mnist(cfg, **kwcfg):
+  # set normal class 
   cl = 0
   batch_size = cfg.batch_size
   test_batch_size = cfg.test_batch_size
@@ -190,12 +192,22 @@ def load_binary_mnist(cfg, **kwcfg):
 
   return train_loader, val_loader, test_loader
 
-def evaluate(n_samples, model, variational, eval_data):
+def evaluate(n_samples, model, variational, dataset, test_mode = False):
   model.eval()
   total_log_p_x = 0.0
   total_elbo = 0.0
-  # for batch in eval_data:
-  #   x = batch[0].to(next(model.parameters()).device)
+
+  n_data = dataset.length
+  
+  if test_mode:
+    eval_data = DataLoader(dataset,batch_size = cfg.test_batch_size)
+            
+    sample_elbo  = np.zeros(shape=(n_data,))
+    sample_y = np.zeros(shape=(n_data,))
+  else:
+    eval_data = DataLoader(dataset, batch_size  =  cfg.test_batch_size)
+        
+  i = 0
   for i, (x , y) in enumerate(eval_data):
     x = x.to(device)
     z, log_q_z = variational(x, n_samples)
@@ -206,50 +218,38 @@ def evaluate(n_samples, model, variational, eval_data):
     log_p_x = torch.logsumexp(elbo, dim=1) - np.log(n_samples)
     # average over sample dimension, sum over minibatch
     total_elbo += elbo.cpu().numpy().mean(1).sum()
+    if test_mode:
+      sample_elbo[i * bs:i * bs + bs] = elbo.cpu().numpy().mean(1)
+      sampy[i * bs:i * bs + bs] = y
     # sum over minibatch
     total_log_p_x += log_p_x.cpu().numpy().sum()
-  n_data = len(eval_data.dataset)
-  return total_elbo / n_data, total_log_p_x / n_data
+  if test_mode:
+    return sample_elbo, sample_y
+  else:
+    return total_elbo / n_data, total_log_p_x / n_data
+  
+  
+if __name__ == '__main__':
+  
 
+  cl = 0
+  dictionary = yaml.load(config)
+  cfg = nomen.Config(dictionary)
+  cfg.parse_args()
+  device = torch.device("cuda:0" if cfg.use_gpu else "cpu")
+  torch.manual_seed(cfg.seed)
+  np.random.seed(cfg.seed)
+  random.seed(cfg.seed)
 
-def _evaluate(n_samples, model, variational,test_data):
-  model.eval()
-  total_log_p_x = 0.0
-  total_elbo = 0.0
-
-  n_data = len(test_data.dataset)
-  sample_elbo  = np.zeros(shape=(n_data,))
-  sample_y = np.zeros(shape=(n_data,))
-  bs = cfg.test_batch_size
-  for i, (x , y) in enumerate(test_data):
-    x = x.to(device)
-    z, log_q_z = variational(x, n_samples)
-    log_p_x_and_z = model(z, x)
-    # importance sampling of approximate marginal likelihood with q(z)
-    # as the proposal, and logsumexp in the sample dimension
-    elbo = log_p_x_and_z - log_q_z
-    log_p_x = torch.logsumexp(elbo, dim=1) - np.log(n_samples)
-    # average over sample dimension, sum over minibatch
-    sample_elbo[i * bs:i * bs + bs] = np.squeeze(elbo.cpu().numpy().mean(1))
-    sample_y[i * bs:i * bs + bs] = y
-  print(sample_y)
-  print(sample_elbo)
-  return sample_elbo, sample_y
-  
-  
-def auroc_class(cl):
-  
-  endflag = False
-  
   model = Model(latent_size=cfg.latent_size, 
                 data_size=cfg.data_size)
   if cfg.variational == 'flow':
     variational = VariationalFlow(latent_size=cfg.latent_size,
                                   data_size=cfg.data_size,
                                   flow_depth=cfg.flow_depth)
-  elif cfg.variational == 'mean-field':
-    variational = VariationalMeanField(latent_size=cfg.latent_size,
-                                       data_size=cfg.data_size)
+  # elif cfg.variational == 'mean-field':
+  #   variational = VariationalMeanField(latent_size=cfg.latent_size,
+  #                                      data_size=cfg.data_size)
   else:
     raise ValueError('Variational distribution not implemented: %s' % cfg.variational)
 
@@ -266,15 +266,14 @@ def auroc_class(cl):
 
   best_valid_elbo = -np.inf
   num_no_improvement = 0
-  cl = 0
-  dataset.val(cl)
-  valid_data = DataLoader(dataset, batch_size = cfg.test_batch_size)
   
+
   for epoch in range(cfg.num_epochs):
     dataset.train(cl)
+    n_data_trn = dataset.length
     train_data = DataLoader(dataset, batch_size = cfg.batch_size)
-
-    for batch_idx, (x ,_) in enumerate(train_data):
+    
+    for batch_idx, (x , y) in enumerate(train_data):
       x = x.to(device)
       model.zero_grad()
       variational.zero_grad()
@@ -286,12 +285,12 @@ def auroc_class(cl):
       loss = -elbo.sum(0)
       loss.backward()
       optimizer.step()
-      step = epoch * len(train_data)+ batch_idx
+      step = epoch * len(train_data) + batch_idx
       if step % cfg.log_interval == 0:
         print(f'step:\t{step}\ttrain elbo: {elbo.detach().cpu().numpy().mean():.2f}')
         with torch.no_grad():
-          
-          valid_elbo, valid_log_p_x = evaluate(cfg.n_samples, model, variational, valid_data)
+          dataset.val(cl)
+          valid_elbo, valid_log_p_x = evaluate(cfg.n_samples, model, variational, dataset)
         print(f'step:\t{step}\t\tvalid elbo: {valid_elbo:.2f}\tvalid log p(x): {valid_log_p_x:.2f}')
         if valid_elbo > best_valid_elbo:
           num_no_improvement = 0
@@ -303,40 +302,14 @@ def auroc_class(cl):
           num_no_improvement += 1
 
         if num_no_improvement > cfg.early_stopping_interval:
-        # if True:
           checkpoint = torch.load(f'{cl}best_state_dict')
           model.load_state_dict(checkpoint['model'])
           variational.load_state_dict(checkpoint['variational'])
           with torch.no_grad():
             dataset.test(cl)
-            test_data = DataLoader(dataset,batch_size = cfg.test_batch_size)
-
-            sample_elbo , sample_y = _evaluate(cfg.n_samples, model, variational, test_data)
-            auroc= roc_auc_score(sample_y, sample_elbo)
+            sample_elbo , sample_y = evaluate(cfg.n_samples, model, variational, dataset, True)
+            auroc= roc_auc_score(sample_elbo, sample_y)
             print(auroc)
-            endflag = True
-            break
 
-    if endflag:
-      break
-  return auroc
-
-if __name__ == '__main__':
-  dictionary = yaml.load(config)
-  cfg = nomen.Config(dictionary)
-  cfg.parse_args()
-  device = torch.device("cuda:0" if cfg.use_gpu else "cpu")
-  torch.manual_seed(cfg.seed)
-  np.random.seed(cfg.seed)
-  random.seed(cfg.seed)
-
-
-  auroc_list = []
-  for cl in range(10):
-    temp = auroc_class(cl)
-    auroc_list.append(temp)
-
-  print(auroc_list)
-  print(np.mean(auroc_list))
-
-
+          print(f'step:\t{step}\t\ttest elbo: {test_elbo:.2f}\ttest log p(x): {test_log_p_x:.2f}')
+          break

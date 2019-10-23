@@ -286,7 +286,7 @@ class OneClassTestHelper(object):
                 # g1: the gradient of reconstruction loss w.r.t the parameters of encoder
                 # g2: the gradient of auto-regression loss w.r.t the parameters of encoder
                 # Backward Total loss= Reconstruction loss + Auto-regression Loss
-                torch.autograd.backward(self.loss.total_loss, self.model.parameters(),retain_graph =True)
+                torch.autograd.backward(self.loss.total_loss, self.model.parameters(), retain_graph =True)
                 # g1_list = g1 + g2
                 g1_list = [pi.grad.data.clone() for pi in list(self.model.encoder.parameters())]    
                 # Backward Auto-regression Loss, the gradients computed in the first backward are not cleared
@@ -663,7 +663,7 @@ class OneClassTestHelper(object):
                     torch.save(self.model.state_dict(), model_dir_epoch)
             
             # early stop
-            if (epoch - best_validation_epoch)> converge_epochs and (epoch > self.before_log_epochs):
+            if (epoch - best_validation_epoch) > converge_epochs and (epoch > self.before_log_epochs):
                 break
 
             
@@ -674,6 +674,7 @@ class OneClassTestHelper(object):
         print("Training finish! Normal_class:>>>>>", cl)
         
         torch.save(self.model.state_dict(), self.model_dir)
+        torch.save(best_model.state_dict(), self.best_model_dir)
         
         state = {'epoch': epoch + 1, 'state_dict': self.model.state_dict(),
              'optimizer': self.optimizer.state_dict(),'ae_optimizer':self.ae_optimizer,'est_optimizer':self.est_optimizer}
@@ -939,7 +940,7 @@ class OneClassTestHelper(object):
         }[self.name]
 
         # format
-        table.float_format = '0.8'
+        table.float_format = '0.4'
         return table
 
 

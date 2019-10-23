@@ -9,7 +9,7 @@ import torch.nn as nn
 from datasets import *
 
 # models
-from models.LSA_mnist import LSA_MNIST #  mnist/fmnist
+from models.LSA_mnist import LSA_MNIST
 from models.LSA_mnist_deep import LSA_MNIST_D
 from models.LSA_mnist_wide import LSA_MNIST_W
 
@@ -279,14 +279,15 @@ def parse_arguments():
     '--list',
     nargs='+',
     default = None,
-    help = 'Select specific novel classes as test dataset (default: all other classes in dataset)')
+    help = 'Select specific novel classes in test dataset (default: using all\
+     other classes in dataset as novel class)')
 
 
     parser.add_argument(
     '--lam',
     type=float,
     default=1,
-    help='trade off between reconstruction loss and autoregression loss')
+    help='trade off between reconstruction loss and auto-regression loss')
     
     parser.add_argument(
     '--seed',
