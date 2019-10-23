@@ -1,16 +1,16 @@
 # Train AE
 
 # # 0.9121
-python test.py --dataset mnist --autoencoder LSA --lr 0.0001     --Train  --select 0 --log_step 200
-python test.py --dataset mnist --autoencoder LSA --lr 0.0001     --Train  --select 1 --log_step 200
-python test.py --dataset mnist --autoencoder LSA --lr 0.0001     --Train  --select 2 --log_step 200
-python test.py --dataset mnist --autoencoder LSA --lr 0.0001     --Train  --select 3 --log_step 200
-python test.py --dataset mnist --autoencoder LSA --lr 0.0001     --Train  --select 4 --log_step 200
-python test.py --dataset mnist --autoencoder LSA --lr 0.0001     --Train  --select 5 --log_step 200
-python test.py --dataset mnist --autoencoder LSA --lr 0.0001     --Train  --select 6 --log_step 200
-python test.py --dataset mnist --autoencoder LSA --lr 0.0001     --Train  --select 7 --log_step 200
-python test.py --dataset mnist --autoencoder LSA --lr 0.0001     --Train  --select 8 --log_step 200
-python test.py --dataset mnist --autoencoder LSA --lr 0.0001     --Train  --select 9 --log_step 200
+python test.py --dataset mnist --autoencoder LSA --lr 0.0001     --Train  --select 0 --log_step 1000
+python test.py --dataset mnist --autoencoder LSA --lr 0.0001     --Train  --select 1 --log_step 1000
+python test.py --dataset mnist --autoencoder LSA --lr 0.0001     --Train  --select 2 --log_step 1000
+python test.py --dataset mnist --autoencoder LSA --lr 0.0001     --Train  --select 3 --log_step 1000
+python test.py --dataset mnist --autoencoder LSA --lr 0.0001     --Train  --select 4 --log_step 1000
+python test.py --dataset mnist --autoencoder LSA --lr 0.0001     --Train  --select 5 --log_step 1000
+python test.py --dataset mnist --autoencoder LSA --lr 0.0001     --Train  --select 6 --log_step 1000
+python test.py --dataset mnist --autoencoder LSA --lr 0.0001     --Train  --select 7 --log_step 1000
+python test.py --dataset mnist --autoencoder LSA --lr 0.0001     --Train  --select 8 --log_step 1000
+python test.py --dataset mnist --autoencoder LSA --lr 0.0001     --Train  --select 9 --log_step 1000
 
 
 

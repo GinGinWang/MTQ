@@ -117,7 +117,7 @@ def main():
 
 
     # # set to Test mode
-    result_file_path = create_file_path(args.mulobj, model.name,args.dataset,args.score_normed,args.num_blocks,args.hidden_size,args.code_length, args.lam, args.checkpoint)
+    result_file_path = create_file_path(args.mulobj, args.fixed, args.pretrained, model.name,args.dataset,args.score_normed,args.num_blocks,args.hidden_size,args.code_length, args.lam, args.checkpoint)
 
     
 

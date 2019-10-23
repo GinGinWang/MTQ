@@ -768,15 +768,12 @@ class OneClassTestHelper(object):
 
         sample_ns = novelty_score(sample_llk, sample_nrec)
 
-        # if self.name in ['LSA_SOS', 'LSAD_SOS', 'LSAW_SOS']:
-        #     sample_ns_t = sample_llk # larger, normal
-        # else:
-        sample_ns_t = sample_ns  # larger, normal
+
 
         # # based on quantile-norm-inf
         if self.name in ['LSA_SOS','LSA_MAF','LSAD_SOS','LSAW_SOS']:
 
-            precision_den, f1_den, recall_den = compute_density_metric(self.name, sample_ns_t,sample_y)
+            precision_den, f1_den, recall_den = compute_density_metric(self.name, sample_llk, sample_y)
             precision_q1, f1_q1, recall_q1 = compute_quantile_metric(self.name, sample_q1, sample_y, self.code_length, '1')
             precision_q2, f1_q2, recall_q2 = compute_quantile_metric(self.name, sample_q2, sample_y, self.code_length, '2')
             precision_qinf, f1_qinf, recall_qinf = compute_quantile_metric(self.name, sample_qinf, sample_y, self.code_length, 'inf')
@@ -801,7 +798,7 @@ class OneClassTestHelper(object):
                                   recall_qinf]
         elif self.name in ['LSA_EN']:
          # every row
-            precision_den, f1_den, recall_den = compute_density_metric(self.name, sample_ns_t,sample_y)
+            precision_den, f1_den, recall_den = compute_density_metric(self.name, sample_llk,sample_y)
             this_class_metrics = [
             roc_auc_score(sample_y, sample_ns),
             roc_auc_score(sample_y, sample_llk),
@@ -817,7 +814,7 @@ class OneClassTestHelper(object):
             ]
         elif self.name in ['SOS']:
         # every row
-            precision_den, f1_den, recall_den = compute_density_metric(self.name, sample_ns_t,sample_y)
+            precision_den, f1_den, recall_den = compute_density_metric(self.name, sample_llk,sample_y)
             precision_q1, f1_q1, recall_q1 = compute_quantile_metric(self.name, sample_q1, sample_y, self.code_length, '1')
             precision_q2, f1_q2, recall_q2 = compute_quantile_metric(self.name, sample_q2, sample_y, self.code_length, '2')
             precision_qinf, f1_qinf, recall_qinf = compute_quantile_metric(self.name, sample_qinf, sample_y, self.code_length, 'inf')
@@ -942,7 +939,7 @@ class OneClassTestHelper(object):
         }[self.name]
 
         # format
-        table.float_format = '0.4'
+        table.float_format = '0.8'
         return table
 
 

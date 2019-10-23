@@ -69,30 +69,28 @@ def compute_density_metric(model_name, sample_ns_t, sample_y):
 # if we know a/100 is the percentile of novelty samples in testset
  
     # # y = 1 normal, y = 0 novel
-    real_nr= float(sum(sample_y==0)/len(sample_y))            
+    real_nr = float(sum(sample_y==0)/len(sample_y))
+    # real_nr = 0.048
     print(f"Real Novelty_Num: {sum(sample_y == 0)} in {len(sample_y)} samples, Novel Ratio= {real_nr}")
 
-
     # #based on density(sort first)
-    threshold1 = np.percentile(sample_ns_t, real_nr*100)
+    threshold1 = np.percentile(sample_ns_t, real_nr * 100)
     print(f"threshold1:{threshold1}")
 
     y_hat1 = np.where(sample_ns_t >= threshold1, 1, 0)
     print(f"Density-based, Predicted Novelty_Num: {sum(y_hat1==0)} in {len(y_hat1)} samples")
-    wrong_predict1 = np.where(sample_y!= y_hat1)
-    print(f"Wrongly Predict on {len(wrong_predict1)}")                
 
     precision_den, recall_den, f1_den, _ =  precision_recall_fscore_support((sample_y==0),(y_hat1==0), average= "binary")
-    acc_den = accuracy_score((sample_y==0),(y_hat1==0))
+    acc_den = accuracy_score((sample_y == 0),(y_hat1 == 0))
 
-    return precision_den, recall_den,f1_den
+    return precision_den, recall_den, f1_den
 
 
 
 def compute_quantile_metric(model_name, sample_qinf, sample_y, code_length, quantile_type):
     
 
-    real_nr= float(sum(sample_y==0)/len(sample_y))           
+    real_nr = float(sum(sample_y==0)/len(sample_y))
     print(f"Real Novelty_Num: {sum(sample_y == 0)} in {len(sample_y)} samples, Novel Ratio= {real_nr}")
 
 
@@ -100,18 +98,19 @@ def compute_quantile_metric(model_name, sample_qinf, sample_y, code_length, quan
     # if quantile_type =='1':
     # 	threshold_q = threshold_q * code_length
     # elif quantile_type == '2':
-    # 	threshold_q = threshold_q *math.sqrt(code_length)
+    # 	threshold_q = threshold_q * math.sqrt(code_length)
 
+    # print(threshold_q) 
 
-    real_threshold = np.percentile(sample_qinf,real_nr*100)
+    real_threshold = np.percentile(sample_qinf,real_nr * 100)
     print(f"{real_nr}percentage_threshold of quantile:real_threshold, max:{max(sample_qinf)} min:{min(sample_qinf)}")
-    # print(f"threshold_q:{threshold_q}")
+
     y_hat_q = np.where((sample_qinf)>=(real_threshold), 1, 0)
     # y_hat_q = np.where((sample_qinf)>=(threshold_q), 1, 0)
 
     print(f"Quantile-based, Predicted Novelty_Num: {sum(y_hat_q==0)} in {len(y_hat_q)} samples")
-    precision, recall, f1, _= precision_recall_fscore_support((sample_y==0),(y_hat_q==0), average= "binary")
-    return precision, recall,f1
+    precision, recall, f1, _ = precision_recall_fscore_support((sample_y==0),(y_hat_q==0), average= "binary")
+    return precision, recall, f1
 
 
 def custom_viz(kernels, path=None, cols=None):
