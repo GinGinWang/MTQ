@@ -31,7 +31,7 @@ Set up enviroment by:
 ```
 pip install -r requirements.txt
 ```
-#Demo
+# Demo
 demo.sh
 
 # Reference
