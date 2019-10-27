@@ -42,7 +42,7 @@ def main():
     device = torch.device('cuda')
 
     #random seed
-    set_random_seed(args.seed) # good mnist
+    set_random_seed(args.seed) 
 
     # prepare dataset in train mode
     if args.dataset == 'mnist':
