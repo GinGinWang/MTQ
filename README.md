@@ -31,6 +31,8 @@ Set up enviroment by:
 ```
 pip install -r requirements.txt
 ```
+#Demo
+demo.sh
 
 # Reference
 [1] Papamakarios G, Pavlakou T, Murray I. Masked autoregressive flow for density estimation[C]//Advances in Neural Information Processing Systems. 2017: 2338-2347.
