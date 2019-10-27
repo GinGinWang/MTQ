@@ -141,8 +141,7 @@ def main():
         device = device,
         fixed = args.fixed,
         pretrained = args.pretrained,
-        load_lsa =args.load_lsa
-        )
+        load_lsa =args.load_lsa)
     
     if args.trainflag:
         cl = args.select
@@ -153,9 +152,11 @@ def main():
         helper.compute_AUROC(log_step = args.log_step, epoch_max = args.epochs)
     elif args.plot_training_loss_auroc:
         helper.plot_training_loss_auroc(log_step = args.log_step)
-    
-    else:
-        helper.visualize_latent_vector(args.select)
+    elif args.using_train_set:
+        cl = args.select
+        helper.test_one_class_classification_with_trainset(cl)
+    # else:
+    #     helper.visualize_latent_vector(args.select)
 
 
 
@@ -306,6 +307,14 @@ def parse_arguments():
     action ='store_true',
     default= False,
     help ='use-pretrained lsa (default: False)' )
+
+
+    parser.add_argument(
+    '--using_train_set',
+    action='store_true',
+    default=False,
+    help='use training set on saved model (default: False)' )
+
 
     return parser.parse_args()
 

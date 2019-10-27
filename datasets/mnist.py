@@ -50,8 +50,10 @@ class MNIST(OneClassDataset):
         self.shuffled_train_idx = train_idx
 
         # Transform zone
-        self.val_transform = transforms.Compose([ToFloatTensor2D()])
-        self.train_transform = transforms.Compose([ToFloatTensor2D()])
+        # self.val_transform = transforms.Compose([ToFloatTensor2D()])
+        self.val_transform = transforms.Compose([ToFloat32(), OCToFloatTensor2D()])
+        # self.train_transform = transforms.Compose([ToFloatTensor2D()])
+        self.train_transform = transforms.Compose([ToFloat32(), OCToFloatTensor2D()])
         self.test_transform = transforms.Compose([ToFloat32(), OCToFloatTensor2D()])
         self.transform = None
 
@@ -168,14 +170,14 @@ class MNIST(OneClassDataset):
             sample = x, int(y == self.normal_class)
 
         elif self.mode == 'val':
-            x, _ = self.train_split[self.val_idxs[i]]
+            x, y = self.train_split[self.val_idxs[i]]
             x = np.uint8(x)[..., np.newaxis]
-            sample = x, x
+            sample = x, int(y == self.normal_class)
 
         elif self.mode == 'train':
-            x, _= self.train_split[self.train_idxs[i]]
+            x, y = self.train_split[self.train_idxs[i]]
             x = np.uint8(x)[..., np.newaxis]
-            sample = x, x
+            sample = x, int(y == self.normal_class)
         else:
             raise ValueError
 

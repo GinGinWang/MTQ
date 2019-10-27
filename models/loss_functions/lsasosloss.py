@@ -32,8 +32,8 @@ class LSASOSLoss(nn.Module):
         self.autoregression_loss = None
 
         self.total_loss = None
-        self.nlog_probs = None
-        self.nagtive_log_jacob = None
+        # self.nlog_probs = None
+        # self.nagtive_log_jacob = None
 
     def forward(self, x, x_r, s,nagtive_log_jacob, average = True):
         # type: (torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor) -> torch.Tensor
@@ -56,8 +56,8 @@ class LSASOSLoss(nn.Module):
         self.reconstruction_loss = rec_loss
         self.autoregression_loss = arg_loss
         
-        self.nlog_probs = nlog_probs * self.lam
-        self.nagtive_log_jacob = nlog_jacob_d * self.lam
+        # self.nlog_probs = nlog_probs * self.lam
+        # self.nagtive_log_jacob = nlog_jacob_d * self.lam
         
         self.total_loss = tot_loss
 

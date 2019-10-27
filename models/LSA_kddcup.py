@@ -42,7 +42,7 @@ class Encoder(BaseModule):
         activation_fn = nn.Hardtanh()
 
         self.fc = nn.Sequential(
-            nn.Linear(in_features=125, out_features=60),
+            nn.Linear(in_features=118, out_features=60),
             # nn.BatchNorm1d(num_features=60),
             activation_fn,
             nn.Linear(in_features=60, out_features=30),
@@ -50,7 +50,7 @@ class Encoder(BaseModule):
             nn.Linear(in_features=30, out_features=10),
             activation_fn,
             nn.Linear(in_features=10, out_features=code_length),
-            # nn.Sigmoid() ### maybe remove?????
+
         )
 
     def forward(self, x):
@@ -97,7 +97,7 @@ class Decoder(BaseModule):
             activation_fn,
             nn.Linear(in_features=30, out_features=60),
             activation_fn,
-            nn.Linear(in_features=60, out_features=125),
+            nn.Linear(in_features=60, out_features=118),
             # nn.BatchNorm1d(num_features=self.output_shape),
             # activation_fn
         )

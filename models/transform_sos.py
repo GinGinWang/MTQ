@@ -19,9 +19,8 @@ class TinvSOS(BaseModule):
         Input: latent vector z
         Output: s, -log_jacob of T (i.e., logjab of T-inverse)
     """
-    #TO DO: Normalization??? Initialization???
     
-    def __init__(self, n_blocks, input_size, hidden_size, k=5, r=4, device = None,**kwargs):
+    def __init__(self, n_blocks, input_size, hidden_size, k=5, r= 4, device = None,**kwargs):
 
         # type: (int, List[int], int) -> None
         """
@@ -51,7 +50,6 @@ class TinvSOS(BaseModule):
             model.to(device)
 
         # # Initialization
-        # # TO DO: initialize linear???
         # for module in model.modules():
         #     if isinstance(module, nn.Linear):
         #         nn.init.orthogonal_(module.weight)
@@ -69,6 +67,6 @@ class TinvSOS(BaseModule):
         :return: s= T_inverse(z), log_jacob_T_inv.
         """
         h = z.view(-1, self.input_size)
-        s,log_jacob_T_inv = self.T_inverse(h)
+        s, log_jacob_T_inv = self.T_inverse(h)
 
         return s, log_jacob_T_inv

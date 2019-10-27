@@ -180,10 +180,7 @@ class OneClassTestHelper(object):
         self.best_model_rec_dir = join(checkpoints_dir,f'{cl}{name}_{train_strategy}_rec.pkl')
         self.best_model_rec_detail_dir = join(checkpoints_dir,f'{cl}{name}_{train_strategy}_rec_detail.pkl')
 
-        
-        # self.train_result_dir = join(checkpoints_dir,f'{cl}{name}_{train_strategy}_history_train')
-        # self.valid_result_dir = join(checkpoints_dir,f'{cl}{name}_{train_strategy}_history_valid')
-        # self.test_result_dir = join(checkpoints_dir,f'{cl}{name}_{train_strategy}_history_test')
+        self.test_result_dir = join(self.checkpoints_dir, f'{cl}{self.name}_{self.train_strategy}_test_sample')
 
         self.train_history_dir = join(checkpoints_dir,f'{cl}{name}_{train_strategy}_loss_history')
 
@@ -521,53 +518,7 @@ class OneClassTestHelper(object):
             print('Val_loss:{:.6f}\t'.format(val_loss/epoch_size))
 
         return val_loss/epoch_size, val_rec/epoch_size,val_nllk/epoch_size
-
-    def train_validate(self, epoch, loader, bs):
-        
-        self.model.eval()
-        sample_llk = np.zeros(shape=(len(self.dataset),))
-        sample_nrec = np.zeros(shape=(len(self.dataset),))
-        
-        # quantile related 
-        sample_q1 = np.zeros(shape=(len(self.dataset),))
-        sample_q2 = np.zeros(shape=(len(self.dataset),))
-        sample_qinf = np.zeros(shape=(len(self.dataset),))
-        # source point u (64)
-        sample_u = np.zeros(shape=(len(self.dataset), self.code_length))
-        # true label
-        sample_y = np.zeros(shape=(len(self.dataset),))
-
-        for batch_idx, (x,y) in enumerate(loader):
-            x = x.to(self.device)
-            with torch.no_grad():
-                
-                    # record details 
-                #new add!!!
-                _, q1,q2, qinf, u= self._eval(x, average= False, quantile_flag= True)
-
-                # quantile 
-                
-                i = batch_idx
-                sample_q1[i*bs:i*bs+bs] = q1
-                sample_q2[i*bs:i*bs+bs] = q2
-                sample_qinf[i*bs:i*bs+bs] = qinf
-                
-                # source point 
-                sample_u[i*bs:i*bs+bs] = u
-
-                sample_y[i*bs:i*bs+bs] = y
-                    # score larger-->normal data
-                sample_nrec[i*bs:i*bs+bs] = - self.loss.reconstruction_loss.cpu().numpy()
-                        
-                sample_llk[i*bs:i*bs+bs] = - self.loss.autoregression_loss.cpu().numpy()
-
-        np.savez(f"{self.train_result_dir}_{epoch}", 
-                    sample_y = sample_y, 
-                    sample_nrec = sample_nrec, 
-                    sample_llk = sample_llk,
-                    sample_qinf = sample_qinf,
-                    sample_u = sample_u)
-
+    
 
     def train_one_class_classification(self, cl):
         # type: () -> None
@@ -631,14 +582,6 @@ class OneClassTestHelper(object):
             self.model.eval()
             validation_loss, validation_rec, validation_nllk = self.validate(epoch, cl)
             
-            # if self.name in ['LSA_SOS','LSA_MAF']:
-            #         if old_validation_loss < validation_loss:
-            #             lr = max(self.lr*0.5, 0.000005)
-            #             if lr < self.lr:
-            #                 self.lr = lr 
-            #                 print(f"Learning Rate Changed to {lr}")
-            #                 for param_group in self.optimizer.param_groups:
-            #                     param_group['lr'] = self.lr
             old_validation_loss = validation_loss
             loss_history['train_loss'].append(train_loss)
             loss_history['train_rec'].append(train_rec)
@@ -697,8 +640,8 @@ class OneClassTestHelper(object):
             self.model_dir = join(self.checkpoints_dir,
                                   f'{checkpoint_name}.pkl')
             self.test_result_dir = join(self.checkpoints_dir,
-                                        f'{checkpoint_name}_history_test')
-
+                                        f'{checkpoint_name}_test_sample')
+            
         # load the checkpoint
         bs = self.batch_size
         self.model.load_w(self.model_dir)
@@ -770,7 +713,6 @@ class OneClassTestHelper(object):
         sample_ns = novelty_score(sample_llk, sample_nrec)
 
 
-
         # # based on quantile-norm-inf
         if self.name in ['LSA_SOS','LSA_MAF','LSAD_SOS','LSAW_SOS']:
 
@@ -834,6 +776,11 @@ class OneClassTestHelper(object):
                                     f1_qinf,
                                     recall_qinf
                 ]
+        np.savez(self.test_result_dir, label= sample_y,
+                     NLL= - sample_llk, rec= - sample_nrec,
+                     u=sample_u, TQM1= - sample_q1,
+                     TQM2= - sample_q2, TQM_inf = - sample_qinf)
+
         return this_class_metrics
 
     def test_classification(self):
@@ -865,7 +812,6 @@ class OneClassTestHelper(object):
 
 
 
-     
     def compute_normalizing_coefficients(self, cl):
         # type: (int) -> Tuple[float, float, float, float]
         """
@@ -1015,9 +961,9 @@ class OneClassTestHelper(object):
                 auroc_dict['ns'].append(roc_auc_score(sample_y, sample_ns))
                 auroc_dict['nllk'].append(roc_auc_score(sample_y, sample_llk))
                 auroc_dict['rec'].append(roc_auc_score(sample_y, sample_nrec))
-                auroc_dict['q1'].append(roc_auc_score(sample_y,sample_q1))
+                auroc_dict['q1'].append(roc_auc_score(sample_y, sample_q1))
                 auroc_dict['q2'].append(roc_auc_score(sample_y, sample_q2))
-                auroc_dict['qinf'].append(roc_auc_score(sample_y,sample_qinf))
+                auroc_dict['qinf'].append(roc_auc_score(sample_y, sample_qinf))
 
             # write AUROC
                 
@@ -1136,7 +1082,6 @@ class OneClassTestHelper(object):
     def visualize_latent_vector(self, cl):
         from pandas.plotting import parallel_coordinates
 
-    # Visualize feature maps
         self.get_path(cl)
         
         def get_latent_vector(train_strategy):
@@ -1232,3 +1177,87 @@ class OneClassTestHelper(object):
         # custom_viz(kernels, f'distgraph/{cl}{self.name}_{self.train_strategy}_conv1_weights.png', 4)
 
 
+
+
+
+    def test_one_class_classification_with_trainset(self, cl):
+        """
+        Test fore one class.
+
+        cl as the nominal class, others classes as novel classes
+        """
+        # for specific checkpoint
+        if (self.test_checkpoint is not None):
+            # select one epoch to test
+            checkpoint_name =\
+                f'{cl}{self.name}_{self.train_strategy}_{self.test_checkpoint}'
+        else:
+            checkpoint_name =\
+                f'{cl}{self.name}_{self.train_strategy}'
+
+
+        model_dir = join(self.checkpoints_dir,
+                              f'{checkpoint_name}.pkl')
+        test_result_dir = join(self.checkpoints_dir,
+                                    f'{checkpoint_name}_test_train_sample')
+
+        # load the checkpoint
+        bs = self.batch_size
+        self.model.load_w(model_dir)
+        print(f"Load Model from {model_dir}")
+
+        self.model.eval()
+        # Test sets
+        self.dataset.train(cl)
+
+        loader = DataLoader(self.dataset, batch_size=bs, shuffle=False)
+
+        # density related
+        sample_llk = np.zeros(shape=(len(self.dataset),))
+        sample_nrec = np.zeros(shape=(len(self.dataset),))
+        # true label
+        sample_y = np.zeros(shape=(len(self.dataset),))
+        # quantile related
+        sample_q1 = np.zeros(shape=(len(self.dataset),))
+        sample_q2 = np.zeros(shape=(len(self.dataset),))
+        sample_qinf = np.zeros(shape=(len(self.dataset),))
+        # source distribution u (64)
+        sample_u = np.zeros(shape=(len(self.dataset), self.code_length))
+
+        for i, (x, y) in tqdm(enumerate(loader),
+                              desc=f'Computing scores for {self.dataset}'):
+            x = x.to(self.device)
+            with torch.no_grad():
+                if self.name in ['LSA_SOS', 'SOS', 'LSA_MAF',
+                                 'LSAD_SOS', 'LSAW_SOS']:
+                    tot_loss, q1, q2, qinf, u =\
+                        self._eval(x, average=False, quantile_flag=True)
+                    # quantile
+                    sample_q1[i * bs:i * bs + bs] = q1
+                    sample_q2[i * bs:i * bs + bs] = q2
+                    sample_qinf[i * bs:i * bs + bs] = qinf
+                    # source point
+                    sample_u[i * bs:i * bs + bs] = u
+                else:
+                    tot_loss = self._eval(x, average=False)
+
+            # True label
+            sample_y[i * bs:i * bs + bs] = y
+            # score larger-->normal data
+            if self.name in ['LSA', 'LSAD', 'LSAW',
+                             'LSA_SOS', 'LSAD_SOS', 'LSAW_SOS',
+                             'LSA_EN', 'LSA_MAF']:
+                sample_nrec[i * bs:i * bs + bs]\
+                    = - self.loss.reconstruction_loss.cpu().numpy()
+
+            if self.name in ['LSA_SOS', 'LSAD_SOS', 'LSAW_SOS',
+                             'LSA_EN',
+                             'EN', 'SOS', 'LSA_MAF']:
+                sample_llk[i * bs:i * bs + bs]\
+                    = - self.loss.autoregression_loss.cpu().numpy()
+
+        sample_llk = modify_inf(sample_llk)
+        np.savez(test_result_dir, label= sample_y,
+                NLL=- sample_llk, rec= - sample_nrec,
+                u=sample_u, TQM1= -sample_q1,
+                TQM2= - sample_q2, TQM_inf= -sample_qinf)

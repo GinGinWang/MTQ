@@ -5,8 +5,7 @@ import matplotlib.pyplot as plt
 
 
 
-#data = np.load('../mnist/1LSA_SOS_64_mul_history.npy_test.npz')
-data = np.load('/home/jj27wang/novelty-detection/NovelDect_SoS/SoSLSA/checkpoints/cifar10_gth/combinedFalse/PtrFalse/b1h256/9SOS_mul_history.npy_test.npz')
+data = np.load('../mnist/1LSA_SOS_64_mul_history.npy_test.npz')
 num_bins = 100
 
 ind_normal = np.where(data['sample_y'] == 1)
@@ -30,6 +29,7 @@ print('normal mean = ', a, 'novel mean = ', b)
 
 c = np.count_nonzero(data[string][ind_normal]==0)
 d = np.count_nonzero(data[string][ind_novel]==0)
+
 print('number of zeros for normal: ', c, 'number of zeros for novel: ',d)
 
 ########CDF plot##############
@@ -57,9 +57,6 @@ else:
         plt.show()
     
     else:
-    #    fig, axs = plt.subplots(1, 2, sharey=True)
-    #    axs[0].hist(data[string][ind_normal], bins=num_bins, label = label_1)
-    #    axs[1].hist(data[string][ind_novel], bins=num_bins, label = label_2)
         plt.hist(data[string][ind_normal], bins=num_bins, label = label_1, alpha=0.5, color = 'green')    
         plt.hist(data[string][ind_novel], bins=num_bins, label = label_2, alpha = 0.5,color = 'red')
         
@@ -79,14 +76,5 @@ plt.plot(data[string][ind_novel],'ro',label = label_2)
 #plt.plot(np.mean(data[string][ind_novel])*np.ones(shape = (len(data[string][ind_novel]))),color = 'red')
 plt.legend()
 plt.show()
-
-
-
-
-
-
-
-
-
 
 

@@ -1,11 +1,6 @@
-# Multivariate Triangular Quantiles for Novelty Detection
-To be present in NIPS 2019 by Jingjing Wang
+# Novelty Detection Using SoSflow density estimator
 
-## Introduction
-This is the official implementation for ``Multivariate Triangular Quantiles for Novelty Detection``.
-
-
-
+### Will UPDATE SOON
 ### Content
 
 * **transform_sos.py** -  SoS flow.

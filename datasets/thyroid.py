@@ -131,7 +131,7 @@ class THYROID (OneClassDataset):
 
     def __len__(self):
         # type: () -> int
-        """
+        """The size of mini-batches is 1024. The learning rate is $10^{-5}$. The training process is stopped after 100 epochs of non-decreasing loss.
         Returns the number of examples.
         """
         return self.length
