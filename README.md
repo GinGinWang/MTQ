@@ -9,13 +9,13 @@ Pytorch implementation to replicate experiments in the  NIPS2019 paper, Multivar
 
 # Models
 This implementation includes the following models for novelty detection. 
-	* LSA: Autoencoder part in [2] 
-	* LSA_EN[2]: Autoencoder + Density Estimator in [2]
-	* LSA_SOS: Autoencoder + TQM based on SOS-flow
-	* LSA_MAF: Autoencoder + TQM based on MAF-flow
-	* EN:  density estimator in [2]
-	* SOS: TQM based on SOS-Flow [3]
-	* MAF: TQM based on  MAF-Flow [1]
+* LSA: Autoencoder part in [2] 
+* LSA_EN[2]: Autoencoder + Density Estimator in [2]
+* LSA_SOS: Autoencoder + TQM based on SOS-flow
+* LSA_MAF: Autoencoder + TQM based on MAF-flow
+* EN:  density estimator in [2]
+* SOS: TQM based on SOS-Flow [3]
+* MAF: TQM based on  MAF-Flow [1]
 
 The LSA_SOS and LSA_MAF are two instances for our TQM. In our paper, we mainly apply LSA_SOS as the novelty detection model.
 # Environments
