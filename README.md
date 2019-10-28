@@ -1,6 +1,5 @@
 # Multivariate Triangular Quantiles for Novelty Detection
-Pytorch implementation to replicate experiments in the  NIPS2019 paper, Multivariate Triangular Quantiles for Novelty Detection (published soon).
-
+Pytorch implementation to replicate the experiments in our NIPS2019 paper "Multivariate Triangular Quantiles for Novelty Detection" (published soon).
 
 # Datasets
 * Thyroid: http://odds.cs.stonybrook.edu/thyroid-disease-dataset/
