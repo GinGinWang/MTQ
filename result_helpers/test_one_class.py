@@ -112,7 +112,6 @@ class OneClassTestHelper(object):
         else:
             self.train_strategy= f'{self.lam}'
 
-        
 
         self.mulobj = mulobj# whether use mul-gradient
         self.score_normed = score_normed # normalized novelty score
@@ -247,15 +246,6 @@ class OneClassTestHelper(object):
 
 
     def train_every_epoch(self, epoch, cl):    
-        # print(epoch)
-        # print("weight")
-        # print(self.model.encoder.conv[0].bn1b.weight.detach().cpu().numpy())
-        # print(self.model.encoder.conv[0].bn1b.running_mean.detach().cpu().numpy())
-
-        # model_copy = type(self.model)(input_shape= self.dataset.shape, code_length= 64, num_blocks =1, hidden_size= 2048, est_name = 'SOS') # get a new instance
-        # model_copy.load_state_dict(self.model.state_dict())
-        # model_copy.cuda()
-
         epoch_loss = 0
         epoch_recloss = 0
         epoch_nllk = 0
