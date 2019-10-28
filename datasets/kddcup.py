@@ -59,10 +59,10 @@ class KDDCUP (OneClassDataset):
         one_hot_service = pd.get_dummies(data["service"])
         one_hot_flag = pd.get_dummies(data["flag"])
 
-        # one_hot_land = pd.get_dummies(data["land"])
-        # one_hot_logged_in= pd.get_dummies(data["logged_in"])
-        # one_hot_is_guest_login = pd.get_dummies(data["is_guest_login"])
-        # one_hot_is_host_login  = pd.get_dummies(data["is_host_login"])
+        one_hot_land = pd.get_dummies(data["land"])
+        one_hot_logged_in= pd.get_dummies(data["logged_in"])
+        one_hot_is_guest_login = pd.get_dummies(data["is_guest_login"])
+        one_hot_is_host_login  = pd.get_dummies(data["is_host_login"])
 
 
         data = data.drop("protocol_type",axis=1)
@@ -75,7 +75,7 @@ class KDDCUP (OneClassDataset):
         # data = data.drop("is_host_login",axis=1)
 
         data = pd.concat([one_hot_protocol, one_hot_service,one_hot_flag,data], axis=1)
-        # data = pd.concat([one_hot_land,one_hot_is_host_login,one_hot_logged_in,one_hot_is_guest_login, data], axis=1)
+        data = pd.concat([one_hot_land,one_hot_is_host_login,one_hot_logged_in,one_hot_is_guest_login, data], axis=1)
 
         features = data.iloc[:,:-1].values
         labels = data.iloc[:,-1].values
@@ -110,7 +110,7 @@ class KDDCUP (OneClassDataset):
         
         # 0.05 nominal data
         self.X_val = nominal_data[randIdx[N_train:N_train_valid]]
-        self.y_val =nominal_data[randIdx[N_train:N_train_valid]]
+        self.y_val = nominal_data[randIdx[N_train:N_train_valid]]
         
         # 0.5 nominal data + all normal data
         self.X_test = nominal_data[randIdx[N_train_valid:]]
