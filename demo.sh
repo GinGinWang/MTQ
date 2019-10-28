@@ -3,6 +3,15 @@
 python test.py --dataset mnist  --lr 0.00001  --select 1 --autoencoder LSA --estimator SOS  --Train  --epochs 1000 --MulObj
 python test.py --dataset mnist  --lr 0.00001  --select 1 --autoencoder LSA --estimator SOS  --Test  --MulObj
 
+
+# Train LSA-SOS on fmnist, setting classs 1 as the normal class
+## Using MGD optimization
+python test.py --dataset fmnist  --lr 0.00001  --select 1 --autoencoder LSA --estimator SOS  --Train  --epochs 1000 --MulObj
+python test.py --dataset fmnist  --lr 0.00001  --select 1 --autoencoder LSA --estimator SOS  --Test  --MulObj
+
+
+
+
 # Experiment on kddcup
 python test.py --dataset kddcup --lr 0.00001  --batch_size 1024 --code_length 2 --epochs 50000 --select  1 --autoencoder LSA --estimator SOS  --Train --log_step 1000  --hidden_size 2048 --MulObj
 
