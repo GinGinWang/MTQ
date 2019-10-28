@@ -2,7 +2,7 @@
 
 Multivariate Triangular Map For Novelty Detection.
 
-By Jingjing/ 2019.10
+By Jing Jing Wang/ 2019.10
 
 """
 import argparse
@@ -258,17 +258,21 @@ def parse_arguments():
         '--checkpoint',
         type=str,
         default=None,
-        help='number of epochs to check when testing (default: Use the last one)')
+        help='number of epochs to check when testing\
+        (default: Use the last one)')
 
-    # learning rate 
+    # learning rate
     parser.add_argument(
-        '--lr', type=float, default=0.0001, help='learning rate (default: 0.0001)')
+        '--lr',
+        type=float,
+        default=0.0001,
+        help='learning rate (default: 0.0001)')
 
     # disable cuda
     parser.add_argument(
         '--no_cuda',
         action='store_true',
-        default= False,
+        default=False,
         help='disables CUDA training')
 
     # number of blocks
@@ -297,7 +301,7 @@ def parse_arguments():
         '--score_normed',
         action='store_true',
         default=False,
-        help='For Test: Normalize novelty score by Valid Set' )
+        help='For Test: Normalize novelty score by Valid Set')
 
     parser.add_argument(
         '--n_class',
@@ -343,13 +347,13 @@ def parse_arguments():
         '--load_lsa',
         action='store_true',
         default=False,
-        help='use-pretrained lsa (default: False)' )
+        help='use-pretrained lsa (default: False)')
 
     parser.add_argument(
         '--using_train_set',
         action='store_true',
         default=False,
-        help='use training set on saved model in Test mode (default: False)' )
+        help='use training set on saved model in Test mode (default: False)')
 
     # Additional function for analyzing results
     parser.add_argument(
@@ -359,12 +363,12 @@ def parse_arguments():
         default=False,
         help='Plot training loss history and the corresponding AUROC')
 
-
-
     return parser.parse_args()
 
 
-
-# Entry point
 if __name__ == '__main__':
+    """
+    entry point.
+    """
+
     main()
