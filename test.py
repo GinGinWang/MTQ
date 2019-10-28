@@ -72,7 +72,7 @@ def main():
 
     # Set Model
     if (args.autoencoder is None):
-        print (f'No Autoencoder, only use Density Estimator: {args.estimator}')
+        print ('No Autoencoder')
         c, h, w = dataset.shape
 
         # build Density Estimator
@@ -88,9 +88,11 @@ def main():
         else:
             raise ValueError('Unknown Estimator')
     else:
+
         if args.autoencoder == "LSA":
             print(f'Autoencoder:{args.autoencoder}')
             print(f'Density Estimator:{args.estimator}')
+
             if args.dataset in ['mnist', 'fmnist']:
                 model = LSA_MNIST(
                     input_shape=dataset.shape,
@@ -265,8 +267,8 @@ def parse_arguments():
     parser.add_argument(
         '--lr',
         type=float,
-        default=0.0001,
-        help='learning rate (default: 0.0001)')
+        default=0.00001,
+        help='learning rate (default: 0.00001)')
 
     # disable cuda
     parser.add_argument(
