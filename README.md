@@ -1,5 +1,5 @@
 # Multivariate Triangular Quantiles for Novelty Detection
-Pytorch to replicate experiments in the  NIPS2019 paper Multivariate Triangular Quantiles for Novelty Detection (published soon).
+Pytorch implementation to replicate experiments in the  NIPS2019 paper, Multivariate Triangular Quantiles for Novelty Detection (published soon).
 
 
 # Datasets
@@ -25,7 +25,7 @@ Set up enviroment by:
 pip install -r requirements.txt
 ```
 # Demo
-demo.sh
+In demo.sh, we give some examples to show the how to train/test a model on one dataset
 
 # Reference
 
