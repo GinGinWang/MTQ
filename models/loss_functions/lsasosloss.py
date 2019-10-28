@@ -35,7 +35,7 @@ class LSASOSLoss(nn.Module):
         # self.nlog_probs = None
         # self.nagtive_log_jacob = None
 
-    def forward(self, x, x_r, s,nagtive_log_jacob, average = True):
+    def forward(self, x, x_r, s, nagtive_log_jacob, average = True):
         # type: (torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor) -> torch.Tensor
         """
         Forward propagation.
