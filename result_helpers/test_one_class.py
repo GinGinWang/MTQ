@@ -139,14 +139,14 @@ class OneClassTestHelper(object):
 
         ## Set up loss function
         # encoder + decoder
-        if self.name in ['LSA','LSAD','LSAW']:
+        if self.name in ['LSA']:
             self.loss = LSALoss(cpd_channels=200)
         # encoder + estimator+ decoder
-        elif self.name in ['LSA_EN','LSAW_EN']:
+        elif self.name in ['LSA_EN']:
             self.loss = LSAENLoss(cpd_channels=200,lam=lam)
         
-        elif self.name in ['LSA_SOS', 'LSA_MAF','LSAD_SOS','LSAW_SOS']:
-            self.loss =LSASOSLoss(lam)
+        elif self.name in ['LSA_SOS', 'LSA_MAF']:
+            self.loss = LSASOSLoss(lam)
 
         elif self.name == 'SOS':
             self.loss = SOSLoss()
@@ -221,16 +221,16 @@ class OneClassTestHelper(object):
 
     def _eval(self, x, average=True, quantile_flag=False):
 
-        if self.name in ['LSA','LSAD','LSAW']:
+        if self.name in ['LSA']:
             # ok
             x_r = self.model(x)
             tot_loss = self.loss(x, x_r, average)
 
-        elif self.name in ['LSA_EN','LSAW_EN']:
+        elif self.name in ['LSA_EN']:
             x_r, z, z_dist = self.model(x)
             tot_loss = self.loss(x, x_r, z, z_dist, average)
 
-        elif self.name in ['LSA_SOS','LSA_MAF','LSAD_SOS','LSAW_SOS','LSAW_MAF']:
+        elif self.name in ['LSA_SOS','LSA_MAF']:
 
             x_r, z, s, log_jacob_T_inverse = self.model(x)
             tot_loss = self.loss(x, x_r, s, log_jacob_T_inverse, average)
@@ -382,7 +382,7 @@ class OneClassTestHelper(object):
 
             epoch_loss +=  self.loss.total_loss.item()*x.shape[0]
 
-            if self.name in ['LSA_EN','LSAW_EN','LSA_SOS','LSAD_SOS','LSAW_SOS','LSA_MAF']:
+            if self.name in ['LSA_EN','LSA_SOS','LSA_MAF']:
                 # print(self.loss.reconstruction_loss)
                 # print(self.loss.autoregression_loss)
                 epoch_recloss += self.loss.reconstruction_loss.item()*x.shape[0]
@@ -407,7 +407,7 @@ class OneClassTestHelper(object):
         #             self.dataset.normal_class, epoch, epoch_loss/epoch_size, epoch_recloss/epoch_size, epoch_nllk/epoch_size, epoch_nllk1/epoch_size, epoch_njob/epoch_size))
 
 
-        if self.name in ['LSA_EN','LSAW_EN','LSA_SOS','LSA_MAF','LSAD_SOS','LSAW_SOS']:
+        if self.name in ['LSA_EN','LSA_SOS','LSA_MAF']:
 
             print('{}Train Epoch-{}: {}\tLoss: {:.6f}\tRec: {:.6f}\tNllk:{:.6f}\t'.format(self.name,
                     self.dataset.normal_class, epoch, epoch_loss/epoch_size, epoch_recloss/epoch_size, epoch_nllk/epoch_size))
@@ -490,7 +490,7 @@ class OneClassTestHelper(object):
                 # else:
                 loss =self. _eval(x, average= False)
 
-                if self.name in ['LSA_EN','LSAW_EN','LSA_SOS','LSA_MAF','LSAD_SOS','LSAW_SOS']:
+                if self.name in ['LSA_EN', 'LSA_SOS', 'LSA_MAF']:
                     val_nllk += self.loss.autoregression_loss.sum().item()
                     val_rec += self.loss.reconstruction_loss.sum().item()
                     val_loss = val_nllk + val_rec
@@ -512,7 +512,7 @@ class OneClassTestHelper(object):
 
                                     
 
-        if self.name in ['LSA_EN','LSAW_EN','LSA_SOS','LSA_MAF','LSAD_SOS','LSAW_SOS']:
+        if self.name in ['LSA_EN','LSA_SOS','LSA_MAF']:
             print('Val_loss:{:.6f}\t Rec: {:.6f}\t Nllk: {:.6f}'.format(val_loss/epoch_size, val_rec/epoch_size, val_nllk/epoch_size))
         else:
             print('Val_loss:{:.6f}\t'.format(val_loss/epoch_size))
@@ -565,12 +565,7 @@ class OneClassTestHelper(object):
             self.model.train()
 
             if self.load_lsa:
-                if self.name in ['LSAD_SOS','LSAD_EN']:
-                    model_style = 'LSAD'
-                elif self.name in ['LSAW_SOS','LSAW_EN']:
-                    model_style = 'LSAW'
-                else:
-                    model_style = 'LSA'
+                model_style = 'LSA'
 
                 self.model.load_lsa(join(self.checkpoints_dir,f'{cl}{model_style}_1_b.pkl'))
                 print("load pre-traind autoencoder")
@@ -670,7 +665,7 @@ class OneClassTestHelper(object):
             x = x.to(self.device)
             with torch.no_grad():
                 if self.name in ['LSA_SOS', 'SOS', 'LSA_MAF',
-                                 'LSAD_SOS', 'LSAW_SOS']:
+                                 ]:
                     tot_loss, q1, q2, qinf, u =\
                         self._eval(x, average=False, quantile_flag=True)
                     # quantile
@@ -685,13 +680,13 @@ class OneClassTestHelper(object):
             # True label
             sample_y[i * bs:i * bs + bs] = y
             # score larger-->normal data
-            if self.name in ['LSA', 'LSAD', 'LSAW',
-                             'LSA_SOS', 'LSAD_SOS', 'LSAW_SOS',
+            if self.name in ['LSA',
+                             'LSA_SOS',
                              'LSA_EN', 'LSA_MAF']:
                 sample_nrec[i * bs:i * bs + bs]\
                     = - self.loss.reconstruction_loss.cpu().numpy()
 
-            if self.name in ['LSA_SOS', 'LSAD_SOS', 'LSAW_SOS',
+            if self.name in ['LSA_SOS',
                              'LSA_EN',
                              'EN', 'SOS', 'LSA_MAF']:
                 sample_llk[i * bs:i * bs + bs]\
@@ -714,7 +709,7 @@ class OneClassTestHelper(object):
 
 
         # # based on quantile-norm-inf
-        if self.name in ['LSA_SOS','LSA_MAF','LSAD_SOS','LSAW_SOS']:
+        if self.name in ['LSA_SOS','LSA_MAF']:
 
             precision_den, f1_den, recall_den = compute_density_metric(self.name, sample_llk, sample_y)
             precision_q1, f1_q1, recall_q1 = compute_quantile_metric(self.name, sample_q1, sample_y, self.code_length, '1')
@@ -750,7 +745,7 @@ class OneClassTestHelper(object):
             f1_den,
             recall_den
             ]
-        elif self.name in ['LSA','LSAD','LSAW']:
+        elif self.name in ['LSA']:
         # every row
             this_class_metrics = [
             roc_auc_score(sample_y, sample_ns),
@@ -833,7 +828,7 @@ class OneClassTestHelper(object):
             x = x.cuda()
             with torch.no_grad():
 
-                if self.name in ['LSA_SOS','SOS','LSAD_SOS','LSAW_SOS']:
+                if self.name in ['LSA_SOS','SOS']:
                     tot_loss, q1,q2,qinf,_ = self._eval(x, quantile_flag= True)
                     sample_q1[i*bs:i*bs+bs] = q1
                     sample_q2[i*bs:i*bs+bs] = q2
@@ -842,10 +837,10 @@ class OneClassTestHelper(object):
                     tot_loss = self._eval( x, average = False)
 
             # score larger-->normal data
-            if self.name in ['LSA','LSAD','LSAW','LSA_SOS','LSA_EN','LSAW_EN','LSAD_SOS','LSAW_SOS']:
+            if self.name in ['LSA','LSA_SOS','LSA_EN']:
                 sample_nrec[i*bs:i*bs+bs] = - self.loss.reconstruction_loss.cpu().numpy()
         
-            if self.name in ['LSA_SOS','LSA_EN','LSAW_EN','EN','SOS','LSAD_SOS','LSAW_SOS']:    
+            if self.name in ['LSA_SOS','LSA_EN','EN','SOS']:    
                 sample_llk[i*bs:i*bs+bs] = - self.loss.autoregression_loss.cpu().numpy()
 
             
@@ -867,23 +862,13 @@ class OneClassTestHelper(object):
 
         'LSA_SOS':['Class', 'AUROC-NS', 'AUROC-LLK', 'AUROC-REC','AUROC-q1','AUROC-q2','AUROC-qinf','PRCISION','F1','RECALL', 'precision_q1', 'f1_q1','recall_q1','precision_q2', 'f1_q2','recall_q2','precision_qinf', 'f1_qinf','recall_qinf'],
 
-        'LSAD_SOS':['Class', 'AUROC-NS', 'AUROC-LLK', 'AUROC-REC','AUROC-q1','AUROC-q2','AUROC-qinf','PRCISION','F1','RECALL', 'precision_q1', 'f1_q1','recall_q1','precision_q2', 'f1_q2','recall_q2','precision_qinf', 'f1_qinf','recall_qinf'],
-        'LSAW_SOS':['Class', 'AUROC-NS', 'AUROC-LLK', 'AUROC-REC','AUROC-q1','AUROC-q2','AUROC-qinf','PRCISION','F1','RECALL', 'precision_q1', 'f1_q1','recall_q1','precision_q2', 'f1_q2','recall_q2','precision_qinf', 'f1_qinf','recall_qinf'],
         'LSA_MAF':['Class', 'AUROC-NS', 'AUROC-LLK', 'AUROC-REC','AUROC-q1','AUROC-q2','AUROC-qinf','PRCISION','F1','RECALL','precision_q1', 'f1_q1','recall_q1','precision_q2', 'f1_q2','recall_q2','precision_qinf', 'f1_qinf','recall_qinf'],
 
         'LSA_EN':['Class', 'AUROC-NS', 'AUROC-LLK', 'AUROC-REC','PRCISION','F1','RECALL'],
-        'LSAW_EN':['Class', 'AUROC-NS', 'AUROC-LLK', 'AUROC-REC','PRCISION','F1','RECALL'],
         'LSA':['Class','AUROC'],
         'LSAD':['Class','AUROC'],
-        'LSAW':['Class','AUROC'],
-        'SOS':['Class','AUROC','PRCISION','F1','RECALL','precision_q1', 'f1_q1','recall_q1','precision_q2', 'f1_q2','recall_q2','precision_qinf', 'f1_qinf','recall_qinf'],
-
-        # 'threshold':['Class', 'precision_den', 'f1_den', 'recall_den','acc_den',
-        
-        # # 'precision_q1','f1_q1','recall_q1',
-        # # 'precision_q2','f1_q2','recall_q2', 
-        # 'precision_qinf','f1_qinf','recall_qinf','acc_qinf','tn_n']
-        }[self.name]
+         'SOS':['Class','AUROC', 'precision_llk','f1_llk','recall_llk','precision_q1', 'f1_q1','recall_q1','precision_q2', 'f1_q2','recall_q2','precision_qinf', 'f1_qinf','recall_qinf'],
+       }[self.name]
 
         # format
         table.float_format = '0.4'
@@ -936,7 +921,7 @@ class OneClassTestHelper(object):
                     
                     x = x.to(self.device)
                     with torch.no_grad():
-                        if self.name in ['LSA_SOS','SOS','LSA_MAF','LSAD_SOS','LSAW_SOS']:
+                        if self.name in ['LSA_SOS','SOS','LSA_MAF']:
                             tot_loss, q1, q2, qinf, u = self._eval(x, average = False, quantile_flag= True)
                             # quantile 
                             sample_q1[i*bs:i*bs+bs] = q1
@@ -950,10 +935,10 @@ class OneClassTestHelper(object):
                     sample_y[i*bs:i*bs+bs] = y
                 
 
-                    if self.name in ['LSA','LSAD','LSAW','LSA_SOS','LSA_EN','LSA_MAF','LSAD_SOS','LSAW_SOS']:
+                    if self.name in ['LSA','LSA_SOS','LSA_EN','LSA_MAF','LSAD_SOS']:
                         sample_nrec[i*bs:i*bs+bs] = - self.loss.reconstruction_loss.cpu().numpy()
                             
-                    if self.name in ['LSA_SOS','LSA_EN','EN','SOS','LSA_MAF','LSAD_SOS','LSAW_SOS']:    
+                    if self.name in ['LSA_SOS','LSA_EN','EN','SOS','LSA_MAF','LSAD_SOS']:    
                         sample_llk[i*bs:i*bs+bs] = - self.loss.autoregression_loss.cpu().numpy()
                     
                     sample_ns = novelty_score(sample_llk, sample_nrec)
@@ -1006,7 +991,7 @@ class OneClassTestHelper(object):
             x = range(0,len(train_loss),1)
             fig = plt.figure(0)
 
-            if self.name in ['LSA_MAF','LSA_EN','LSA_SOS','LSAD_SOS','LSAW_SOS']:
+            if self.name in ['LSA_MAF','LSA_EN','LSA_SOS']:
                 ax1 =plt.subplot(411)
                 ax1.plot(x, train_loss, 'b',label = 'train_loss')
                 ax1.plot(x, validation_loss, 'r',label = 'validation_loss')
@@ -1058,11 +1043,11 @@ class OneClassTestHelper(object):
 
             plt.plot(x, auroc['ns'], 'bo-',label = 'ns')
             
-            if model_name in ['LSA_MAF','LSA_SOS','LSA_EN','LSAD_SOS','LSAW_SOS']:
+            if model_name in ['LSA_MAF','LSA_SOS','LSA_EN']:
                 plt.plot(x, auroc['rec'], 'g--',label = 'rec')
                 plt.plot(x, auroc['nllk'], 'r>-',label = 'nllk')
 
-            if model_name in ['LSA_MAF','LSA_SOS','LSAD_SOS','LSAW_SOS']:
+            if model_name in ['LSA_MAF','LSA_SOS']:
                   plt.plot(x, auroc['q1'], 'co-',label = 'q1')
                   plt.plot(x, auroc['q2'], 'm--',label = 'q2')
                   plt.plot(x, auroc['qinf'], 'y<-',label = 'qinf')
@@ -1229,7 +1214,7 @@ class OneClassTestHelper(object):
             x = x.to(self.device)
             with torch.no_grad():
                 if self.name in ['LSA_SOS', 'SOS', 'LSA_MAF',
-                                 'LSAD_SOS', 'LSAW_SOS']:
+                                 ]:
                     tot_loss, q1, q2, qinf, u =\
                         self._eval(x, average=False, quantile_flag=True)
                     # quantile
@@ -1244,13 +1229,13 @@ class OneClassTestHelper(object):
             # True label
             sample_y[i * bs:i * bs + bs] = y
             # score larger-->normal data
-            if self.name in ['LSA', 'LSAD', 'LSAW',
-                             'LSA_SOS', 'LSAD_SOS', 'LSAW_SOS',
+            if self.name in ['LSA', 
+                             'LSA_SOS',
                              'LSA_EN', 'LSA_MAF']:
                 sample_nrec[i * bs:i * bs + bs]\
                     = - self.loss.reconstruction_loss.cpu().numpy()
 
-            if self.name in ['LSA_SOS', 'LSAD_SOS', 'LSAW_SOS',
+            if self.name in ['LSA_SOS',
                              'LSA_EN',
                              'EN', 'SOS', 'LSA_MAF']:
                 sample_llk[i * bs:i * bs + bs]\

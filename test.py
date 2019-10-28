@@ -100,14 +100,7 @@ def main():
                 model =LSA_CIFAR10(input_shape=dataset.shape, code_length = args.code_length, num_blocks=args.num_blocks, est_name= args.estimator,hidden_size= args.hidden_size).cuda()
             else:
                 ValueError("Unknown Dataset")        
-        
-        elif args.autoencoder =='LSAD':
-                model =LSA_MNIST_D(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator,hidden_size= args.hidden_size).cuda()
-        
-        elif args.autoencoder =='LSAW':
-                model =LSA_MNIST_W(input_shape=dataset.shape, code_length=args.code_length, num_blocks=args.num_blocks, est_name = args.estimator,hidden_size= args.hidden_size).cuda()
 
-        
         else:
             raise ValueError('Unknown Autoencoder')
 
