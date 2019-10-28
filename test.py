@@ -10,13 +10,9 @@ from datasets import *
 
 # models
 from models.LSA_mnist import LSA_MNIST
-from models.LSA_mnist_deep import LSA_MNIST_D
-from models.LSA_mnist_wide import LSA_MNIST_W
-
 
 from models import LSA_CIFAR10 # cifar10
 from models import LSA_KDDCUP # kddcup
-from models import LSA_THYROID
 
 from models.estimator_1D import Estimator1D
 from models.transform_maf import TinvMAF
