@@ -83,7 +83,7 @@ def compute_density_metric(model_name, sample_ns_t, sample_y):
     precision_den, recall_den, f1_den, _ =  precision_recall_fscore_support((sample_y==0),(y_hat1==0), average= "binary")
     acc_den = accuracy_score((sample_y == 0),(y_hat1 == 0))
 
-    return precision_den, recall_den, f1_den
+    return precision_den, f1_den, recall_den
 
 
 
